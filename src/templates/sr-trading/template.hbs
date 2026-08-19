@@ -1,0 +1,162 @@
+<div class="sr-trading">
+  <div class="main-container">
+    <div class="title-header">
+      <h1>Quotation</h1>
+    </div>
+    
+    <div class="info-section">
+      <div class="billed-to">
+        <p class="label">Quotation To:</p>
+        <p class="company-name"><strong>{{billedTo.name}}</strong></p>
+        {{#if billedTo.building}}<p>{{billedTo.building}}</p>{{/if}}
+        {{#if billedTo.street}}<p>{{billedTo.street}}</p>{{/if}}
+        <p>
+          {{#if billedTo.city}}{{billedTo.city}}{{/if}}{{#if billedTo.state}}, {{billedTo.state}}{{/if}}
+          {{#if billedTo.country}}, {{billedTo.country}}{{/if}}
+          {{#if billedTo.pincode}} - {{billedTo.pincode}}{{/if}}
+        </p>
+        {{#if billedTo.gstin}}<p><strong>GSTIN:</strong> {{billedTo.gstin}}</p>{{/if}}
+        {{#if billedTo.panNumber}}<p><strong>PAN:</strong> {{billedTo.panNumber}}</p>{{/if}}
+        {{#if billedTo.email}}<p><strong>Email:</strong> {{billedTo.email}}</p>{{/if}}
+        {{#if billedTo.phone}}<p><strong>Phone:</strong> {{billedTo.phone}}</p>{{/if}}
+      </div>
+      
+      <div class="invoice-meta">
+        <div class="meta-grid">
+          <div>Quotation No</div>
+          <div class="text-right"><strong>{{invoiceNumber}}</strong></div>
+          
+          <div>Quotation Date</div>
+          <div class="text-right"><strong>{{formateShortDateWithOffset invoiceDateUserInput ownerOffset}}</strong></div>
+          
+          {{#if dueDate}}
+          <div>Valid Till Date</div>
+          <div class="text-right"><strong>{{formateShortDateWithOffset dueDate ownerOffset}}</strong></div>
+          {{/if}}
+        </div>
+        
+        <div class="catalogue-qr">
+          <div class="qr-placeholder">
+             <!-- Placeholder or custom field logic for QR -->
+             <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23eee'/><text x='50' y='50' text-anchor='middle' alignment-baseline='middle' font-family='sans-serif' font-size='12' fill='%23666'>QR Code</text></svg>" alt="Product Catalogue QR">
+          </div>
+          <div class="qr-text">
+            <strong>Scan here to view our product catalogue</strong>
+            <p>(This catalogue contains a selected range of our products. Please contact us for products not listed here)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="w-10"></th>
+          <th class="w-50">Item</th>
+          <th class="w-15">HSN/SAC</th>
+          <th class="w-10 text-center">Quantity</th>
+          <th class="w-10 text-right">Rate</th>
+          <th class="w-15 text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td>{{addOne @index}}.</td>
+          <td>
+            <strong>{{addOne @index}}. {{name}}</strong>
+            {{#if description}}
+              <div class="item-description">
+                {{> MarkdownViewer (prepareMarkdownViewerData description) }}
+              </div>
+            {{/if}}
+          </td>
+          <td>{{hsn}}</td>
+          <td class="text-center">{{quantity}}</td>
+          <td class="text-right">{{formatCurrency rate}}</td>
+          <td class="text-right">{{formatCurrency amount}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    
+    <div class="totals-section">
+      <div class="totals-grid">
+        <div class="totals-row">
+          <div class="totals-label">Amount</div>
+          <div class="totals-value">{{formatCurrency subTotal}}</div>
+        </div>
+        {{#if cgst}}
+        <div class="totals-row">
+          <div class="totals-label">CGST</div>
+          <div class="totals-value">{{formatCurrency cgst}}</div>
+        </div>
+        {{/if}}
+        {{#if sgst}}
+        <div class="totals-row">
+          <div class="totals-label">SGST</div>
+          <div class="totals-value">{{formatCurrency sgst}}</div>
+        </div>
+        {{/if}}
+        {{#if igst}}
+        <div class="totals-row">
+          <div class="totals-label">IGST</div>
+          <div class="totals-value">{{formatCurrency igst}}</div>
+        </div>
+        {{/if}}
+        <div class="totals-row final-total">
+          <div class="totals-label">Total (INR)</div>
+          <div class="totals-value">{{formatCurrency finalTotal.total}}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="amount-in-words">
+      Total (in words): <strong>{{amountInWords finalTotal.total}}</strong>
+    </div>
+    
+    <div class="footer-section">
+      <div class="terms-container">
+        <strong>Terms and Conditions</strong>
+        <div class="terms-list">
+          {{#each terms}}
+            {{#each terms}}
+              <p>{{addOne @index}}. {{this}}</p>
+            {{/each}}
+          {{/each}}
+        </div>
+      </div>
+      
+      <div class="bank-container">
+        <strong>Bank and UPI details</strong>
+        {{#if bankAccount}}
+        <div class="bank-grid">
+          <div>Account Name</div>
+          <div>{{bankAccount.name}}</div>
+          
+          <div>Account Number</div>
+          <div>{{bankAccount.accountNo}}</div>
+          
+          <div>IFSC</div>
+          <div>{{bankAccount.ifsc}}</div>
+          
+          <div>Account Type</div>
+          <div>{{bankAccount.accountType}}</div>
+          
+          <div>Bank</div>
+          <div>{{bankAccount.bank}}</div>
+        </div>
+        {{/if}}
+        
+        {{#if upi}}
+        <div class="upi-section">
+          <strong>Scan To Pay</strong>
+          {{#if upi.qr}}
+            <img class="upi-qr" src="data:image/png;base64,{{upi.qr}}" alt="UPI QR">
+          {{/if}}
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
