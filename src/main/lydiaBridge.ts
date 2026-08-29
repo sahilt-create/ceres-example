@@ -42,7 +42,6 @@ const HEIGHT_MESSAGE_TYPE = "ceres:content-height";
 const HEIGHT_MESSAGE_SOURCE = "ceres";
 
 // Height calculation configuration
-const PRINT_HEIGHT_BUFFER = 80;
 const PARENT_HEIGHT_BUFFER = 0;
 const HEIGHT_REPORT_DEBOUNCE_MS = 120;
 const HEIGHT_CHANGE_THRESHOLD = 1;
@@ -88,7 +87,6 @@ export function initLydiaBridge(
 
   // Internal state
   let isPreparingForPrint = false;
-  let hasSentHeight = false;
   let lastComputedHeight: number | null = null;
   let lastReportedHeight: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
@@ -130,20 +128,29 @@ export function initLydiaBridge(
     console.debug("[CeresPrint]", ...args);
   };
 
-  // Measures the full document height using every reliable method available.
-  // Different browsers report height differently, so we take the max of all approaches.
+  const measureElementHeight = (element: HTMLElement): number =>
+    Math.max(
+      element.scrollHeight,
+      element.offsetHeight,
+      element.getBoundingClientRect().height
+    );
+
+  // The rendered output is authoritative for pageless sizing. Measuring the
+  // viewport/body first can return 100vh or a stale print min-height and create
+  // blank space, an extra page, or cumulative growth across repeated prints.
   const computeFullHeight = (): number => {
     const { body, documentElement: docEl } = document;
     if (!body || !docEl) return 0;
 
-    return Math.max(
-      body.scrollHeight,
-      docEl.scrollHeight,
-      body.offsetHeight,
-      docEl.offsetHeight,
-      body.getBoundingClientRect().height,
-      docEl.getBoundingClientRect().height
-    );
+    const output = document.getElementById(outputElementId);
+    if (output) {
+      const outputHeight = measureElementHeight(output);
+      if (Number.isFinite(outputHeight) && outputHeight > 0) {
+        return outputHeight;
+      }
+    }
+
+    return Math.max(measureElementHeight(body), measureElementHeight(docEl));
   };
 
   // Sends a message to the parent window. Includes all necessary guards.
@@ -211,7 +218,6 @@ export function initLydiaBridge(
       return;
     }
 
-    hasSentHeight = true;
     postHeightToParent(fullHeight, reason);
     debugLog("reportContentHeight", { reason, fullHeight });
   };
@@ -222,10 +228,6 @@ export function initLydiaBridge(
    * @param force
    */
   const scheduleHeightReport = (reason = "resize", force = false) => {
-    if (hasSentHeight && !force) {
-      return;
-    }
-
     pendingReportReason = reason;
 
     if (heightReportTimer) {
@@ -245,8 +247,8 @@ export function initLydiaBridge(
     }, HEIGHT_REPORT_DEBOUNCE_MS);
   };
 
-  // Locks the document to a minimum height so the browser doesn't collapse it during print.
-  // The extra buffer accounts for browser chrome and margin quirks in print mode.
+  // Locks the document to its exact rendered height so iframe printing cannot
+  // collapse it. Pageless PDF relies on this value remaining deterministic.
   const enforceSizing = (fullHeight: number) => {
     const docEl = document.documentElement;
     const { body } = document;
@@ -255,7 +257,7 @@ export function initLydiaBridge(
       return;
     }
 
-    const targetHeight = fullHeight + PRINT_HEIGHT_BUFFER;
+    const targetHeight = Math.ceil(fullHeight);
     lastComputedHeight = fullHeight;
 
     docEl.style.minHeight = `${targetHeight}px`;
@@ -287,6 +289,12 @@ export function initLydiaBridge(
     body.style.width = "auto";
     body.style.display = "block";
     body.style.alignItems = "stretch";
+
+    // Clear a previous print pass before measuring. beforeprint can fire after
+    // the explicit print command; retaining its min-height would inflate every
+    // repeated measurement.
+    docEl.style.removeProperty("min-height");
+    body.style.removeProperty("min-height");
 
     const fullHeight = computeFullHeight();
     enforceSizing(fullHeight);
@@ -523,18 +531,23 @@ export function initLydiaBridge(
     handleDocumentVisibilityChange as EventListener
   );
 
-  // Watch for content size changes after initial render — images loading, fonts swapping,
-  // or dynamic content shifting things around. During print prep, we re-enforce sizing;
-  // otherwise we just track the latest height quietly.
+  // Report late image/font/content changes as well. Pageless PDF uses the most
+  // recent output height, so observing only during print can leave the parent
+  // with a stale page height.
   if (typeof ResizeObserver !== "undefined" && document.body) {
     resizeObserver = new ResizeObserver(() => {
       if (isPreparingForPrint) {
         const fullHeight = computeFullHeight();
         enforceSizing(fullHeight);
+        return;
       }
+
+      scheduleHeightReport("resize");
     });
 
-    resizeObserver.observe(document.body);
+    resizeObserver.observe(
+      document.getElementById(outputElementId) ?? document.body
+    );
     addCleanup(() => {
       resizeObserver?.disconnect();
       resizeObserver = null;

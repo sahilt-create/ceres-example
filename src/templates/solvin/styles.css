@@ -3,7 +3,7 @@
   position: relative;
   width: 100%;
   max-width: 980px;
-  min-height: 1456px;
+  min-height: 0;
   margin: 0 auto;
   padding: 24px;
   background: var(--ceres-primary-background, #fff);
@@ -28,9 +28,8 @@
 
 .solvin-money {
   display: inline;
-  font-family:
-    "Noto Sans", "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", Arial,
-    sans-serif;
+  font-family: "Noto Sans", "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol",
+    Arial, sans-serif;
   white-space: nowrap;
 }
 
@@ -1339,10 +1338,29 @@
     min-height: 0;
   }
 
-  /* .signature-box is absolutely positioned, so the section must retain
-     enough flow height to keep the footer below the signature and label. */
+  /* Reserve the complete compact signature block in normal flow. This keeps
+     the footer on the final content page without allowing either to overlap. */
   .signature-section {
-    min-height: 220px;
+    min-height: 125px;
+    margin-top: 12px;
+  }
+
+  .signature-box {
+    top: 12px;
+  }
+
+  .signature-box h2 {
+    margin-bottom: 6px;
+  }
+
+  .signature-box img {
+    width: 86px;
+    height: 56px;
+    margin-bottom: 6px;
+  }
+
+  .signature-line {
+    margin-bottom: 5px;
   }
 
   .invoice-meta-table > div {

@@ -1,5 +1,6 @@
 import {
   decodeBase64,
+  resolveTemplateManifestUrl,
   toCssColor,
   mergeInto,
   isPlainObject,
@@ -107,6 +108,23 @@ describe("commonUtils", () => {
     });
   });
 
+  describe("resolveTemplateManifestUrl", () => {
+    it("treats a plain template slug as a local template", () => {
+      expect(resolveTemplateManifestUrl("solvin")).toBe(
+        "./templates/solvin/manifest.json"
+      );
+    });
+
+    it("resolves an encoded absolute manifest URL", () => {
+      const url = "https://cdn.example.com/templates/solvin/manifest.json";
+      expect(resolveTemplateManifestUrl(btoa(url))).toBe(url);
+    });
+
+    it("rejects invalid values instead of constructing a corrupt path", () => {
+      expect(resolveTemplateManifestUrl("not a template!")).toBeNull();
+    });
+  });
+
   describe("toCssColor", () => {
     it("returns valid css color string", () => {
       expect(toCssColor({ r: 255, g: 0, b: 0 })).toBe("rgb(255, 0, 0)");
@@ -122,7 +140,11 @@ describe("commonUtils", () => {
   });
 
   describe("applyQrCodeUpdate", () => {
-    let mockImg: { src: string; closest: jest.Mock; removeAttribute: jest.Mock };
+    let mockImg: {
+      src: string;
+      closest: jest.Mock;
+      removeAttribute: jest.Mock;
+    };
     let mockContainer: { classList: { remove: jest.Mock; add: jest.Mock } };
 
     beforeEach(() => {
@@ -137,7 +159,9 @@ describe("commonUtils", () => {
 
     it("no-ops when img element is not found", () => {
       (global as any).document.querySelector.mockReturnValue(null);
-      expect(() => applyQrCodeUpdate("data:image/png;base64,abc")).not.toThrow();
+      expect(() =>
+        applyQrCodeUpdate("data:image/png;base64,abc")
+      ).not.toThrow();
     });
 
     it("sets src and removes is-empty when value is a non-empty string", () => {

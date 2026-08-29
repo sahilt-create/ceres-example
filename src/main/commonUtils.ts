@@ -33,15 +33,29 @@ export const resolveTemplateManifestUrl = (
   }
 
   const decoded = decodeBase64(encodedValue);
-  if (!decoded) {
-    return null;
-  }
-
-  if (decoded.startsWith("http://") || decoded.startsWith("https://")) {
+  if (
+    decoded &&
+    (decoded.startsWith("http://") || decoded.startsWith("https://"))
+  ) {
     return decoded;
   }
 
-  return `./templates/${decoded}/manifest.json`;
+  if (decoded && decoded.toLowerCase().endsWith(".json")) {
+    return decoded;
+  }
+
+  // Template slugs such as "solvin" can also consist entirely of valid
+  // Base64 characters. Treat a safe, explicit slug as a slug instead of
+  // accepting atob() garbage as a directory name.
+  if (/^[a-z0-9][a-z0-9_-]*$/i.test(encodedValue)) {
+    return `./templates/${encodedValue}/manifest.json`;
+  }
+
+  if (decoded && /^[a-z0-9][a-z0-9_-]*$/i.test(decoded)) {
+    return `./templates/${decoded}/manifest.json`;
+  }
+
+  return null;
 };
 
 export const loadTemplateManifest = async () => {
@@ -779,9 +793,7 @@ const applyDescriptionFullWidthUpdate = (value: unknown): void => {
   );
 
   contents.forEach((content, index) => {
-    const target = fullWidth
-      ? fullWidthTargets[index]
-      : inlineTargets[index];
+    const target = fullWidth ? fullWidthTargets[index] : inlineTargets[index];
     target?.appendChild(content);
   });
 
