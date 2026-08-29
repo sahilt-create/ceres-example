@@ -448,18 +448,11 @@ const escapeHtml = (value: string): string =>
       }[character] || character)
   );
 
-/**
- * Produces PDF-safe monetary markup. Chromium PDF workers can omit the INR
- * glyph from a selected/custom font, so the rupee mark is drawn as inline SVG
- * while every other currency keeps its normal escaped text representation.
- */
+/** Wraps monetary text so PDF rendering can use a currency-capable font. */
 export const formatSolvinCurrencyMarkup = (
   amount: any,
   invoiceValue?: any
 ): string => {
   const formatted = formatSolvinCurrency(amount, invoiceValue);
-  if (!formatted.startsWith("₹")) return escapeHtml(formatted);
-
-  const numericText = escapeHtml(formatted.slice(1).trimStart());
-  return `<span class="solvin-money"><svg class="solvin-inr-symbol" viewBox="0 0 16 18" role="img" aria-label="INR"><path d="M1 2h14M1 5h14M3 2h3.5c4 0 6 1.2 6 3.2S10.5 8.5 6.5 8.5H3L13 17" /></svg><span>${numericText}</span></span>`;
+  return `<span class="solvin-money">${escapeHtml(formatted)}</span>`;
 };

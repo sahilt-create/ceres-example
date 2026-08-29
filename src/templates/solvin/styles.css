@@ -27,22 +27,11 @@
 }
 
 .solvin-money {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.12em;
+  display: inline;
+  font-family:
+    "Noto Sans", "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", Arial,
+    sans-serif;
   white-space: nowrap;
-}
-
-.solvin-inr-symbol {
-  width: 0.72em;
-  height: 0.82em;
-  flex: 0 0 auto;
-  overflow: visible;
-  stroke: currentcolor;
-  stroke-width: 1.65;
-  fill: none;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
 }
 
 /* Letterhead (header) and footer image — filled from invoice.letterHead /

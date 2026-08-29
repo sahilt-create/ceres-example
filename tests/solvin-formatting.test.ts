@@ -20,16 +20,16 @@ describe("Solvin currency formatting", () => {
     ).toBe("₹1,35,000.00");
   });
 
-  it("renders INR with a font-independent vector currency mark", () => {
+  it("renders INR with its standard currency symbol in a font-safe wrapper", () => {
     const markup = formatSolvinCurrencyMarkup(135000, {
       currency: "INR",
       locale: "en-IN",
     });
 
-    expect(markup).toContain('class="solvin-inr-symbol"');
-    expect(markup).toContain('aria-label="INR"');
+    expect(markup).toContain('class="solvin-money"');
+    expect(markup).toContain("₹");
     expect(markup).toContain("1,35,000.00");
-    expect(markup).not.toContain("₹");
+    expect(markup).not.toContain("<svg");
   });
 
   it("keeps non-INR currency text escaped and unchanged", () => {
@@ -38,7 +38,7 @@ describe("Solvin currency formatting", () => {
         currency: "SAR",
         customCurrencySymbol: "SAR",
       })
-    ).toBe("SAR 100.00");
+    ).toBe('<span class="solvin-money">SAR 100.00</span>');
   });
 
   it("honors the invoice sub-unit length", () => {
