@@ -1,5 +1,6 @@
 .solvin-invoice {
   box-sizing: border-box;
+  position: relative;
   width: 100%;
   max-width: 980px;
   min-height: 1456px;
@@ -27,14 +28,29 @@
 
 /* Letterhead (header) and footer image — filled from invoice.letterHead /
    invoice.letterHeadFooter by applyPreviewAssets (img[data-ceres-height]). */
-.invoice-letterhead,
-.invoice-letterhead-footer {
+.solvin-invoice > .invoice-letterhead,
+.solvin-invoice > .invoice-letterhead-footer {
   display: block;
   width: 100%;
 }
 
-.invoice-letterhead.is-empty,
-.invoice-letterhead-footer.is-empty {
+/* The live business shell also defines generic letterhead positioning. Keep
+   Solvin's populated assets in normal document flow so they reserve their
+   rendered height instead of sitting behind invoice content. */
+.solvin-invoice > .invoice-letterhead:not(.is-empty),
+.solvin-invoice > .invoice-letterhead-footer:not(.is-empty) {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  clear: both;
+  float: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.solvin-invoice > .invoice-letterhead.is-empty,
+.solvin-invoice > .invoice-letterhead-footer.is-empty {
   position: absolute;
   width: 0;
   height: 0;
@@ -45,11 +61,14 @@
   pointer-events: none;
 }
 
-.invoice-letterhead img,
-.invoice-letterhead-footer img {
+.solvin-invoice > .invoice-letterhead img,
+.solvin-invoice > .invoice-letterhead-footer img {
   display: block;
+  position: static !important;
   width: 100%;
   height: auto;
+  max-height: none;
+  transform: none !important;
 }
 
 .solvin-title {
@@ -1303,9 +1322,14 @@
   .shipped-card,
   .item-row,
   .totals-wrap,
-  .lower-grid,
-  .signature-section {
+  .lower-grid {
     min-height: 0;
+  }
+
+  /* .signature-box is absolutely positioned, so the section must retain
+     enough flow height to keep the footer below the signature and label. */
+  .signature-section {
+    min-height: 220px;
   }
 
   .invoice-meta-table > div {
