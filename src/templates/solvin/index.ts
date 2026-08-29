@@ -4,21 +4,21 @@ import {
   formatCountryName,
   formatQuantityWithUnit,
   formatSolvinCurrency,
+  getItemSku,
   getPartyAddressLines,
   getItemSerialNumbers,
   getItemUnit,
+  shouldShowItemSku,
   summarizeItemQuantity,
 } from "./formatting";
 import amountInWords from "../../widgets/shared/amountInWords";
 import "./styles.css";
 
 // Register every partial/helper used by the Solvin template before rendering.
-import "../../widgets/invoice-status";
 import "../../widgets/date-time";
 import "../../widgets/markdown-viewer";
 import "../../widgets/refrens-branding";
 import "../../widgets/phone-number";
-import "../../widgets/hsn-summary";
 import "../../widgets/image";
 import "../../widgets/currency-format";
 
@@ -116,9 +116,7 @@ if (hb) {
   hb.registerHelper("isTotalColumn", (column: any) => isKey(column, ["total"]));
   hb.registerHelper("itemColumnValue", getItemColumnValue);
   hb.registerHelper("itemCurrencyValue", getItemColumnValue);
-  hb.registerHelper("itemSku", (item: any) =>
-    String(asRecord(item).sku ?? asRecord(item).itemSku ?? "")
-  );
+  hb.registerHelper("itemSku", getItemSku);
   hb.registerHelper("itemHsn", (item: any) =>
     String(
       asRecord(item).hsn ?? asRecord(item).sac ?? asRecord(item).hsnCode ?? ""
@@ -128,9 +126,7 @@ if (hb) {
   hb.registerHelper("itemUnit", (item: any, invoice: any) =>
     getItemUnit(item, invoice)
   );
-  hb.registerHelper("showItemSku", (item: any, enabled: any) =>
-    Boolean(enabled && (asRecord(item).sku || asRecord(item).itemSku))
-  );
+  hb.registerHelper("showItemSku", shouldShowItemSku);
   hb.registerHelper(
     "quantityWithUnit",
     (item: any, invoice: any, showUnit: any) =>

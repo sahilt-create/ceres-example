@@ -27,6 +27,41 @@ const asOptionalArray = (value: any): any[] => {
   return value ? [value] : [];
 };
 
+const optionalBoolean = (value: any): boolean | undefined => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
+  return undefined;
+};
+
+/** Resolves the supported item SKU aliases without leaking null-like text. */
+export const getItemSku = (itemValue: any): string => {
+  const item = asRecord(itemValue);
+  const sku = String(
+    item.sku ?? item.itemSku ?? item.stockKeepingUnit ?? ""
+  ).trim();
+  return ["", "null", "undefined", "n/a"].includes(sku.toLowerCase())
+    ? ""
+    : sku;
+};
+
+/** Applies both document-level and item-level SKU visibility switches. */
+export const shouldShowItemSku = (
+  itemValue: any,
+  invoiceSetting: any
+): boolean => {
+  const item = asRecord(itemValue);
+  const documentVisible = optionalBoolean(invoiceSetting) ?? false;
+  const itemVisible =
+    optionalBoolean(item.showSku) ??
+    optionalBoolean(item.showSkuInInvoice) ??
+    true;
+  return documentVisible && itemVisible && Boolean(getItemSku(item));
+};
+
 /** Resolves serial numbers from supported direct and batch item shapes. */
 export const getItemSerialNumbers = (itemValue: any): string => {
   const item = asRecord(itemValue);
@@ -289,5 +324,5 @@ export const formatSolvinCurrency = (
     invoice.locale || invoice.businessLocale || "en-IN",
     precision,
     invoice.customCurrencySymbol
-  );
+  ).replace(/\u00a0/g, " ");
 };

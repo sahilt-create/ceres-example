@@ -2,9 +2,11 @@ import {
   formatCountryName,
   formatQuantityWithUnit,
   formatSolvinCurrency,
+  getItemSku,
   getPartyAddressLines,
   getItemSerialNumbers,
   getItemUnit,
+  shouldShowItemSku,
   summarizeItemQuantity,
 } from "../src/templates/solvin/formatting";
 
@@ -33,6 +35,15 @@ describe("Solvin currency formatting", () => {
         subUnitLength: -1,
       })
     ).toBe("$100.00");
+  });
+
+  it("uses the PDF-safe ISO code for lowercase SAR currency", () => {
+    expect(
+      formatSolvinCurrency(51.45, {
+        currency: "sar",
+        locale: "en-US",
+      })
+    ).toBe("SAR 51.45");
   });
 });
 
@@ -127,6 +138,38 @@ describe("Solvin item unit formatting", () => {
 });
 
 describe("Solvin item display properties", () => {
+  it("resolves a clean SKU value and rejects null-like placeholders", () => {
+    expect(getItemSku({ sku: "  SKU-001  " })).toBe("SKU-001");
+    expect(getItemSku({ itemSku: "LEGACY-001" })).toBe("LEGACY-001");
+    expect(getItemSku({ sku: "undefined" })).toBe("");
+  });
+
+  it.each([
+    { invoiceSetting: true, itemSetting: undefined, visible: true },
+    { invoiceSetting: "true", itemSetting: "true", visible: true },
+    { invoiceSetting: 1, itemSetting: 1, visible: true },
+    { invoiceSetting: false, itemSetting: true, visible: false },
+    { invoiceSetting: "false", itemSetting: true, visible: false },
+    { invoiceSetting: 0, itemSetting: true, visible: false },
+    { invoiceSetting: true, itemSetting: false, visible: false },
+    { invoiceSetting: true, itemSetting: "false", visible: false },
+    { invoiceSetting: true, itemSetting: 0, visible: false },
+  ])(
+    "applies invoice SKU setting $invoiceSetting and item setting $itemSetting",
+    ({ invoiceSetting, itemSetting, visible }) => {
+      expect(
+        shouldShowItemSku(
+          { sku: "SKU-001", showSku: itemSetting },
+          invoiceSetting
+        )
+      ).toBe(visible);
+    }
+  );
+
+  it("never shows an empty SKU even when all switches are enabled", () => {
+    expect(shouldShowItemSku({ sku: "", showSku: true }, true)).toBe(false);
+  });
+
   it("formats direct and batch-level serial numbers without duplicates", () => {
     expect(
       getItemSerialNumbers({

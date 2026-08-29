@@ -9,7 +9,6 @@
 
   <header class="solvin-title">
     <h1>{{#if invoice.invoiceTitle}}{{invoice.invoiceTitle}}{{else}}Invoice{{/if}}</h1>
-    <div class="title-status">{{> InvoiceStatus invoice}}</div>
   </header>
 
   <section class="party-meta-grid">
@@ -227,9 +226,41 @@
       {{/if}}
     </div>
 
-    {{#if mapped.visibility.showHsnSummary}}<div class="hsn-panel" data-ceres-hsn-summary>
-      {{> HsnSummaryTable (computeHsnSummary invoice.items isIgst=mapped.visibility.showIgst isUtgst=mapped.visibility.isUtgst) taxLabel=invoice.taxName }}
-    </div>{{/if}}
+    {{#if mapped.visibility.showHsnSummary}}{{#if mapped.hsnSummary.hasRows}}<div class="hsn-panel" data-ceres-hsn-summary>
+      <table class="solvin-hsn-table{{#unless mapped.visibility.showIgst}} is-split-tax{{/unless}}">
+        <thead>
+          <tr>
+            <th rowspan="2">HSN</th>
+            <th rowspan="2">Taxable<br />Value</th>
+            {{#if mapped.visibility.showIgst}}
+              <th colspan="2">{{#if invoice.taxName}}{{invoice.taxName}}{{else}}IGST{{/if}}</th>
+            {{else}}
+              <th colspan="2">CGST</th>
+              <th colspan="2">{{#if mapped.visibility.isUtgst}}UTGST{{else}}SGST{{/if}}</th>
+            {{/if}}
+          </tr>
+          <tr><th>Rate</th><th>Amount</th>{{#unless mapped.visibility.showIgst}}<th>Rate</th><th>Amount</th>{{/unless}}</tr>
+        </thead>
+        <tbody>
+          {{#each mapped.hsnSummary.hsnList}}<tr>
+            <td>{{hsn}}</td><td>{{formatSolvinCurrency taxableValue ../../invoice}}</td>
+            {{#if ../../mapped.visibility.showIgst}}
+              <td>{{igstRate}}%</td><td>{{formatSolvinCurrency igstAmount ../../invoice}}</td>
+            {{else}}
+              <td>{{cgstRate}}%</td><td>{{formatSolvinCurrency cgstAmount ../../invoice}}</td>
+              <td>{{sgstRate}}%</td><td>{{formatSolvinCurrency sgstAmount ../../invoice}}</td>
+            {{/if}}
+          </tr>{{/each}}
+        </tbody>
+        <tfoot>
+          <tr class="solvin-hsn-total-row"><th>Total</th><td>{{formatSolvinCurrency mapped.hsnSummary.totalTaxableValue invoice}}</td>
+            {{#if mapped.visibility.showIgst}}<td></td><td>{{formatSolvinCurrency mapped.hsnSummary.totalIgstAmount invoice}}</td>
+            {{else}}<td></td><td>{{formatSolvinCurrency mapped.hsnSummary.totalCgstAmount invoice}}</td><td></td><td>{{formatSolvinCurrency mapped.hsnSummary.totalSgstAmount invoice}}</td>{{/if}}
+          </tr>
+          <tr><td colspan="{{#if mapped.visibility.showIgst}}4{{else}}6{{/if}}" class="solvin-hsn-words"><strong>Total Tax In Words:</strong> <span>{{titleCaseWords (amountInWords mapped.hsnSummary.totalTaxAmount)}}</span></td></tr>
+        </tfoot>
+      </table>
+    </div>{{/if}}{{/if}}
   </section>
 
   <section class="signature-section">

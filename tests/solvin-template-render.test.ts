@@ -6,9 +6,11 @@ import {
   formatCountryName,
   formatQuantityWithUnit,
   formatSolvinCurrency,
+  getItemSku,
   getPartyAddressLines,
   getItemSerialNumbers,
   getItemUnit,
+  shouldShowItemSku,
 } from "../src/templates/solvin/formatting";
 
 type UnknownRecord = Record<string, any>;
@@ -29,7 +31,10 @@ const itemValue = (itemInput: any, columnValue: any): any => {
 };
 
 beforeAll(() => {
-  HandlebarsRuntime.registerPartial("InvoiceStatus", () => "");
+  HandlebarsRuntime.registerPartial(
+    "InvoiceStatus",
+    () => '<span class="invoice-status-marker">Overdue</span>'
+  );
   HandlebarsRuntime.registerPartial(
     "MarkdownViewer",
     (value: unknown) =>
@@ -101,16 +106,13 @@ beforeAll(() => {
   );
   HandlebarsRuntime.registerHelper("itemColumnValue", itemValue);
   HandlebarsRuntime.registerHelper("itemCurrencyValue", itemValue);
-  HandlebarsRuntime.registerHelper("itemSku", (item: unknown) =>
-    String(asRecord(item).sku ?? asRecord(item).itemSku ?? "")
-  );
+  HandlebarsRuntime.registerHelper("itemSku", getItemSku);
   HandlebarsRuntime.registerHelper("itemHsn", () => "");
   HandlebarsRuntime.registerHelper("itemSerialNumbers", getItemSerialNumbers);
   HandlebarsRuntime.registerHelper("itemUnit", getItemUnit);
   HandlebarsRuntime.registerHelper(
     "showItemSku",
-    (item: unknown, enabled: unknown) =>
-      Boolean(enabled && (asRecord(item).sku || asRecord(item).itemSku))
+    (item: unknown, enabled: unknown) => shouldShowItemSku(item, enabled)
   );
   HandlebarsRuntime.registerHelper(
     "quantityWithUnit",
@@ -447,26 +449,238 @@ describe("Solvin compiled template", () => {
 
     expect(model.mapped.visibility).toMatchObject({
       showHsnSummary: true,
-      showCountryOfSupply: true,
-      showPlaceOfSupply: true,
-      isDescriptionFullWidth: true,
-      showSkuInName: true,
+      showCountryOfSupply: false,
+      showPlaceOfSupply: false,
+      isDescriptionFullWidth: false,
+      showSkuInName: false,
       showTotalsRow: true,
       showTotals: true,
       showTotalInWords: true,
       showSerialNumbersInDescription: true,
     });
-    expect(html).toContain("HSN Summary");
+    expect(html).toContain('class="solvin-hsn-table"');
     expect(html).toContain("data-ceres-hsn-summary");
-    expect(html).toContain("Country of Supply");
-    expect(html).toContain("Place of Supply");
-    expect(html).toContain('class="item-description-row"');
-    expect(html).toContain("SKU</b> : SOL-001");
+    expect(html).not.toContain("Country of Supply");
+    expect(html).not.toContain("Place of Supply");
+    expect(html).not.toContain('class="item-description-row"');
+    expect(html).not.toContain("SKU</b> : SOL-001");
     expect(html).toContain("Serial No.</b> : SN-001, SN-002");
     expect(html).toContain("Consulting subtotal");
     expect(html).toContain('class="items-total-row"');
     expect(html).toContain('class="totals-wrap"');
     expect(html).toContain('class="amount-words-row"');
+  });
+
+  it.each([true, "true", 1])(
+    "renders the SKU when the invoice setting is enabled as %p",
+    (showSkuInInvoice) => {
+      const input = payload(false);
+      Object.assign(input.invoice.items[0], { sku: " SKU-001 " });
+      Object.assign(input.invoice, {
+        advanceOptions: { showSkuInInvoice },
+      });
+
+      const model = mapSolvinTemplateData(input as any);
+      const html = template(model);
+
+      expect(model.mapped.visibility.showSkuInName).toBe(true);
+      expect(html).toContain("SKU</b> : SKU-001");
+    }
+  );
+
+  it.each([false, "false", 0])(
+    "hides the SKU when the invoice setting is disabled as %p",
+    (showSkuInInvoice) => {
+      const input = payload(false);
+      Object.assign(input.invoice.items[0], {
+        sku: "SKU-001",
+        showSku: true,
+      });
+      Object.assign(input.invoice, {
+        advanceOptions: { showSkuInInvoice },
+      });
+
+      const model = mapSolvinTemplateData(input as any);
+      const html = template(model);
+
+      expect(model.mapped.visibility.showSkuInName).toBe(false);
+      expect(html).not.toContain("SKU-001");
+    }
+  );
+
+  it.each([false, "false", 0])(
+    "honors the item-level SKU setting %p when the invoice setting is enabled",
+    (showSku) => {
+      const input = payload(false);
+      Object.assign(input.invoice.items[0], { sku: "SKU-001", showSku });
+      Object.assign(input.invoice, {
+        advanceOptions: { showSkuInInvoice: true },
+      });
+
+      const html = template(mapSolvinTemplateData(input as any));
+      expect(html).not.toContain("SKU-001");
+    }
+  );
+
+  it("never renders an invoice payment-status badge", () => {
+    const html = template(mapSolvinTemplateData(payload(false) as any));
+
+    expect(html).not.toContain("invoice-status-marker");
+    expect(html).not.toContain("Overdue");
+  });
+
+  it("renders the HSN summary with grouped horizontal tax columns", () => {
+    const input = payload(false);
+    Object.assign(input.invoice.items[0], {
+      hsn: "998311",
+      gstRate: 18,
+      amount: 100,
+      igst: 18,
+    });
+
+    const html = template(mapSolvinTemplateData(input as any));
+
+    expect(html).toMatch(
+      /<th rowspan="2">HSN<\/th>[\s\S]*<th rowspan="2">Taxable<br \/>Value<\/th>[\s\S]*<th colspan="2">VAT<\/th>/
+    );
+    expect(html).toMatch(/<th>Rate<\/th><th>Amount<\/th>/);
+    expect(html).toContain("998311");
+    expect(html).toContain('class="solvin-hsn-total-row"');
+    expect(html).toContain("Total Tax In Words:");
+  });
+
+  it("normalizes API string values and HSN aliases for the HSN summary", () => {
+    const input = payload(false);
+    Object.assign(input.invoice.items[0], {
+      hsnCode: "540710",
+      taxRate: "5",
+      amount: "SAR 49.00",
+      igst: "SAR 2.45",
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+
+    expect(model.mapped.hsnSummary.hsnList[0]).toMatchObject({
+      hsn: "540710",
+      taxableValue: 49,
+      igstRate: 5,
+      igstAmount: 2.45,
+    });
+  });
+
+  it("renames an accidental Amount label on the total column", () => {
+    const input = payload(false);
+    input.invoice.columns[4] = {
+      ...input.invoice.columns[4],
+      label: "Amount",
+      isHidden: false,
+    } as any;
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+    const totalColumn = model.mapped.columns.find(
+      (column) => column.key === "total"
+    );
+
+    expect(totalColumn?.label).toBe("Total");
+    expect(html).toMatch(/<th class="col-total [^"]+">Total<\/th>/);
+  });
+
+  it("follows the full-width description setting from advanced options", () => {
+    const disabled = mapSolvinTemplateData(payload(false) as any);
+    const enabled = mapSolvinTemplateData(payload(true) as any);
+
+    expect(disabled.mapped.visibility.isDescriptionFullWidth).toBe(false);
+    expect(template(disabled)).not.toContain('class="item-description-row"');
+    expect(enabled.mapped.visibility.isDescriptionFullWidth).toBe(true);
+    expect(template(enabled)).toContain('class="item-description-row"');
+  });
+
+  it.each([true, "true", 1, "yes", "on"])(
+    "honors hide-country/place settings expressed as %p",
+    (hidden) => {
+      const input = payload(false);
+      Object.assign(input.invoice, {
+        countryOfSupply: "IN",
+        placeOfSupply: "Karnataka",
+        advanceOptions: {
+          hideCountryOfSupply: hidden,
+          hidePlaceOfSupply: hidden,
+        },
+      });
+
+      const model = mapSolvinTemplateData(input as any);
+      const html = template(model);
+
+      expect(model.mapped.visibility.showCountryOfSupply).toBe(false);
+      expect(model.mapped.visibility.showPlaceOfSupply).toBe(false);
+      expect(html).not.toContain("Country of Supply");
+      expect(html).not.toContain("Place of Supply");
+    }
+  );
+
+  it.each([false, "false", 0, "no", "off"])(
+    "keeps populated country/place visible when hide settings are %p",
+    (hidden) => {
+      const input = payload(false);
+      Object.assign(input.invoice, {
+        countryOfSupply: "IN",
+        placeOfSupply: "Karnataka",
+        advanceOptions: {
+          hideCountryOfSupply: hidden,
+          hidePlaceOfSupply: hidden,
+        },
+      });
+
+      const model = mapSolvinTemplateData(input as any);
+
+      expect(model.mapped.visibility.showCountryOfSupply).toBe(true);
+      expect(model.mapped.visibility.showPlaceOfSupply).toBe(true);
+    }
+  );
+
+  it("honors explicit show-country/place settings and invoiceValueProps", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      countryOfSupply: "IN",
+      placeOfSupply: "Karnataka",
+      advanceOptions: {
+        showCountryOfSupply: false,
+        showPlaceOfSupply: true,
+      },
+    });
+    Object.assign(input, {
+      invoiceValueProps: {
+        placeOfSupply: { showInInvoice: false },
+      },
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+
+    expect(model.mapped.visibility.showCountryOfSupply).toBe(false);
+    expect(model.mapped.visibility.showPlaceOfSupply).toBe(false);
+  });
+
+  it.each([
+    { value: true, fullWidth: true },
+    { value: "true", fullWidth: true },
+    { value: 1, fullWidth: true },
+    { value: false, fullWidth: false },
+    { value: "false", fullWidth: false },
+    { value: 0, fullWidth: false },
+  ])("honors showDescriptionInFullWidth=$value", ({ value, fullWidth }) => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      isDescriptionFullWidth: undefined,
+      advanceOptions: { showDescriptionInFullWidth: value },
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.mapped.visibility.isDescriptionFullWidth).toBe(fullWidth);
+    expect(html.includes('class="item-description-row"')).toBe(fullWidth);
+    expect(html.match(/Rendered once/g)).toHaveLength(1);
   });
 
   it.each([
