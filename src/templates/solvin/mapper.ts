@@ -1,0 +1,461 @@
+import {
+  normalizeInvoiceTemplateState,
+  type InvoiceTemplateColumn,
+} from "../../main/invoiceTemplateNormalization";
+
+type UnknownRecord = Record<string, any>;
+
+const ROW_NUMBER_KEYS = new Set(["sr", "srno", "sno", "rownumber", "index"]);
+
+/** The enabled display-property profile supplied for the Solvin template. */
+export const SOLVIN_DISPLAY_PROPERTIES = Object.freeze({
+  showHsnSummary: true,
+  showSupply: true,
+  isDescriptionFullWidth: true,
+  showSkuInName: true,
+  showSerialNumbersInDescription: true,
+  showGroupSubTotal: true,
+  showTotalsRow: true,
+  showTotals: true,
+  showTotalInWords: true,
+});
+
+const asRecord = (value: any): UnknownRecord =>
+  value && typeof value === "object" && !Array.isArray(value) ? value : {};
+
+const normalizedName = (value: any): string =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+
+const firstText = (...values: any[]): string =>
+  values.map((value) => String(value ?? "").trim()).find(Boolean) || "";
+
+const resolveCurrencySymbol = (invoice: UnknownRecord): string =>
+  firstText(invoice.customCurrencySymbol);
+
+const buildNote = (invoice: UnknownRecord): string => {
+  const note = firstText(invoice.notes);
+  const currency = firstText(invoice.currency, invoice.businessCurrency, "INR");
+  const symbol = resolveCurrencySymbol(invoice);
+  const currencyLine = symbol ? `${currency} (${symbol})` : currency;
+
+  return note
+    ? `${note}\n\nCurrency: ${currencyLine}`
+    : `Currency: ${currencyLine}`;
+};
+
+const numericValue = (value: any): number | undefined => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return undefined;
+
+  const accountingNegative = /^\(.*\)$/.test(raw);
+  const numericPart = raw.match(/[-+]?\d[\d,\s]*(?:\.\d+)?/);
+  if (!numericPart) return undefined;
+
+  // Permit formatted currency values such as "SAR 100" and "₹1,250.50",
+  // but reject arbitrary mixed values rather than silently treating them as 0.
+  const surroundingText = raw
+    .replace(numericPart[0], "")
+    .replace(/[()\s]/g, "");
+  if (
+    surroundingText &&
+    !/^(?:[A-Za-z]{3}|[^A-Za-z0-9]+)$/.test(surroundingText)
+  ) {
+    return undefined;
+  }
+
+  const parsed = Number(numericPart[0].replace(/[,\s]/g, ""));
+  if (!Number.isFinite(parsed)) return undefined;
+  return accountingNegative ? -Math.abs(parsed) : parsed;
+};
+
+const firstMonetaryValue = (...values: any[]): any =>
+  values.find((value) => numericValue(value) !== undefined);
+
+const optionalBooleanValue = (value: any): boolean | undefined => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return undefined;
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
+  return undefined;
+};
+
+const configuredVisibility = (
+  invoice: UnknownRecord,
+  keys: string[]
+): boolean | undefined => {
+  const invoiceValueProps = asRecord(invoice.invoiceValueProps);
+
+  return keys
+    .map((key) => {
+      const matchingKey = Object.keys(invoiceValueProps).find(
+        (candidate) => normalizedName(candidate) === normalizedName(key)
+      );
+      if (!matchingKey) return undefined;
+
+      const setting = invoiceValueProps[matchingKey];
+      const directValue = optionalBooleanValue(setting);
+      if (directValue !== undefined) return directValue;
+
+      const settingRecord = asRecord(setting);
+      return (
+        optionalBooleanValue(settingRecord.visible) ??
+        optionalBooleanValue(settingRecord.showInInvoice)
+      );
+    })
+    .find((value) => value !== undefined);
+};
+
+/** Resolves built-in properties and document-configured item custom fields. */
+export const getItemColumnValue = (itemValue: any, columnValue: any): any => {
+  const item = asRecord(itemValue);
+  const column = asRecord(columnValue);
+  const key = String(column.key ?? "");
+  const normalizedKey = normalizedName(key);
+
+  if (key && item[key] !== undefined) return item[key];
+
+  const matchingItemKey = Object.keys(item).find(
+    (candidate) => normalizedName(candidate) === normalizedKey
+  );
+  if (matchingItemKey) return item[matchingItemKey];
+
+  const custom = asRecord(item.custom);
+  const matchingCustomKey = Object.keys(custom).find(
+    (candidate) => normalizedName(candidate) === normalizedKey
+  );
+  if (matchingCustomKey) return custom[matchingCustomKey];
+
+  const customFields = Array.isArray(item.customFields)
+    ? item.customFields
+    : Object.values(asRecord(item.customFields));
+  const customField = customFields.find((field: any) => {
+    const record = asRecord(field);
+    return [record.key, record.label, record.name]
+      .map(normalizedName)
+      .includes(normalizedKey);
+  });
+  const customFieldRecord = asRecord(customField);
+  return customFieldRecord.value ?? customFieldRecord.defaultValue ?? "";
+};
+
+const findVisibleColumn = (
+  columns: InvoiceTemplateColumn[],
+  keys: string[],
+  fallbackLabels: any[] = [],
+  allowSummarisedCurrency = false
+): InvoiceTemplateColumn | undefined => {
+  const normalizedKeys = keys.map(normalizedName);
+  const visibleColumns = columns.filter((column) => !column.isHidden);
+  return (
+    visibleColumns.find((column) =>
+      normalizedKeys.includes(normalizedName(column.key))
+    ) ||
+    visibleColumns.find((column) =>
+      [...normalizedKeys, ...fallbackLabels.map(normalizedName)].includes(
+        normalizedName(column.label)
+      )
+    ) ||
+    (allowSummarisedCurrency &&
+      visibleColumns.find(
+        (column) =>
+          column.summarise &&
+          (column.semanticType === "currency" ||
+            column.fxReturnType.toLowerCase() === "currency") &&
+          ![
+            "discount",
+            "tax",
+            "igst",
+            "cgst",
+            "sgst",
+            "utgst",
+            "total",
+          ].includes(normalizedName(column.key))
+      )) ||
+    undefined
+  );
+};
+
+const labelFor = (
+  columns: InvoiceTemplateColumn[],
+  keys: string[],
+  fallback: any,
+  defaultLabel: string
+): string =>
+  findVisibleColumn(columns, keys, [fallback, defaultLabel])?.label ||
+  String(fallback || defaultLabel);
+
+const isRealLineItem = (itemValue: any): boolean => {
+  const item = asRecord(itemValue);
+  return !item.isGroupItemTotalRow && !item.isAdditionalCharge && !item.group;
+};
+
+const getTaxRates = (
+  items: any[],
+  taxRateColumn?: InvoiceTemplateColumn
+): number[] => {
+  const rates = items
+    .filter(isRealLineItem)
+    .map((itemValue) => {
+      const item = asRecord(itemValue);
+      const value =
+        item.gstRate ??
+        item.taxRate ??
+        item.tax ??
+        (taxRateColumn
+          ? getItemColumnValue(itemValue, taxRateColumn)
+          : undefined);
+      return numericValue(value);
+    })
+    .filter((rate): rate is number => rate !== undefined);
+
+  return [...new Set(rates)].sort((left, right) => left - right);
+};
+
+const appendTaxRates = (
+  label: string,
+  rates: number[],
+  divisor = 1
+): string => {
+  if (!rates.length || label.includes("%")) return label;
+
+  const formattedRates = rates.map((rate) => {
+    const applicableRate = Math.round((rate / divisor) * 10000) / 10000;
+    return `${applicableRate}%`;
+  });
+
+  return `${label} (${formattedRates.join(", ")})`;
+};
+
+/** Ensures the rendered items table starts with a visible serial-number column. */
+export const addItemSerialNumberColumn = (
+  state: ReturnType<typeof normalizeInvoiceTemplateState>
+) => {
+  const columns = [...state.mapped.columns];
+  const existingIndex = columns.findIndex((column) =>
+    ROW_NUMBER_KEYS.has(column.key.toLowerCase())
+  );
+
+  if (existingIndex >= 0) {
+    const [existingColumn] = columns.splice(existingIndex, 1);
+    columns.unshift({
+      ...existingColumn,
+      label: "Item",
+      className: "col-index",
+      isHidden: false,
+    });
+  } else {
+    columns.unshift({
+      key: "index",
+      label: "Item",
+      className: "col-index",
+      isHidden: false,
+      dataType: "number",
+      fxReturnType: "",
+      isCessColumn: false,
+      summarise: false,
+    });
+  }
+
+  return {
+    ...state,
+    mapped: {
+      ...state.mapped,
+      columns,
+      visibility: {
+        ...state.mapped.visibility,
+        visibleColumnCount: columns.filter((column) => !column.isHidden).length,
+      },
+    },
+  };
+};
+
+export const mapSolvinTemplateData = (payload: any) => {
+  const normalizedState = addItemSerialNumberColumn(
+    normalizeInvoiceTemplateState(payload)
+  );
+  const invoice = {
+    ...normalizedState.invoice,
+    items: Array.isArray(normalizedState.invoice.items)
+      ? normalizedState.invoice.items
+      : [],
+  };
+  const state = { ...normalizedState, invoice };
+  const { columns } = state.mapped;
+  const customLabels = asRecord(invoice.customLabels);
+  const balance = asRecord(invoice.balance);
+  const toPay = asRecord(invoice.toPay);
+  const finalTotal = asRecord(invoice.finalTotal);
+  const invoiceTotals = asRecord(invoice.totals);
+  const dueAmount = firstMonetaryValue(
+    balance.due,
+    balance.dueAmount,
+    balance.balanceDue,
+    toPay.full,
+    toPay.amount,
+    typeof invoice.toPay === "object" ? undefined : invoice.toPay,
+    finalTotal.due,
+    finalTotal.dueAmount,
+    invoiceTotals.due,
+    invoiceTotals.dueAmount
+  );
+  const explicitDueVisibility =
+    configuredVisibility(invoice, ["dueAmount", "balanceDue"]) ??
+    optionalBooleanValue(invoice.showDueAmount);
+  const notes = firstText(invoice.notes);
+  const showTerms =
+    Array.isArray(invoice.terms) &&
+    invoice.terms.some((group) => {
+      const { terms } = asRecord(group);
+      return (
+        Array.isArray(terms) && terms.some((term) => Boolean(firstText(term)))
+      );
+    });
+  const showNotes =
+    Boolean(notes) &&
+    (configuredVisibility(invoice, ["notes"]) ??
+      optionalBooleanValue(invoice.notesShowInInvoice) ??
+      optionalBooleanValue(invoice.showNotesInInvoice) ??
+      optionalBooleanValue(invoice.showNotes) ??
+      !(optionalBooleanValue(invoice.hideNotes) ?? false));
+  const parsedDueAmount = numericValue(dueAmount);
+  const showDueAmount =
+    explicitDueVisibility ??
+    (parsedDueAmount !== undefined && parsedDueAmount !== 0);
+  const hasHsnItems = invoice.items.some((itemValue) => {
+    const item = asRecord(itemValue);
+    return Boolean(firstText(item.hsn, item.sac, item.hsnCode));
+  });
+  const showHsnSummary =
+    SOLVIN_DISPLAY_PROPERTIES.showHsnSummary &&
+    state.mapped.visibility.showTaxes &&
+    (state.mapped.visibility.showHsnSummary || hasHsnItems);
+  const amountColumn = findVisibleColumn(
+    columns,
+    ["amount", "subtotal"],
+    [customLabels.subTotal, "Sub Total", "Amount", "Taxable Value"],
+    true
+  );
+  const taxRateColumn = findVisibleColumn(
+    columns,
+    ["gstRate", "gst", "taxRate", "tax"],
+    ["GST Rate", "Tax Rate"]
+  );
+  const taxRates = getTaxRates(
+    Array.isArray(invoice.items) ? invoice.items : [],
+    taxRateColumn
+  );
+
+  // The rows and values rendered in the document are authoritative. This also
+  // handles an amount column whose values live in item.customFields.
+  const itemAmounts = amountColumn
+    ? (Array.isArray(invoice.items) ? invoice.items : [])
+        .filter(isRealLineItem)
+        .map((item) => numericValue(getItemColumnValue(item, amountColumn)))
+        .filter((value): value is number => value !== undefined)
+    : [];
+  const subTotal = itemAmounts.length
+    ? itemAmounts.reduce((sum, amount) => sum + amount, 0)
+    : numericValue(invoice.subTotal) ?? 0;
+
+  return {
+    ...state,
+    mapped: {
+      ...state.mapped,
+      visibility: {
+        ...state.mapped.visibility,
+        showDueAmount,
+        showHsnSummary,
+        showCountryOfSupply:
+          SOLVIN_DISPLAY_PROPERTIES.showSupply &&
+          Boolean(firstText(invoice.countryOfSupply)),
+        showPlaceOfSupply:
+          SOLVIN_DISPLAY_PROPERTIES.showSupply &&
+          Boolean(firstText(invoice.placeOfSupply)),
+        isDescriptionFullWidth:
+          SOLVIN_DISPLAY_PROPERTIES.isDescriptionFullWidth,
+        showSku: SOLVIN_DISPLAY_PROPERTIES.showSkuInName,
+        showSkuInName: SOLVIN_DISPLAY_PROPERTIES.showSkuInName,
+        showSerialNumbersInDescription:
+          SOLVIN_DISPLAY_PROPERTIES.showSerialNumbersInDescription,
+        showTotalsRow: SOLVIN_DISPLAY_PROPERTIES.showTotalsRow,
+        showTotals: SOLVIN_DISPLAY_PROPERTIES.showTotals,
+        showTotalInWords: SOLVIN_DISPLAY_PROPERTIES.showTotalInWords,
+        showNotes,
+        showTerms,
+      },
+    },
+    display: {
+      currency: firstText(invoice.currency, invoice.businessCurrency, "INR"),
+      currencySymbol: resolveCurrencySymbol(invoice),
+      note: buildNote(invoice),
+      notes,
+      labels: {
+        notes: firstText(customLabels.notes, "Notes"),
+        subTotal:
+          amountColumn?.label || String(customLabels.subTotal || "Sub Total"),
+        igst: appendTaxRates(
+          labelFor(
+            columns,
+            ["igst", "taxamount", "tax"],
+            customLabels.igst || invoice.taxName,
+            "IGST"
+          ),
+          taxRates
+        ),
+        cgst: appendTaxRates(
+          labelFor(columns, ["cgst"], customLabels.cgst, "CGST"),
+          taxRates,
+          2
+        ),
+        sgst: appendTaxRates(
+          labelFor(columns, ["sgst"], customLabels.sgst, "SGST"),
+          taxRates,
+          2
+        ),
+        utgst: appendTaxRates(
+          labelFor(columns, ["utgst", "sgst"], customLabels.utgst, "UTGST"),
+          taxRates,
+          2
+        ),
+        total: labelFor(columns, ["total"], customLabels.total, "Total"),
+        tdsAmountWithheld: firstText(
+          customLabels.tdsAmountWithheld,
+          customLabels.tds,
+          "TDS Amount Withheld"
+        ),
+        amountPaid: firstText(
+          customLabels.amountPaid,
+          customLabels.paid,
+          "Amount Paid"
+        ),
+        amountReceived: firstText(
+          customLabels.amountReceived,
+          customLabels.settledAmount,
+          "Amount Received"
+        ),
+        transactionCharge: firstText(
+          customLabels.transactionCharge,
+          "Transaction Charge"
+        ),
+        dueAmount: firstText(
+          customLabels.dueAmount,
+          customLabels.balanceDue,
+          "Due Amount"
+        ),
+      },
+    },
+    totals: { subTotal, dueAmount },
+  };
+};
+
+export type SolvinTemplateState = ReturnType<typeof mapSolvinTemplateData>;

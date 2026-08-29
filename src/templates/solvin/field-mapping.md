@@ -1,0 +1,74 @@
+# Solvin field mapping
+
+The Solvin template starts with `normalizeInvoiceTemplateState` and adds a
+template-specific `display` and `totals` view model in `mapper.ts`.
+
+## Header and parties
+
+| Rendered field        | Template source and fallbacks                                                 | Visibility / formatting                                                            |
+| --------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Letterhead            | `invoice.letterHead`                                                          | Empty image hook remains for live preview updates.                                 |
+| Document title        | `invoice.invoiceTitle`, then `Invoice`                                        | Always shown.                                                                      |
+| Status                | `InvoiceStatus invoice`                                                       | Widget-owned status rules.                                                         |
+| Billed By / To        | `invoice.billedBy`, `invoice.billedTo`                                        | Address fields render only when populated; configured custom labels are preferred. |
+| Party IDs and contact | GSTIN, PAN, TRN, TIN, VAT, SST, phone, email, `additionalIds`, `customFields` | Optional values only; phone uses the shared formatter.                             |
+| Shipped To            | `invoice.shippedTo`                                                           | Controlled by `mapped.visibility.shippedTo`.                                       |
+
+## Document details
+
+| Rendered field            | Template source and fallbacks                                 | Visibility / formatting                                                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Number                    | `invoice.invoiceNumber`                                       | Label uses `customLabels.invoiceNumber`, then `Invoice No`.                                                                                                                            |
+| Invoice / due date        | `invoice.invoiceDate`, `invoice.dueDate`                      | Shared date helper with `ownerOffset`; due date is optional.                                                                                                                           |
+| Country / place of supply | Normalized `invoice.countryOfSupply`, `invoice.placeOfSupply` | ISO country codes display as names. GST state codes are mapped only for Indian supply; foreign placeholder codes use the billed-to destination. Shared visibility flags are respected. |
+| PO number                 | `invoice.purchaseOrderNumber`                                 | Optional, configured label supported.                                                                                                                                                  |
+| Custom headers            | `invoice.customHeaders[]`                                     | Every payload-provided label/value pair is rendered.                                                                                                                                   |
+
+## Items
+
+| Rendered field      | Template source and fallbacks                                                                               | Visibility / formatting                                                                                                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Columns             | `mapped.columns[]`                                                                                          | Only non-hidden columns render; labels remain payload-editable.                                                                                                                            |
+| Cell value          | Direct item key, case-insensitive item key, `item.custom`, then matching `item.customFields` key/label/name | Rate/unit-price and monetary columns use currency formatting; other currency, number, percent and boolean formatting follows column metadata.                                              |
+| Description         | `item.description`                                                                                          | Solvin's enabled display profile renders descriptions once in a full-width row with the visible-column colspan.                                                                            |
+| SKU / serials       | `item.sku`; supported direct or batch serial-number collections                                             | SKU and available serial numbers render in item details even when older stored document options are disabled.                                                                              |
+| Unit                | `item.unit`, then configured business units and legacy UOM fields                                           | `advanceOptions.unitColumn` supports `SEPARATE`, `MERGE_QUANTITY`, and `MERGE_NAME`; opaque configured unit IDs resolve to their display labels.                                           |
+| Group subtotal rows | Payload rows marked `isGroupItemTotalRow`                                                                   | Always shown by the enabled Solvin display profile; excluded from derived subtotal, quantity, and rate calculations.                                                                       |
+| Item summary row    | Quantity, distinct tax rates, and configured summarised columns                                             | Always shown and includes summarized real-item quantity. Monetary values use the shared currency formatter and tax-rate values retain the `%` suffix without adding unlike rates together. |
+
+## Totals
+
+| Rendered field             | Template source and fallbacks                                                   | Visibility / formatting                                                                                                                                                                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subtotal value             | `totals.subTotal`                                                               | Sum of valid numeric line-item values from the visible amount/subtotal column, including formatted currency strings and matching item custom fields. Synthetic group totals, additional-charge rows, and invalid values are excluded. Falls back to `invoice.subTotal` when no valid item amount resolves. |
+| Subtotal label             | `display.labels.subTotal`                                                       | Visible amount/subtotal column label first, then custom/default label.                                                                                                                                                                                                                                     |
+| Tax labels                 | `display.labels.igst/cgst/sgst/utgst`                                           | Tax label plus the distinct item tax percentages. IGST/global tax uses the full `gstRate`/`taxRate`/`tax`; split GST labels use half of each rate.                                                                                                                                                         |
+| IGST / CGST / SGST / UTGST | `invoice.finalTotal.*`                                                          | Tax label mirrors the corresponding visible item column, then uses custom/API/default fallback. Tax visibility is normalized.                                                                                                                                                                              |
+| Additional charges         | `invoice.additionalCharges[]`                                                   | Uses charge label/name and amount.                                                                                                                                                                                                                                                                         |
+| Grand total                | `invoice.finalTotal.total`                                                      | Label mirrors visible total column, then custom/default label; currency-code visibility is configurable.                                                                                                                                                                                                   |
+| TDS amount withheld        | `invoice.balance.tds`                                                           | Renders when non-zero and uses accounting parentheses. Label uses `customLabels.tdsAmountWithheld`, then `customLabels.tds`, then `TDS Amount Withheld`.                                                                                                                                                   |
+| Amount paid                | `invoice.balance.paid`                                                          | Renders when non-zero and uses accounting parentheses. Label uses `customLabels.amountPaid`, then `customLabels.paid`, then `Amount Paid`.                                                                                                                                                                 |
+| Amount received            | `invoice.balance.settledAmount`                                                 | Renders when non-zero. Label uses `customLabels.amountReceived`, then `customLabels.settledAmount`, then `Amount Received`.                                                                                                                                                                                |
+| Transaction charge         | `invoice.balance.transactionCharge`                                             | Renders when non-zero. Label uses `customLabels.transactionCharge`, then `Transaction Charge`.                                                                                                                                                                                                             |
+| Due amount                 | `totals.dueAmount`, resolved from payload balance, `toPay`, or due-total fields | Renders for a non-zero payload value by default. An explicit `showDueAmount` or matching `invoiceValueProps` setting controls visibility. Label uses `customLabels.dueAmount`, then `customLabels.balanceDue`, then `Due Amount`.                                                                          |
+| Custom footers             | `invoice.customFooters[]`                                                       | Intentionally hidden from the totals section.                                                                                                                                                                                                                                                              |
+| Total in words             | Custom value, then `amountInWords(invoice.finalTotal.total)`                    | Always shown by the enabled Solvin display profile; title-cased custom value uses the shared number conversion fallback.                                                                                                                                                                                   |
+
+## Lower sections and intentional omissions
+
+- Terms render from grouped `invoice.terms[].terms[]`.
+- Notes render in a full-width Markdown block using `invoice.notes` and the
+  editable `customLabels.notes` heading. This supports API payloads that store
+  lengthy terms and conditions in `notes`; the block can continue across
+  printed/PDF pages and respects notes visibility settings.
+- Bank account fields and bank custom fields render only when
+  `mapped.visibility.showBankAccount` is true.
+- HSN summary uses the shared widget whenever taxes are visible and HSN data exists. Solvin recognizes the API's `showHSNSummaryInInvoice` shape but intentionally applies the supplied enabled profile even when older stored options differ. Its wrapper keeps the live-preview `data-ceres-hsn-summary` hook.
+- Signature and footer letterhead use their shared image/live-update hooks.
+- Notes and currency metadata are mapped as `display.notes`, `display.note`,
+  `display.currency`, and `display.currencySymbol`. `display.notes` is the
+  rendered note content. `display.note` preserves the combined legacy value
+  that appends `Currency: <code> (<custom symbol>)`.
+- This design intentionally omits attachments, transport/logistics,
+  payment history, UPI/QR, tax-detail tables, and IRN blocks because they are
+  not present in the supplied Solvin layout.

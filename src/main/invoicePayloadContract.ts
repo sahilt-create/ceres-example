@@ -11,7 +11,12 @@ export interface CeresTemplatePayload {
   showExpenseNumber?: boolean;
   isEarlyPayApplicable?: boolean;
   showItemNameFullWidth?: boolean;
-  invoiceValueProps?: Record<string, { visible: boolean }>;
+  invoiceValueProps?: Record<
+    string,
+    | { visible?: boolean | string; showInInvoice?: boolean | string }
+    | boolean
+    | string
+  >;
   ownerTimeZone?: string;
   businessTimeZone?: string;
   showBankAccount?: boolean;
@@ -21,6 +26,7 @@ export interface CeresTemplatePayload {
   isBusinessUser?: boolean;
   hideHashInDocumentNumber?: boolean;
   showPaymentsTable?: boolean;
+  showDueAmount?: boolean | string | number;
   isPublicView?: boolean;
   isDescriptionFullWidth?: boolean;
   irnPosition?: "ABOVE_LINEITEMS" | "BELOW_LINEITEMS" | string;
@@ -56,6 +62,9 @@ export interface InvoiceAdvanceOptions {
   hideTaxes?: boolean;
   hideTotals?: boolean;
   hideCurrencyCode?: boolean;
+  showHsnSummary?: boolean | string | number;
+  showHSNSummaryInInvoice?: boolean | string | number;
+  showSerialNumbersInDescription?: boolean | string | number;
   reverseCharge?: boolean;
   taxSummaryView?: "DETAILED" | "SUMMARY" | string;
   showSkuInInvoice?: boolean;
@@ -66,6 +75,7 @@ export interface InvoiceAdvanceOptions {
   itemNameFullWidth?: boolean;
   isDescriptionFullWidth?: boolean;
   hideCountryOfSupply?: boolean;
+  hidePlaceOfSupply?: boolean;
   [key: string]: unknown;
 }
 
@@ -85,15 +95,29 @@ export interface InvoiceData {
   isOverdue?: boolean;
   invoiceNumber: string;
   expenseNumber?: string;
+  expenseDate?: string | Date;
+  creditNoteNumber?: string;
+  creditNoteDate?: string | Date;
+  debitNoteNumber?: string;
+  debitNoteDate?: string | Date;
+  salesOrderNumber?: string;
+  salesOrderDate?: string | Date;
+  orderNumber?: string;
   purchaseOrderNumber?: string;
+  purchaseOrderDate?: string | Date;
+  documentNumber?: string;
+  documentDate?: string | Date;
   quotationNumber?: string;
   dueDate?: string | Date;
   invoiceDate?: string | Date;
   invoiceTitle?: string;
   invoiceSubTitle?: string;
   currency: string;
+  businessLocale?: string;
   subUnitLength?: number;
   customCurrencySymbol?: string;
+  showItemNameFullWidth?: boolean;
+  isDescriptionFullWidth?: boolean;
   billedBy?: BillerDetails;
   billedTo?: BillerDetails;
   shippedFrom?: BillerDetails;
@@ -102,6 +126,19 @@ export interface InvoiceData {
   taxSummary?: TaxSummary | TaxSummary[];
   hsnSummary?: HsnSummary | HsnSummary[];
   additionalCharges?: AdditionalCharge[];
+  extraTotalFields?:
+    | Array<{
+        _id?: string;
+        key?: string;
+        label?: string;
+        name?: string;
+        value?: any;
+        defaultValue?: any;
+        showInInvoice?: boolean;
+        params?: { showInInvoice?: boolean; [key: string]: any };
+        [key: string]: any;
+      }>
+    | Record<string, any>;
   cesses?: CessCharge[];
   latePaymentFee?: {
     enabled?: boolean;
@@ -127,6 +164,7 @@ export interface InvoiceData {
     credit?: number | string;
     [key: string]: any;
   };
+  showDueAmount?: boolean | string | number;
   taxType?: string;
   taxName?: string;
   isIgst?: boolean;
@@ -137,6 +175,10 @@ export interface InvoiceData {
   utgst?: number;
   irn?: IrnDetails;
   notes?: string;
+  hideNotes?: boolean | string | number;
+  showNotes?: boolean | string | number;
+  showNotesInInvoice?: boolean | string | number;
+  notesShowInInvoice?: boolean | string | number;
   terms?: Array<{ label: string; terms: string[] }>;
   attachments?: string[];
   footers?: Array<{ _id: string; label: string; value: string }>;
@@ -166,6 +208,7 @@ export interface InvoiceData {
   creditNoteStatus?: string;
   linkedInvoices?: Array<any>;
   documentReason?: string;
+  countryOfSupply?: string;
   placeOfSupply?: string;
   pos?: string;
   invoiceType?: string;
@@ -425,6 +468,8 @@ export interface ColumnDef {
   label: string;
   dataType?: string;
   fxReturnType?: string;
+  semanticType?: "percentage" | "currency";
+  isCessColumn?: boolean;
   summarise?: boolean;
   isHidden?: boolean;
 }
@@ -448,6 +493,7 @@ export interface FlattenedInvoicePayload extends InvoiceData {
   isBusinessUser?: boolean;
   hideHashInDocumentNumber?: boolean;
   showPaymentsTable?: boolean;
+  showDueAmount?: boolean | string | number;
   isPublicView?: boolean;
   isDescriptionFullWidth?: boolean;
   irnPosition?: CeresTemplatePayload["irnPosition"];
@@ -460,7 +506,9 @@ export interface FlattenedInvoicePayload extends InvoiceData {
   einvoiceConfig?: EinvoiceConfig;
 }
 
-export type InvoicePayloadInput = CeresTemplatePayload | FlattenedInvoicePayload;
+export type InvoicePayloadInput =
+  | CeresTemplatePayload
+  | FlattenedInvoicePayload;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -506,19 +554,22 @@ export const normalizeInvoicePayload = (
     hideEarlyPay: payload.hideEarlyPay,
     showExpenseNumber: payload.showExpenseNumber,
     isEarlyPayApplicable: payload.isEarlyPayApplicable,
-    showItemNameFullWidth: payload.showItemNameFullWidth,
+    showItemNameFullWidth:
+      payload.showItemNameFullWidth ?? payload.invoice.showItemNameFullWidth,
     invoiceValueProps: payload.invoiceValueProps,
     ownerTimeZone: payload.ownerTimeZone,
     businessTimeZone: payload.businessTimeZone,
     showBankAccount: payload.showBankAccount,
     showUpi: payload.showUpi,
-    businessLocale: payload.businessLocale,
+    businessLocale: payload.businessLocale ?? payload.invoice.businessLocale,
     businessCurrency: payload.businessCurrency,
     isBusinessUser: payload.isBusinessUser,
     hideHashInDocumentNumber: payload.hideHashInDocumentNumber,
     showPaymentsTable: payload.showPaymentsTable,
+    showDueAmount: payload.showDueAmount ?? payload.invoice.showDueAmount,
     isPublicView: payload.isPublicView,
-    isDescriptionFullWidth: payload.isDescriptionFullWidth,
+    isDescriptionFullWidth:
+      payload.isDescriptionFullWidth ?? payload.invoice.isDescriptionFullWidth,
     irnPosition: payload.irnPosition,
     showStockSummary: payload.showStockSummary,
     showVendorBankAccount: payload.showVendorBankAccount,
@@ -527,6 +578,7 @@ export const normalizeInvoicePayload = (
     copy: payload.copy,
     ewayConfig: payload.ewayConfig,
     einvoiceConfig: payload.einvoiceConfig,
-    template: payload.invoice.template ?? normalizeTemplateConfig(payload.template),
+    template:
+      payload.invoice.template ?? normalizeTemplateConfig(payload.template),
   };
 };
