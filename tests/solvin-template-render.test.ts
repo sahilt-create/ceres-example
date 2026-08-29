@@ -138,6 +138,10 @@ beforeAll(() => {
     "formatSolvinCurrency",
     (value: unknown) => `money:${String(value ?? "")}`
   );
+  HandlebarsRuntime.registerHelper(
+    "formatSolvinCurrencyMarkup",
+    (value: unknown) => `money:${String(value ?? "")}`
+  );
   HandlebarsRuntime.registerHelper("formatTotalQuantity", () => "1");
   HandlebarsRuntime.registerHelper(
     "columnSummaryValue",

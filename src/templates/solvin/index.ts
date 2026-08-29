@@ -4,6 +4,7 @@ import {
   formatCountryName,
   formatQuantityWithUnit,
   formatSolvinCurrency,
+  formatSolvinCurrencyMarkup,
   getItemSku,
   getPartyAddressLines,
   getItemSerialNumbers,
@@ -75,6 +76,11 @@ if (hb) {
   hb.registerHelper("formatCountryName", formatCountryName);
   hb.registerHelper("partyAddressLines", getPartyAddressLines);
   hb.registerHelper("formatSolvinCurrency", formatSolvinCurrency);
+  hb.registerHelper(
+    "formatSolvinCurrencyMarkup",
+    (amount: any, invoice: any) =>
+      new hb.SafeString(formatSolvinCurrencyMarkup(amount, invoice))
+  );
   hb.registerHelper("columnAlignmentClass", (column: any) => {
     const record = asRecord(column);
     const dataType = String(record.dataType ?? "").toLowerCase();

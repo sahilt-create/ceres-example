@@ -2,6 +2,7 @@ import {
   formatCountryName,
   formatQuantityWithUnit,
   formatSolvinCurrency,
+  formatSolvinCurrencyMarkup,
   getItemSku,
   getPartyAddressLines,
   getItemSerialNumbers,
@@ -17,6 +18,27 @@ describe("Solvin currency formatting", () => {
     expect(
       formatSolvinCurrency(135000, { currency: "INR", locale: "en-IN" })
     ).toBe("₹1,35,000.00");
+  });
+
+  it("renders INR with a font-independent vector currency mark", () => {
+    const markup = formatSolvinCurrencyMarkup(135000, {
+      currency: "INR",
+      locale: "en-IN",
+    });
+
+    expect(markup).toContain('class="solvin-inr-symbol"');
+    expect(markup).toContain('aria-label="INR"');
+    expect(markup).toContain("1,35,000.00");
+    expect(markup).not.toContain("₹");
+  });
+
+  it("keeps non-INR currency text escaped and unchanged", () => {
+    expect(
+      formatSolvinCurrencyMarkup(100, {
+        currency: "SAR",
+        customCurrencySymbol: "SAR",
+      })
+    ).toBe("SAR 100.00");
   });
 
   it("honors the invoice sub-unit length", () => {

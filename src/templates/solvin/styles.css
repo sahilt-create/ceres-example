@@ -26,6 +26,25 @@
   margin: 0;
 }
 
+.solvin-money {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.12em;
+  white-space: nowrap;
+}
+
+.solvin-inr-symbol {
+  width: 0.72em;
+  height: 0.82em;
+  flex: 0 0 auto;
+  overflow: visible;
+  stroke: currentcolor;
+  stroke-width: 1.65;
+  fill: none;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
 /* Letterhead (header) and footer image — filled from invoice.letterHead /
    invoice.letterHeadFooter by applyPreviewAssets (img[data-ceres-height]). */
 .solvin-invoice > .invoice-letterhead,

@@ -119,7 +119,7 @@
             {{else if (isHsnColumn column)}}
               {{formatSolvinHsn (itemColumnValue item column)}}
             {{else if (isCurrencyColumn column)}}
-              {{formatSolvinCurrency (itemCurrencyValue item column ../../invoice) ../../invoice}}
+              {{{formatSolvinCurrencyMarkup (itemCurrencyValue item column ../../invoice) ../../invoice}}}
             {{else if (isRateColumn column)}}
               {{formatItemNumber item column ../../invoice}}%
             {{else if (isBooleanColumn column)}}
@@ -154,13 +154,13 @@
             {{else if (isQuantityColumn column)}}
               {{formatTotalQuantity ../invoice.items ../invoice}}
             {{else if (isAmountColumn column)}}
-              {{formatSolvinCurrency ../totals.subTotal ../invoice}}
+              {{{formatSolvinCurrencyMarkup ../totals.subTotal ../invoice}}}
             {{else if (isTotalColumn column)}}
-              {{formatSolvinCurrency ../invoice.finalTotal.total ../invoice}}
+              {{{formatSolvinCurrencyMarkup ../invoice.finalTotal.total ../invoice}}}
             {{else if (isRateColumn column)}}
               {{columnRateSummaryValue ../invoice.items column ../invoice}}
             {{else if column.summarise}}
-              {{#if (isCurrencyColumn column)}}{{formatSolvinCurrency (columnSummaryValue ../invoice.items column) ../invoice}}{{else}}{{formatItemNumber (columnSummaryValue ../invoice.items column) column ../invoice}}{{/if}}
+              {{#if (isCurrencyColumn column)}}{{{formatSolvinCurrencyMarkup (columnSummaryValue ../invoice.items column) ../invoice}}}{{else}}{{formatItemNumber (columnSummaryValue ../invoice.items column) column ../invoice}}{{/if}}
             {{/if}}
           </td>
           {{/unless}}
@@ -173,21 +173,21 @@
   {{#if mapped.visibility.showTotals}}<div class="totals-wrap">
     <div class="totals-spacer"></div>
     <div class="totals-table">
-      <div class="totals-label">{{display.labels.subTotal}}</div><div>{{formatSolvinCurrency totals.subTotal invoice}}</div>
+      <div class="totals-label">{{display.labels.subTotal}}</div><div>{{{formatSolvinCurrencyMarkup totals.subTotal invoice}}}</div>
       {{#if mapped.visibility.showTaxes}}{{#if mapped.visibility.showIgst}}
-        <div class="totals-label">{{display.labels.igst}}</div><div>{{formatSolvinCurrency invoice.finalTotal.igst invoice}}</div>
+        <div class="totals-label">{{display.labels.igst}}</div><div>{{{formatSolvinCurrencyMarkup invoice.finalTotal.igst invoice}}}</div>
       {{else}}
-        <div class="totals-label">{{display.labels.cgst}}</div><div>{{formatSolvinCurrency invoice.finalTotal.cgst invoice}}</div>
+        <div class="totals-label">{{display.labels.cgst}}</div><div>{{{formatSolvinCurrencyMarkup invoice.finalTotal.cgst invoice}}}</div>
         <div class="totals-label">{{#if mapped.visibility.isUtgst}}{{display.labels.utgst}}{{else}}{{display.labels.sgst}}{{/if}}</div>
-        <div>{{#if mapped.visibility.isUtgst}}{{formatSolvinCurrency invoice.finalTotal.utgst invoice}}{{else}}{{formatSolvinCurrency invoice.finalTotal.sgst invoice}}{{/if}}</div>
+        <div>{{#if mapped.visibility.isUtgst}}{{{formatSolvinCurrencyMarkup invoice.finalTotal.utgst invoice}}}{{else}}{{{formatSolvinCurrencyMarkup invoice.finalTotal.sgst invoice}}}{{/if}}</div>
       {{/if}}{{/if}}
-      {{#each invoice.additionalCharges}}<div class="totals-label">{{#if label}}{{label}}{{else}}{{name}}{{/if}}</div><div>{{formatSolvinCurrency amount ../invoice}}</div>{{/each}}
-      <div class="totals-label grand-total">{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display: none;"{{/if}}>&nbsp;({{display.currency}})</span></div><div class="grand-total">{{formatSolvinCurrency invoice.finalTotal.total invoice}}</div>
-      {{#if invoice.balance.tds}}<div class="totals-footer-label">{{display.labels.tdsAmountWithheld}}</div><div class="totals-footer-value">({{formatSolvinCurrency invoice.balance.tds invoice}})</div>{{/if}}
-      {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{formatSolvinCurrency invoice.balance.paid invoice}})</div>{{/if}}
-      {{#if invoice.balance.settledAmount}}<div class="totals-footer-label">{{display.labels.amountReceived}}</div><div class="totals-footer-value">{{formatSolvinCurrency invoice.balance.settledAmount invoice}}</div>{{/if}}
-      {{#if invoice.balance.transactionCharge}}<div class="totals-footer-label">{{display.labels.transactionCharge}}</div><div class="totals-footer-value">{{formatSolvinCurrency invoice.balance.transactionCharge invoice}}</div>{{/if}}
-      {{#if mapped.visibility.showDueAmount}}{{#if totals.dueAmount}}<div class="totals-footer-label">{{display.labels.dueAmount}}</div><div class="totals-footer-value">{{formatSolvinCurrency totals.dueAmount invoice}}</div>{{/if}}{{/if}}
+      {{#each invoice.additionalCharges}}<div class="totals-label">{{#if label}}{{label}}{{else}}{{name}}{{/if}}</div><div>{{{formatSolvinCurrencyMarkup amount ../invoice}}}</div>{{/each}}
+      <div class="totals-label grand-total">{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display: none;"{{/if}}>&nbsp;({{display.currency}})</span></div><div class="grand-total">{{{formatSolvinCurrencyMarkup invoice.finalTotal.total invoice}}}</div>
+      {{#if invoice.balance.tds}}<div class="totals-footer-label">{{display.labels.tdsAmountWithheld}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.tds invoice}}})</div>{{/if}}
+      {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.paid invoice}}})</div>{{/if}}
+      {{#if invoice.balance.settledAmount}}<div class="totals-footer-label">{{display.labels.amountReceived}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.settledAmount invoice}}}</div>{{/if}}
+      {{#if invoice.balance.transactionCharge}}<div class="totals-footer-label">{{display.labels.transactionCharge}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.transactionCharge invoice}}}</div>{{/if}}
+      {{#if mapped.visibility.showDueAmount}}{{#if totals.dueAmount}}<div class="totals-footer-label">{{display.labels.dueAmount}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup totals.dueAmount invoice}}}</div>{{/if}}{{/if}}
     </div>
   </div>{{/if}}
 
@@ -233,23 +233,23 @@
         <tbody>
           {{#each mapped.hsnSummary.hsnList}}
             <tr class="solvin-hsn-meta-row"><th>HSN</th><td>{{hsn}}</td></tr>
-            <tr class="solvin-hsn-meta-row"><th>Taxable Value</th><td>{{formatSolvinCurrency taxableValue ../invoice}}</td></tr>
+            <tr class="solvin-hsn-meta-row"><th>Taxable Value</th><td>{{{formatSolvinCurrencyMarkup taxableValue ../invoice}}}</td></tr>
             {{#if ../mapped.visibility.showIgst}}
               <tr class="solvin-hsn-tax-title"><th colspan="2">{{#if ../invoice.taxName}}{{../invoice.taxName}}{{else}}IGST{{/if}}</th></tr>
               <tr class="solvin-hsn-tax-head"><th>Rate</th><th>Amount</th></tr>
-              <tr class="solvin-hsn-tax-values"><td>{{igstRate}}%</td><td>{{formatSolvinCurrency igstAmount ../invoice}}</td></tr>
+              <tr class="solvin-hsn-tax-values"><td>{{igstRate}}%</td><td>{{{formatSolvinCurrencyMarkup igstAmount ../invoice}}}</td></tr>
             {{else}}
               <tr class="solvin-hsn-tax-title"><th colspan="2">CGST</th></tr>
               <tr class="solvin-hsn-tax-head"><th>Rate</th><th>Amount</th></tr>
-              <tr class="solvin-hsn-tax-values"><td>{{cgstRate}}%</td><td>{{formatSolvinCurrency cgstAmount ../invoice}}</td></tr>
+              <tr class="solvin-hsn-tax-values"><td>{{cgstRate}}%</td><td>{{{formatSolvinCurrencyMarkup cgstAmount ../invoice}}}</td></tr>
               <tr class="solvin-hsn-tax-title"><th colspan="2">{{#if ../mapped.visibility.isUtgst}}UTGST{{else}}SGST{{/if}}</th></tr>
               <tr class="solvin-hsn-tax-head"><th>Rate</th><th>Amount</th></tr>
-              <tr class="solvin-hsn-tax-values"><td>{{sgstRate}}%</td><td>{{formatSolvinCurrency sgstAmount ../invoice}}</td></tr>
+              <tr class="solvin-hsn-tax-values"><td>{{sgstRate}}%</td><td>{{{formatSolvinCurrencyMarkup sgstAmount ../invoice}}}</td></tr>
             {{/if}}
           {{/each}}
         </tbody>
         <tfoot>
-          <tr class="solvin-hsn-total-row"><th>Total</th><td>{{formatSolvinCurrency mapped.hsnSummary.totalTaxAmount invoice}}</td></tr>
+          <tr class="solvin-hsn-total-row"><th>Total</th><td>{{{formatSolvinCurrencyMarkup mapped.hsnSummary.totalTaxAmount invoice}}}</td></tr>
           <tr><td colspan="2" class="solvin-hsn-words"><strong>Total Tax In Words :</strong> <span>{{solvinTaxAmountInWords mapped.hsnSummary.totalTaxAmount}}</span></td></tr>
         </tfoot>
       </table>

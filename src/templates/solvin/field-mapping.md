@@ -54,6 +54,11 @@ template-specific `display` and `totals` view model in `mapper.ts`.
 | Custom footers             | `invoice.customFooters[]`                                                       | Intentionally hidden from the totals section.                                                                                                                                                                                                                                                              |
 | Total in words             | Custom value, then `amountInWords(invoice.finalTotal.total)`                    | Always shown by the enabled Solvin display profile; title-cased custom value uses the shared number conversion fallback.                                                                                                                                                                                   |
 
+All monetary cells use PDF-safe currency markup. INR renders its rupee mark as
+an inline vector so restricted or custom PDF fonts cannot replace `₹` with a
+missing-glyph square; other currency and custom symbols retain their configured
+text formatting.
+
 ## Lower sections and intentional omissions
 
 - Terms render from grouped `invoice.terms[].terms[]`.
