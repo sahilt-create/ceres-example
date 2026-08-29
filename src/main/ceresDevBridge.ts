@@ -23,13 +23,12 @@ export function initDevBridge(): boolean {
     !templateParam.startsWith("http") &&
     !templateParam.includes("=")
   ) {
-    let isDecodingValid = false;
-    try {
-      const decoded = atob(templateParam);
-      if (decoded.includes("/") || decoded.includes(".json")) {
-        isDecodingValid = true;
-      }
-    } catch (e) {}
+    const decoded = decodeBase64(templateParam);
+    const isDecodingValid = Boolean(
+      decoded &&
+        (/^https?:\/\//i.test(decoded) ||
+          decoded.toLowerCase().includes(".json"))
+    );
 
     if (!isDecodingValid) {
       const tplName = templateParam;

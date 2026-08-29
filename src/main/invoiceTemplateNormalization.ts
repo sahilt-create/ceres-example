@@ -43,6 +43,7 @@ export interface InvoiceTemplateVisibility {
   showSkuInName: boolean;
   showUnitInName: boolean;
   showUnitInQuantity: boolean;
+  showUnitAsColumn: boolean;
   showTotals: boolean;
   showTotalsRow: boolean;
   showDueAmount: boolean;
@@ -81,6 +82,7 @@ export interface InvoiceTemplateDerivedState {
   showSkuInName: boolean;
   showUnitInName: boolean;
   showUnitInQuantity: boolean;
+  showUnitAsColumn: boolean;
 }
 
 export interface NormalizedInvoiceTemplateState {
@@ -220,10 +222,13 @@ const toBooleanValue = (value: unknown, fallback = false): boolean => {
 
 const toOptionalBoolean = (value: unknown): boolean | undefined => {
   if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
-    if (normalized === "true") return true;
-    if (normalized === "false") return false;
+    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "off", ""].includes(normalized)) {
+      return false;
+    }
   }
   return undefined;
 };
@@ -257,6 +262,26 @@ const toNonEmptyString = (value: unknown): string | null => {
 const hasValue = (value: unknown): boolean => {
   const str = toStringValue(value);
   return str.length > 0 && str !== "null" && str !== "undefined";
+};
+
+const resolvePopulatedFieldVisibility = (
+  invoice: FlattenedInvoicePayload,
+  advanceOptions: UnknownRecord,
+  field: "countryOfSupply" | "placeOfSupply"
+): boolean => {
+  if (!hasValue(invoice[field])) return false;
+
+  const suffix =
+    field === "countryOfSupply" ? "CountryOfSupply" : "PlaceOfSupply";
+  const configured = getConfiguredFieldVisibility(invoice, field);
+  const shown = toOptionalBoolean(
+    advanceOptions[`show${suffix}`] ?? invoice[`show${suffix}`]
+  );
+  const hidden = toOptionalBoolean(
+    advanceOptions[`hide${suffix}`] ?? invoice[`hide${suffix}`]
+  );
+
+  return configured ?? shown ?? (hidden === undefined ? true : !hidden);
 };
 
 const normalizeGstCode = (value: unknown): string => {
@@ -495,12 +520,60 @@ const getTemplateLayoutContext = (invoice: FlattenedInvoicePayload) => {
     ownerCountry === "MY" &&
     (hsnView === "MERGE" || (hsnView === "DEFAULT" && !allowRenderHSN));
   const showSkuInName = toBooleanValue(advanceOptions.showSkuInInvoice);
-  const unitColumn = toStringValue(
-    advanceOptions.unitColumn,
+  const rawUnitMode = toStringValue(
+    pickFirstValue(
+      advanceOptions.unitColumn,
+      advanceOptions.unitDisplay,
+      advanceOptions.showUnit
+    ),
     "MERGE_QUANTITY"
-  ).toUpperCase();
-  const showUnitInName = unitColumn === "MERGE_NAME";
-  const showUnitInQuantity = unitColumn === "MERGE_QUANTITY";
+  )
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_");
+  const normalizedUnitMode = rawUnitMode.replace(/_/g, "");
+  const showUnitSetting = toOptionalBoolean(
+    pickFirstValue(
+      advanceOptions.showUnitInInvoice,
+      advanceOptions.showUnit
+    )
+  );
+  const hideUnitSetting = toOptionalBoolean(advanceOptions.hideUnit);
+  const unitHidden = hideUnitSetting === true || showUnitSetting === false;
+  const explicitName = toOptionalBoolean(advanceOptions.showUnitInName);
+  const explicitQuantity = toOptionalBoolean(
+    advanceOptions.showUnitInQuantity
+  );
+  const explicitColumn = toOptionalBoolean(
+    pickFirstValue(
+      advanceOptions.showUnitAsColumn,
+      advanceOptions.showUnitColumn
+    )
+  );
+  const showUnitInName =
+    !unitHidden &&
+    (explicitName === true ||
+      (explicitQuantity !== true &&
+        explicitColumn !== true &&
+        explicitName !== false &&
+        normalizedUnitMode.includes("NAME")));
+  const showUnitAsColumn =
+    !unitHidden &&
+    !showUnitInName &&
+    (explicitColumn === true ||
+      (explicitColumn !== false &&
+        (normalizedUnitMode.includes("SEPARATE") ||
+          normalizedUnitMode.includes("COLUMN"))));
+  const showUnitInQuantity =
+    !unitHidden &&
+    !showUnitInName &&
+    !showUnitAsColumn &&
+    explicitQuantity !== false &&
+    (explicitQuantity === true ||
+      normalizedUnitMode.includes("QUANTITY") ||
+      normalizedUnitMode.includes("QTY") ||
+      !["HIDE", "HIDDEN", "NONE", "DONOTSHOW", "OFF"].includes(
+        normalizedUnitMode
+      ));
 
   return {
     invoiceTemplate,
@@ -518,6 +591,7 @@ const getTemplateLayoutContext = (invoice: FlattenedInvoicePayload) => {
     showSkuInName,
     showUnitInName,
     showUnitInQuantity,
+    showUnitAsColumn,
   };
 };
 
@@ -553,7 +627,7 @@ const normalizeInvoiceColumns = (
       } else if (normalizedKey === "discount") {
         visible = context.discountEnabled;
       } else if (normalizedKey === "unit") {
-        visible = !context.showUnitInName && !context.showUnitInQuantity;
+        visible = context.showUnitAsColumn;
       } else if (normalizedKey === "sgst" || normalizedKey === "cgst") {
         visible =
           context.isTaxInvoice &&
@@ -711,6 +785,7 @@ export const normalizeInvoiceTemplateState = (
         showSkuInName: context.showSkuInName,
         showUnitInName: context.showUnitInName,
         showUnitInQuantity: context.showUnitInQuantity,
+        showUnitAsColumn: context.showUnitAsColumn,
         showTotals,
         showTotalsRow,
         showDueAmount: toBooleanValue(invoice.showDueAmount),
@@ -730,17 +805,23 @@ export const normalizeInvoiceTemplateState = (
         ),
         isDescriptionFullWidth: toBooleanValue(
           pickFirstValue(
+            context.advanceOptions.showDescriptionInFullWidth,
             context.advanceOptions.isDescriptionFullWidth,
+            invoice.showDescriptionInFullWidth,
             invoice.isDescriptionFullWidth
           )
         ),
         showStatusTagInPrint: billType === "INVOICE" && status === "PAID",
-        showCountryOfSupply:
-          hasValue(invoice.countryOfSupply) &&
-          !toBooleanValue(context.advanceOptions.hideCountryOfSupply),
-        showPlaceOfSupply:
-          hasValue(invoice.placeOfSupply) &&
-          !toBooleanValue(context.advanceOptions.hidePlaceOfSupply),
+        showCountryOfSupply: resolvePopulatedFieldVisibility(
+          invoice,
+          context.advanceOptions,
+          "countryOfSupply"
+        ),
+        showPlaceOfSupply: resolvePopulatedFieldVisibility(
+          invoice,
+          context.advanceOptions,
+          "placeOfSupply"
+        ),
         visibleColumnCount: columns.filter((column) => !column.isHidden).length,
       },
     },
@@ -752,6 +833,7 @@ export const normalizeInvoiceTemplateState = (
       showSkuInName: context.showSkuInName,
       showUnitInName: context.showUnitInName,
       showUnitInQuantity: context.showUnitInQuantity,
+      showUnitAsColumn: context.showUnitAsColumn,
     },
   };
 };

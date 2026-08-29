@@ -37,6 +37,106 @@ const optionalBoolean = (value: any): boolean | undefined => {
   return undefined;
 };
 
+/** Converts uppercase amount-in-words output to title case. */
+export const toTitleCaseWords = (value: any): string =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+
+const internationalOnes = [
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
+];
+const internationalTens = [
+  "",
+  "",
+  "Twenty",
+  "Thirty",
+  "Forty",
+  "Fifty",
+  "Sixty",
+  "Seventy",
+  "Eighty",
+  "Ninety",
+];
+
+const internationalBelowThousand = (value: number): string => {
+  if (value < 20) return internationalOnes[value];
+  if (value < 100) {
+    return `${internationalTens[Math.floor(value / 10)]}${
+      value % 10 ? ` ${internationalOnes[value % 10]}` : ""
+    }`;
+  }
+  return `${internationalOnes[Math.floor(value / 100)]} Hundred${
+    value % 100 ? ` ${internationalBelowThousand(value % 100)}` : ""
+  }`;
+};
+
+const internationalIntegerWords = (value: number): string => {
+  if (!value) return "Zero";
+  const scales = [
+    { value: 1_000_000_000, label: "Billion" },
+    { value: 1_000_000, label: "Million" },
+    { value: 1_000, label: "Thousand" },
+  ];
+  let remainder = value;
+  const words: string[] = [];
+
+  scales.forEach((scale) => {
+    if (remainder < scale.value) return;
+    words.push(
+      `${internationalIntegerWords(Math.floor(remainder / scale.value))} ${
+        scale.label
+      }`
+    );
+    remainder %= scale.value;
+  });
+  if (remainder) words.push(internationalBelowThousand(remainder));
+  return words.join(" ");
+};
+
+/** Formats HSN tax totals with the international thousand/million scale. */
+export const solvinTaxAmountInWords = (amountValue: any): string => {
+  const amount = Number(amountValue);
+  if (!Number.isFinite(amount)) return "Zero Rupees Only";
+  if (amount < 0) return `Minus ${solvinTaxAmountInWords(Math.abs(amount))}`;
+
+  let rupees = Math.floor(amount);
+  let paise = Math.round((amount - rupees) * 100);
+  if (paise === 100) {
+    rupees += 1;
+    paise = 0;
+  }
+  const rupeeWords = `${internationalIntegerWords(rupees)} ${
+    rupees === 1 ? "Rupee" : "Rupees"
+  }`;
+  const paiseWords = paise
+    ? ` And ${internationalIntegerWords(paise)} ${
+        paise === 1 ? "Paisa" : "Paise"
+      }`
+    : "";
+  return `${rupeeWords}${paiseWords} Only`;
+};
+
 /** Resolves the supported item SKU aliases without leaking null-like text. */
 export const getItemSku = (itemValue: any): string => {
   const item = asRecord(itemValue);
@@ -317,12 +417,20 @@ export const formatSolvinCurrency = (
   const subUnitLength = Number(invoice.subUnitLength ?? 2);
   const precision =
     Number.isInteger(subUnitLength) && subUnitLength >= 0 ? subUnitLength : 2;
+  const currency = String(invoice.currency || invoice.businessCurrency || "INR")
+    .trim()
+    .toUpperCase();
+
+  let { customCurrencySymbol } = invoice;
+  if (!customCurrencySymbol && ["RC", "SAR"].includes(currency)) {
+    customCurrencySymbol = currency;
+  }
 
   return formatCurrency(
     amount,
-    invoice.currency || invoice.businessCurrency || "INR",
+    currency === "RC" ? "USD" : currency,
     invoice.locale || invoice.businessLocale || "en-IN",
     precision,
-    invoice.customCurrencySymbol
+    customCurrencySymbol
   ).replace(/\u00a0/g, " ");
 };

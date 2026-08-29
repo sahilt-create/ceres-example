@@ -90,10 +90,12 @@ const renderDocument = async () => {
       cssUrl ? loadCSS(cssUrl) : Promise.resolve(),
     ]);
 
+    let sourcePayload: any;
     const renderWithData = async (payload: any, reason = "payload") => {
       if (!payload) {
         return;
       }
+      sourcePayload = payload;
 
       const templateStyleOptions = extractTemplateStyleOptions(payload);
       if (templateStyleOptions && !templateStylesApplied) {
@@ -152,6 +154,24 @@ const renderDocument = async () => {
       await Promise.all([fontsReady, waitForImages(outputDiv)]);
 
       lydiaBridge?.reportContentHeight(`render:${reason}`);
+    };
+
+    (window as any).CeresUpdateAdvanceOptions = async (value: unknown) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return;
+      if (!sourcePayload || typeof sourcePayload !== "object") return;
+
+      const invoiceTarget =
+        sourcePayload.invoice && typeof sourcePayload.invoice === "object"
+          ? sourcePayload.invoice
+          : sourcePayload;
+      const currentOptions =
+        invoiceTarget.advanceOptions &&
+        typeof invoiceTarget.advanceOptions === "object" &&
+        !Array.isArray(invoiceTarget.advanceOptions)
+          ? invoiceTarget.advanceOptions
+          : {};
+      invoiceTarget.advanceOptions = { ...currentOptions, ...value };
+      await renderWithData(sourcePayload, "advance-options-update");
     };
 
     const response = await fetch(apiEndpoint);

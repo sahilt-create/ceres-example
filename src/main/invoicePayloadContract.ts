@@ -16,6 +16,7 @@ export interface CeresTemplatePayload {
     | { visible?: boolean | string; showInInvoice?: boolean | string }
     | boolean
     | string
+    | number
   >;
   ownerTimeZone?: string;
   businessTimeZone?: string;
@@ -28,7 +29,8 @@ export interface CeresTemplatePayload {
   showPaymentsTable?: boolean;
   showDueAmount?: boolean | string | number;
   isPublicView?: boolean;
-  isDescriptionFullWidth?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
+  showDescriptionInFullWidth?: boolean | string | number;
   irnPosition?: "ABOVE_LINEITEMS" | "BELOW_LINEITEMS" | string;
   showStockSummary?: boolean;
   showVendorBankAccount?: boolean;
@@ -67,15 +69,26 @@ export interface InvoiceAdvanceOptions {
   showSerialNumbersInDescription?: boolean | string | number;
   reverseCharge?: boolean;
   taxSummaryView?: "DETAILED" | "SUMMARY" | string;
-  showSkuInInvoice?: boolean;
+  showSkuInInvoice?: boolean | string | number;
   showThumbnailAsColumn?: boolean;
   hideGroupSubTotal?: boolean;
   unitColumn?: string;
+  unitDisplay?: string;
+  showUnit?: boolean | string | number;
+  showUnitInInvoice?: boolean | string | number;
+  hideUnit?: boolean | string | number;
+  showUnitInName?: boolean | string | number;
+  showUnitInQuantity?: boolean | string | number;
+  showUnitAsColumn?: boolean | string | number;
+  showUnitColumn?: boolean | string | number;
   hsnView?: string;
   itemNameFullWidth?: boolean;
-  isDescriptionFullWidth?: boolean;
-  hideCountryOfSupply?: boolean;
-  hidePlaceOfSupply?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
+  showDescriptionInFullWidth?: boolean | string | number;
+  showCountryOfSupply?: boolean | string | number;
+  hideCountryOfSupply?: boolean | string | number;
+  showPlaceOfSupply?: boolean | string | number;
+  hidePlaceOfSupply?: boolean | string | number;
   [key: string]: unknown;
 }
 
@@ -88,6 +101,7 @@ export interface InvoicePaymentOptions {
 
 export interface InvoiceData {
   _id: string;
+  invoiceValueProps?: CeresTemplatePayload["invoiceValueProps"];
   billType: string;
   isExpenditure?: boolean;
   status: "DRAFT" | "UNPAID" | "PAID" | "PARTIAL" | "CANCELED" | string;
@@ -117,7 +131,12 @@ export interface InvoiceData {
   subUnitLength?: number;
   customCurrencySymbol?: string;
   showItemNameFullWidth?: boolean;
-  isDescriptionFullWidth?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
+  showDescriptionInFullWidth?: boolean | string | number;
+  showCountryOfSupply?: boolean | string | number;
+  hideCountryOfSupply?: boolean | string | number;
+  showPlaceOfSupply?: boolean | string | number;
+  hidePlaceOfSupply?: boolean | string | number;
   billedBy?: BillerDetails;
   billedTo?: BillerDetails;
   shippedFrom?: BillerDetails;
@@ -308,7 +327,7 @@ export interface LineItem {
   isGroupItemTotalRow?: boolean;
   isAdditionalCharge?: boolean;
   sku?: string;
-  showSku?: boolean;
+  showSku?: boolean | string | number;
   unit?: string;
   classification?: string;
   inventoryTxn?: string;
@@ -495,7 +514,7 @@ export interface FlattenedInvoicePayload extends InvoiceData {
   showPaymentsTable?: boolean;
   showDueAmount?: boolean | string | number;
   isPublicView?: boolean;
-  isDescriptionFullWidth?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
   irnPosition?: CeresTemplatePayload["irnPosition"];
   showStockSummary?: boolean;
   showVendorBankAccount?: boolean;
@@ -556,7 +575,8 @@ export const normalizeInvoicePayload = (
     isEarlyPayApplicable: payload.isEarlyPayApplicable,
     showItemNameFullWidth:
       payload.showItemNameFullWidth ?? payload.invoice.showItemNameFullWidth,
-    invoiceValueProps: payload.invoiceValueProps,
+    invoiceValueProps:
+      payload.invoiceValueProps ?? payload.invoice.invoiceValueProps,
     ownerTimeZone: payload.ownerTimeZone,
     businessTimeZone: payload.businessTimeZone,
     showBankAccount: payload.showBankAccount,
@@ -569,7 +589,10 @@ export const normalizeInvoicePayload = (
     showDueAmount: payload.showDueAmount ?? payload.invoice.showDueAmount,
     isPublicView: payload.isPublicView,
     isDescriptionFullWidth:
-      payload.isDescriptionFullWidth ?? payload.invoice.isDescriptionFullWidth,
+      payload.showDescriptionInFullWidth ??
+      payload.isDescriptionFullWidth ??
+      payload.invoice.showDescriptionInFullWidth ??
+      payload.invoice.isDescriptionFullWidth,
     irnPosition: payload.irnPosition,
     showStockSummary: payload.showStockSummary,
     showVendorBankAccount: payload.showVendorBankAccount,

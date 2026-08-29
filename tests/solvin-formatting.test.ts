@@ -8,6 +8,8 @@ import {
   getItemUnit,
   shouldShowItemSku,
   summarizeItemQuantity,
+  solvinTaxAmountInWords,
+  toTitleCaseWords,
 } from "../src/templates/solvin/formatting";
 
 describe("Solvin currency formatting", () => {
@@ -44,6 +46,26 @@ describe("Solvin currency formatting", () => {
         locale: "en-US",
       })
     ).toBe("SAR 51.45");
+  });
+});
+
+describe("Solvin amount-in-words formatting", () => {
+  it("keeps only the first letter of each word uppercase", () => {
+    expect(
+      toTitleCaseWords("FOUR HUNDRED NINE RUPEES AND NINETEEN PAISE ONLY")
+    ).toBe("Four Hundred Nine Rupees And Nineteen Paise Only");
+  });
+
+  it("uses the international scale for HSN tax totals", () => {
+    expect(solvinTaxAmountInWords(216000)).toBe(
+      "Two Hundred Sixteen Thousand Rupees Only"
+    );
+    expect(solvinTaxAmountInWords(2.45)).toBe(
+      "Two Rupees And Forty Five Paise Only"
+    );
+    expect(solvinTaxAmountInWords(2.46)).toBe(
+      "Two Rupees And Forty Six Paise Only"
+    );
   });
 });
 

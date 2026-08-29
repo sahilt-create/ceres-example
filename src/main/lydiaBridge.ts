@@ -607,6 +607,13 @@ export function initLydiaBridge(
   registerInvoiceFieldHandler("documentQr", applyDocumentQrUpdate);
   registerInvoiceFieldHandler("advanceOptions", (value: unknown) => {
     applyAdvanceOptionsUpdate(value as unknown);
+    const rerender = (window as any).CeresUpdateAdvanceOptions;
+    if (typeof rerender === "function") {
+      Promise.resolve(rerender(value)).finally(() => {
+        reportContentHeight("advance-options-update");
+      });
+      return;
+    }
     reportContentHeight("advance-options-update");
   });
 

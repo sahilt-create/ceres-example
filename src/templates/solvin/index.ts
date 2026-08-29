@@ -10,6 +10,8 @@ import {
   getItemUnit,
   shouldShowItemSku,
   summarizeItemQuantity,
+  solvinTaxAmountInWords,
+  toTitleCaseWords,
 } from "./formatting";
 import amountInWords from "../../widgets/shared/amountInWords";
 import "./styles.css";
@@ -68,9 +70,8 @@ if (hb) {
   hb.registerHelper("amountInWords", (amount: any) =>
     amountInWords(numberValue(amount))
   );
-  hb.registerHelper("titleCaseWords", (value: any) =>
-    String(value ?? "").replace(/\b\w/g, (letter) => letter.toUpperCase())
-  );
+  hb.registerHelper("titleCaseWords", toTitleCaseWords);
+  hb.registerHelper("solvinTaxAmountInWords", solvinTaxAmountInWords);
   hb.registerHelper("formatCountryName", formatCountryName);
   hb.registerHelper("partyAddressLines", getPartyAddressLines);
   hb.registerHelper("formatSolvinCurrency", formatSolvinCurrency);

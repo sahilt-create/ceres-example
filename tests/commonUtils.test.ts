@@ -5,10 +5,93 @@ import {
   isPlainObject,
   applyQrCodeUpdate,
   applyIrnUpdate,
+  applyAdvanceOptionsUpdate,
   extractTemplateStyleOptions,
 } from "../src/main/commonUtils";
 
 describe("commonUtils", () => {
+  describe("applyAdvanceOptionsUpdate", () => {
+    afterEach(() => {
+      delete (global as any).document;
+    });
+
+    it("moves item descriptions between inline and full-width targets", () => {
+      const inlineTarget = {
+        appendChild: jest.fn(),
+        style: { display: "" },
+      };
+      const fullWidthTarget = { appendChild: jest.fn() };
+      const fullWidthRow = {
+        style: { display: "none" },
+        classList: { toggle: jest.fn() },
+      };
+      const content = {};
+      const querySelectorAll = jest.fn((selector: string) => {
+        if (selector === "[data-ceres-description-inline]") {
+          return [inlineTarget];
+        }
+        if (selector === "[data-ceres-description-full-width]") {
+          return [fullWidthTarget];
+        }
+        if (selector === "[data-ceres-description-row]") {
+          return [fullWidthRow];
+        }
+        if (selector === "[data-ceres-description-content]") {
+          return [content];
+        }
+        return [];
+      });
+      (global as any).document = {
+        querySelector: jest.fn(() => null),
+        querySelectorAll,
+      };
+
+      applyAdvanceOptionsUpdate({ showDescriptionInFullWidth: "true" });
+      expect(fullWidthTarget.appendChild).toHaveBeenCalledWith(content);
+      expect(inlineTarget.style.display).toBe("none");
+      expect(fullWidthRow.style.display).toBe("");
+      expect(fullWidthRow.classList.toggle).toHaveBeenCalledWith(
+        "item-description-row",
+        true
+      );
+
+      applyAdvanceOptionsUpdate({ isDescriptionFullWidth: false });
+      expect(inlineTarget.appendChild).toHaveBeenCalledWith(content);
+      expect(inlineTarget.style.display).toBe("");
+      expect(fullWidthRow.style.display).toBe("none");
+      expect(fullWidthRow.classList.toggle).toHaveBeenCalledWith(
+        "item-description-row",
+        false
+      );
+    });
+
+    it("applies country and place show/hide aliases live", () => {
+      const countryElements = [{ style: { display: "none" } }];
+      const placeElements = [{ style: { display: "" } }];
+      const querySelectorAll = jest.fn((selector: string) => {
+        if (selector === "[data-ceres-country-of-supply]") {
+          return countryElements;
+        }
+        if (selector === "[data-ceres-place-of-supply]") {
+          return placeElements;
+        }
+        return [];
+      });
+      (global as any).document = {
+        querySelector: jest.fn(() => null),
+        querySelectorAll,
+      };
+
+      applyAdvanceOptionsUpdate({
+        hideCountryOfSupply: "false",
+        showPlaceOfSupply: 0,
+      });
+
+      expect(countryElements[0].style.display).toBe("");
+      expect(placeElements[0].style.display).toBe("none");
+    });
+  });
+
   describe("decodeBase64", () => {
     it("returns null for empty input", () => {
       expect(decodeBase64(null)).toBeNull();

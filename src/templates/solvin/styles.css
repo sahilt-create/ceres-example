@@ -62,15 +62,6 @@
   text-align: center;
 }
 
-.title-status {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  height: 37px;
-}
-
 .solvin-title h1 {
   color: var(--ceres-primary-color, #001f5c);
   font-family: Arial, Helvetica, sans-serif;
@@ -139,6 +130,12 @@
   min-height: 28px;
   padding: 4px;
   border-bottom: 1px solid #bfbfbf;
+}
+
+/* Solvin does not display supply metadata, regardless of payload defaults. */
+.solvin-invoice [data-ceres-country-of-supply],
+.solvin-invoice [data-ceres-place-of-supply] {
+  display: none !important;
 }
 
 .invoice-meta-table > div:nth-child(odd) {
@@ -674,6 +671,10 @@
   border: 1px solid #e0e0e0;
 }
 
+.lower-grid.without-terms {
+  grid-template-columns: 1fr 1fr;
+}
+
 .lower-grid h2 {
   margin-bottom: 11px;
   color: #21272e;
@@ -752,6 +753,90 @@
 
 .hsn-panel {
   min-width: 0;
+}
+
+.solvin-hsn-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #21272e;
+  font-size: 13px;
+  line-height: 1.3;
+  table-layout: fixed;
+}
+
+.solvin-hsn-table th,
+.solvin-hsn-table td {
+  min-height: 34px;
+  padding: 8px 10px;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.solvin-hsn-table tr > :last-child {
+  border-right: 0;
+}
+
+.solvin-hsn-total-row th {
+  font-weight: 700;
+}
+
+.solvin-hsn-table tr > :first-child {
+  width: 50%;
+}
+
+.solvin-hsn-meta-row th {
+  text-align: left;
+}
+
+.solvin-hsn-meta-row td {
+  text-align: right;
+}
+
+.solvin-hsn-tax-title th,
+.solvin-hsn-tax-head th,
+.solvin-hsn-tax-values td {
+  text-align: center;
+}
+
+.solvin-hsn-tax-title th {
+  font-weight: 700;
+}
+
+.solvin-hsn-tax-head th {
+  font-weight: 600;
+}
+
+.solvin-hsn-total-row th {
+  text-align: center;
+}
+
+.solvin-hsn-total-row td,
+.solvin-hsn-tax-values td:last-child {
+  text-align: right;
+}
+
+.solvin-hsn-total-row > * {
+  border-top: 1px solid #21272e;
+}
+
+.solvin-hsn-words {
+  padding: 10px !important;
+  border-bottom: 0 !important;
+  text-align: left !important;
+}
+
+.solvin-hsn-words strong,
+.solvin-hsn-words span {
+  display: block;
+}
+
+.solvin-hsn-words span {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .hsn-panel .ceres-table-section {
@@ -1003,7 +1088,7 @@
   .solvin-title {
     min-height: 44px;
     height: auto;
-    padding: 6px 96px 6px 0;
+    padding: 6px 0;
   }
 
   .party-meta-grid {

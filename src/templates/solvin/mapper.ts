@@ -11,9 +11,6 @@ const ROW_NUMBER_KEYS = new Set(["sr", "srno", "sno", "rownumber", "index"]);
 /** The enabled display-property profile supplied for the Solvin template. */
 export const SOLVIN_DISPLAY_PROPERTIES = Object.freeze({
   showHsnSummary: true,
-  showSupply: true,
-  isDescriptionFullWidth: true,
-  showSkuInName: true,
   showSerialNumbersInDescription: true,
   showGroupSubTotal: true,
   showTotalsRow: true,
@@ -79,6 +76,53 @@ const numericValue = (value: any): number | undefined => {
 const firstMonetaryValue = (...values: any[]): any =>
   values.find((value) => numericValue(value) !== undefined);
 
+const getHsnSummaryEntries = (value: any): any[] => {
+  if (Array.isArray(value)) return value;
+
+  const summary = asRecord(value);
+  return Array.isArray(summary.hsnList) ? summary.hsnList : [];
+};
+
+/**
+ * Uses the API's rounded HSN tax total when supplied. Individual IGST/CGST/
+ * SGST cells can legitimately add up to a different paise value after the
+ * invoice service applies its final rounding adjustment.
+ */
+const getAuthoritativeHsnTaxTotal = (value: any): number | undefined => {
+  const summary = asRecord(value);
+  const directTotal = numericValue(
+    firstMonetaryValue(
+      summary.totalTaxAmountValue,
+      summary.totalTaxAmount,
+      summary.totalTax,
+      summary.tax
+    )
+  );
+  if (directTotal !== undefined) return directTotal;
+
+  const rowTotals = getHsnSummaryEntries(value)
+    .map((entry) => {
+      const row = asRecord(entry);
+      return numericValue(
+        firstMonetaryValue(
+          row.tax,
+          row.totalTaxAmountValue,
+          row.totalTaxAmount,
+          row.totalTax
+        )
+      );
+    })
+    .filter((amount): amount is number => amount !== undefined);
+
+  if (!rowTotals.length) return undefined;
+  return (
+    Math.round(
+      (rowTotals.reduce((sum, amount) => sum + amount, 0) + Number.EPSILON) *
+        100
+    ) / 100
+  );
+};
+
 const optionalBooleanValue = (value: any): boolean | undefined => {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -114,31 +158,6 @@ const configuredVisibility = (
       );
     })
     .find((value) => value !== undefined);
-};
-
-const resolveSupplyVisibility = (
-  invoice: UnknownRecord,
-  advanceOptions: UnknownRecord,
-  field: "countryOfSupply" | "placeOfSupply",
-  fallback: boolean
-): boolean => {
-  if (!firstText(invoice[field])) return false;
-
-  const suffix =
-    field === "countryOfSupply" ? "CountryOfSupply" : "PlaceOfSupply";
-  const configured = configuredVisibility(invoice, [field]);
-  const explicitlyShown = optionalBooleanValue(
-    advanceOptions[`show${suffix}`] ?? invoice[`show${suffix}`]
-  );
-  const explicitlyHidden = optionalBooleanValue(
-    advanceOptions[`hide${suffix}`] ?? invoice[`hide${suffix}`]
-  );
-
-  return (
-    configured ??
-    explicitlyShown ??
-    (explicitlyHidden === undefined ? fallback : !explicitlyHidden)
-  );
 };
 
 /** Resolves built-in properties and document-configured item custom fields. */
@@ -292,6 +311,25 @@ export const addItemSerialNumberColumn = (
     });
   }
 
+  const unitColumnIndex = columns.findIndex((column) =>
+    ["unit", "uom", "unitname"].includes(normalizedName(column.key))
+  );
+  if (state.mapped.visibility.showUnitAsColumn && unitColumnIndex < 0) {
+    const quantityIndex = columns.findIndex((column) =>
+      ["quantity", "qty"].includes(normalizedName(column.key))
+    );
+    columns.splice(quantityIndex >= 0 ? quantityIndex + 1 : 2, 0, {
+      key: "unit",
+      label: "Unit",
+      className: "col-unit",
+      isHidden: false,
+      dataType: "string",
+      fxReturnType: "",
+      isCessColumn: false,
+      summarise: false,
+    });
+  }
+
   const normalizedColumns = columns.map((column) =>
     normalizedName(column.key) === "total" &&
     ["", "amount"].includes(normalizedName(column.label))
@@ -363,10 +401,10 @@ export const mapSolvinTemplateData = (payload: any) => {
       optionalBooleanValue(invoice.showNotesInInvoice) ??
       optionalBooleanValue(invoice.showNotes) ??
       !(optionalBooleanValue(invoice.hideNotes) ?? false));
-  const parsedDueAmount = numericValue(dueAmount);
-  const showDueAmount =
-    explicitDueVisibility ??
-    (parsedDueAmount !== undefined && parsedDueAmount !== 0);
+  // `toPay`/balance values are also used for payment calculations, so their
+  // presence does not mean the Due Amount field was added to the invoice.
+  // Only render it when the invoice configuration explicitly enables it.
+  const showDueAmount = explicitDueVisibility ?? false;
   const isDescriptionFullWidth =
     optionalBooleanValue(advanceOptions.showDescriptionInFullWidth) ??
     optionalBooleanValue(advanceOptions.isDescriptionFullWidth) ??
@@ -395,10 +433,16 @@ export const mapSolvinTemplateData = (payload: any) => {
       sgst: numericValue(item.sgst ?? item.utgst) ?? 0,
     };
   });
-  const hsnSummary = computeHsnSummary(hsnItems, {
+  const computedHsnSummary = computeHsnSummary(hsnItems, {
     isIgst: state.mapped.visibility.showIgst,
     isUtgst: state.mapped.visibility.isUtgst,
   });
+  const hsnSummary = {
+    ...computedHsnSummary,
+    totalTaxAmount:
+      getAuthoritativeHsnTaxTotal(invoice.hsnSummary) ??
+      computedHsnSummary.totalTaxAmount,
+  };
   const amountColumn = findVisibleColumn(
     columns,
     ["amount", "subtotal"],
@@ -435,18 +479,8 @@ export const mapSolvinTemplateData = (payload: any) => {
         ...state.mapped.visibility,
         showDueAmount,
         showHsnSummary,
-        showCountryOfSupply: resolveSupplyVisibility(
-          invoice,
-          advanceOptions,
-          "countryOfSupply",
-          state.mapped.visibility.showCountryOfSupply
-        ),
-        showPlaceOfSupply: resolveSupplyVisibility(
-          invoice,
-          advanceOptions,
-          "placeOfSupply",
-          state.mapped.visibility.showPlaceOfSupply
-        ),
+        showCountryOfSupply: false,
+        showPlaceOfSupply: false,
         isDescriptionFullWidth,
         showSku: state.mapped.visibility.showSku,
         showSkuInName: state.mapped.visibility.showSkuInName,
@@ -461,7 +495,11 @@ export const mapSolvinTemplateData = (payload: any) => {
       hsnSummary,
     },
     display: {
-      currency: firstText(invoice.currency, invoice.businessCurrency, "INR"),
+      currency: firstText(
+        invoice.currency,
+        invoice.businessCurrency,
+        "INR"
+      ).toUpperCase(),
       currencySymbol: resolveCurrencySymbol(invoice),
       note: buildNote(invoice),
       notes,

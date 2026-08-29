@@ -165,6 +165,10 @@ beforeAll(() => {
     String(value ?? "")
   );
   HandlebarsRuntime.registerHelper("amountInWords", () => "One Hundred");
+  HandlebarsRuntime.registerHelper(
+    "solvinTaxAmountInWords",
+    () => "Two Hundred Sixteen Thousand Rupees Only"
+  );
   HandlebarsRuntime.registerHelper("formatCountryName", formatCountryName);
   HandlebarsRuntime.registerHelper("partyAddressLines", getPartyAddressLines);
   HandlebarsRuntime.registerHelper("computeHsnSummary", () => ({}));
@@ -323,7 +327,7 @@ describe("Solvin compiled template", () => {
     expect(hiddenHtml).toContain("Amount Received");
   });
 
-  it("shows a payload due amount when the visibility flag is omitted", () => {
+  it("does not infer due-amount visibility from a payload value", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       balance: { due: 660 },
@@ -332,17 +336,18 @@ describe("Solvin compiled template", () => {
     const model = mapSolvinTemplateData(input as any);
     const html = template(model);
 
-    expect(model.mapped.visibility.showDueAmount).toBe(true);
+    expect(model.mapped.visibility.showDueAmount).toBe(false);
     expect(model.totals.dueAmount).toBe(660);
-    expect(html).toContain("Due Amount");
-    expect(html).toContain("money:660");
+    expect(html).not.toContain("Due Amount");
+    expect(html).not.toContain("money:660");
   });
 
-  it("resolves due amount from toPay without inventing a value", () => {
+  it("resolves due amount from toPay when the field is enabled", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       balance: {},
       toPay: { full: 660 },
+      showDueAmount: true,
     });
 
     const model = mapSolvinTemplateData(input as any);
@@ -361,8 +366,15 @@ describe("Solvin compiled template", () => {
       invoiceValueProps: { dueAmount: { showInInvoice: false } },
     });
 
-    const html = template(mapSolvinTemplateData(input as any));
-    expect(html).not.toContain("Due Amount");
+    const hiddenHtml = template(mapSolvinTemplateData(input as any));
+    expect(hiddenHtml).not.toContain("Due Amount");
+
+    Object.assign(input, {
+      invoiceValueProps: { dueAmount: { showInInvoice: true } },
+    });
+    const visibleHtml = template(mapSolvinTemplateData(input as any));
+    expect(visibleHtml).toContain("Due Amount");
+    expect(visibleHtml).toContain("money:660");
   });
 
   it("uses editable labels for the payment balance rows", () => {
@@ -460,8 +472,10 @@ describe("Solvin compiled template", () => {
     });
     expect(html).toContain('class="solvin-hsn-table"');
     expect(html).toContain("data-ceres-hsn-summary");
-    expect(html).not.toContain("Country of Supply");
-    expect(html).not.toContain("Place of Supply");
+    expect(html).toContain(
+      'data-ceres-country-of-supply style="display: none;"'
+    );
+    expect(html).toContain('data-ceres-place-of-supply style="display: none;"');
     expect(html).not.toContain('class="item-description-row"');
     expect(html).not.toContain("SKU</b> : SOL-001");
     expect(html).toContain("Serial No.</b> : SN-001, SN-002");
@@ -529,7 +543,7 @@ describe("Solvin compiled template", () => {
     expect(html).not.toContain("Overdue");
   });
 
-  it("renders the HSN summary with grouped horizontal tax columns", () => {
+  it("renders the HSN summary as a stacked vertical tax table", () => {
     const input = payload(false);
     Object.assign(input.invoice.items[0], {
       hsn: "998311",
@@ -540,13 +554,15 @@ describe("Solvin compiled template", () => {
 
     const html = template(mapSolvinTemplateData(input as any));
 
-    expect(html).toMatch(
-      /<th rowspan="2">HSN<\/th>[\s\S]*<th rowspan="2">Taxable<br \/>Value<\/th>[\s\S]*<th colspan="2">VAT<\/th>/
-    );
+    expect(html).toMatch(/<th>HSN<\/th><td>998311<\/td>/);
+    expect(html).toMatch(/<th>Taxable Value<\/th><td>money:100<\/td>/);
+    expect(html).toMatch(/<th colspan="2">VAT<\/th>/);
     expect(html).toMatch(/<th>Rate<\/th><th>Amount<\/th>/);
+    expect(html).toMatch(/<td>18%<\/td><td>money:18<\/td>/);
     expect(html).toContain("998311");
     expect(html).toContain('class="solvin-hsn-total-row"');
-    expect(html).toContain("Total Tax In Words:");
+    expect(html).toContain("Total Tax In Words :");
+    expect(html).toContain("Two Hundred Sixteen Thousand Rupees Only");
   });
 
   it("normalizes API string values and HSN aliases for the HSN summary", () => {
@@ -566,6 +582,36 @@ describe("Solvin compiled template", () => {
       igstRate: 5,
       igstAmount: 2.45,
     });
+  });
+
+  it("uses the API-rounded HSN tax total without changing the line tax amount", () => {
+    const input = payload(false);
+    Object.assign(input.invoice.items[0], {
+      hsnCode: "540710",
+      taxRate: 5,
+      amount: 49,
+      igst: 2.45,
+    });
+    Object.assign(input.invoice, {
+      hsnSummary: [
+        {
+          hsn: "540710",
+          taxableValue: 49,
+          igst: 2.45,
+          tax: 2.46,
+        },
+      ],
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.mapped.hsnSummary.hsnList[0].igstAmount).toBe(2.45);
+    expect(model.mapped.hsnSummary.totalTaxAmount).toBe(2.46);
+    expect(html).toMatch(/<td>5%<\/td><td>money:2\.45<\/td>/);
+    expect(html).toMatch(
+      /class="solvin-hsn-total-row"><th>Total<\/th><td>money:2\.46<\/td>/
+    );
   });
 
   it("renames an accidental Amount label on the total column", () => {
@@ -614,13 +660,17 @@ describe("Solvin compiled template", () => {
 
       expect(model.mapped.visibility.showCountryOfSupply).toBe(false);
       expect(model.mapped.visibility.showPlaceOfSupply).toBe(false);
-      expect(html).not.toContain("Country of Supply");
-      expect(html).not.toContain("Place of Supply");
+      expect(html).toContain(
+        'data-ceres-country-of-supply style="display: none;"'
+      );
+      expect(html).toContain(
+        'data-ceres-place-of-supply style="display: none;"'
+      );
     }
   );
 
   it.each([false, "false", 0, "no", "off"])(
-    "keeps populated country/place visible when hide settings are %p",
+    "keeps country/place hidden in Solvin even when hide settings are %p",
     (hidden) => {
       const input = payload(false);
       Object.assign(input.invoice, {
@@ -634,10 +684,28 @@ describe("Solvin compiled template", () => {
 
       const model = mapSolvinTemplateData(input as any);
 
-      expect(model.mapped.visibility.showCountryOfSupply).toBe(true);
-      expect(model.mapped.visibility.showPlaceOfSupply).toBe(true);
+      expect(model.mapped.visibility.showCountryOfSupply).toBe(false);
+      expect(model.mapped.visibility.showPlaceOfSupply).toBe(false);
     }
   );
+
+  it("hides country and place of supply by default in Solvin", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      countryOfSupply: "IN",
+      placeOfSupply: "Karnataka",
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.mapped.visibility.showCountryOfSupply).toBe(false);
+    expect(model.mapped.visibility.showPlaceOfSupply).toBe(false);
+    expect(html).toContain(
+      'data-ceres-country-of-supply style="display: none;"'
+    );
+    expect(html).toContain('data-ceres-place-of-supply style="display: none;"');
+  });
 
   it("honors explicit show-country/place settings and invoiceValueProps", () => {
     const input = payload(false);
@@ -702,6 +770,30 @@ describe("Solvin compiled template", () => {
       quantityText: "2",
       nameUnitText: true,
     },
+    {
+      mode: "Merge with name",
+      visibleUnitColumn: false,
+      quantityText: "2",
+      nameUnitText: true,
+    },
+    {
+      mode: "MERGE_WITH_QUANTITY",
+      visibleUnitColumn: false,
+      quantityText: "2 Boxes",
+      nameUnitText: false,
+    },
+    {
+      mode: "Separate column",
+      visibleUnitColumn: true,
+      quantityText: "2",
+      nameUnitText: false,
+    },
+    {
+      mode: "HIDE",
+      visibleUnitColumn: false,
+      quantityText: "2",
+      nameUnitText: false,
+    },
   ])(
     "renders units using the $mode mode",
     ({ mode, visibleUnitColumn, quantityText, nameUnitText }) => {
@@ -736,6 +828,58 @@ describe("Solvin compiled template", () => {
       }
     }
   );
+
+  it("honors the explicit show-unit boolean", () => {
+    const input = payload(false);
+    input.invoice.columns.splice(2, 0, {
+      key: "unit",
+      label: "Unit",
+    } as any);
+    Object.assign(input.invoice.items[0], { quantity: 2, unit: "unit-box" });
+    Object.assign(input.invoice, {
+      advanceOptions: { unitColumn: "SEPARATE", showUnit: false },
+      owner: {
+        configuration: {
+          units: [{ value: "unit-box", label: "Boxes" }],
+        },
+      },
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+    const unitColumn = model.mapped.columns.find(
+      (column) => column.key === "unit"
+    );
+
+    expect(model.mapped.visibility.showUnitInName).toBe(false);
+    expect(model.mapped.visibility.showUnitInQuantity).toBe(false);
+    expect(model.mapped.visibility.showUnitAsColumn).toBe(false);
+    expect(unitColumn?.isHidden).toBe(true);
+    expect(html).not.toContain("Boxes");
+  });
+
+  it("creates a Unit column in separate mode when the API omits it", () => {
+    const input = payload(false);
+    Object.assign(input.invoice.items[0], { quantity: 2, unit: "unit-box" });
+    Object.assign(input.invoice, {
+      advanceOptions: { unitColumn: "Separate column" },
+      owner: {
+        configuration: {
+          units: [{ value: "unit-box", label: "Boxes" }],
+        },
+      },
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+    const unitColumn = model.mapped.columns.find(
+      (column) => column.key === "unit"
+    );
+
+    expect(unitColumn).toMatchObject({ label: "Unit", isHidden: false });
+    expect(html).toMatch(/<th class="col-unit [^"]+">Unit<\/th>/);
+    expect(html).toMatch(/<td class="col-unit [^"]+">\s*Boxes\s*<\/td>/);
+  });
 
   it("renders a full-width description exactly once across visible columns", () => {
     const model = normalizeInvoiceTemplateState(payload(true) as any);
@@ -961,10 +1105,14 @@ describe("Solvin compiled template", () => {
 
     const html = template(normalizeInvoiceTemplateState(input as any));
 
-    expect(html).toContain('<div class="meta-label">Country of Supply</div>');
-    expect(html).toContain("<div>India</div>");
-    expect(html).toContain('<div class="meta-label">Place of Supply</div>');
-    expect(html).toContain("<div>Karnataka</div>");
+    expect(html).toContain(
+      '<div class="meta-label" data-ceres-country-of-supply>Country of Supply</div>'
+    );
+    expect(html).toContain("<div data-ceres-country-of-supply>India</div>");
+    expect(html).toContain(
+      '<div class="meta-label" data-ceres-place-of-supply>Place of Supply</div>'
+    );
+    expect(html).toContain("<div data-ceres-place-of-supply>Karnataka</div>");
   });
 
   it("omits empty supply metadata", () => {
@@ -995,8 +1143,8 @@ describe("Solvin compiled template", () => {
 
     const html = template(normalizeInvoiceTemplateState(input as any));
 
-    expect(html).toContain("<div>India</div>");
-    expect(html).toContain("<div>Maharashtra</div>");
+    expect(html).toContain("<div data-ceres-country-of-supply>India</div>");
+    expect(html).toContain("<div data-ceres-place-of-supply>Maharashtra</div>");
   });
 
   it("renders Hong Kong correctly without applying an Indian GST state code", () => {
@@ -1013,7 +1161,7 @@ describe("Solvin compiled template", () => {
 
     const html = template(normalizeInvoiceTemplateState(input as any));
 
-    expect(html).toContain("<div>Hong Kong</div>");
+    expect(html).toContain("<div data-ceres-country-of-supply>Hong Kong</div>");
     expect(html).not.toContain("Centre Jurisdiction");
   });
 
@@ -1031,7 +1179,9 @@ describe("Solvin compiled template", () => {
 
     const html = template(normalizeInvoiceTemplateState(input as any));
 
-    expect(html).not.toContain("Country of Supply");
-    expect(html).not.toContain("Place of Supply");
+    expect(html).toContain(
+      'data-ceres-country-of-supply style="display: none;"'
+    );
+    expect(html).toContain('data-ceres-place-of-supply style="display: none;"');
   });
 });

@@ -54,8 +54,8 @@
       <div class="meta-label">{{#if invoice.customLabels.invoiceDate}}{{invoice.customLabels.invoiceDate}}{{else}}Invoice Date{{/if}}</div>
       <div>{{formateShortDateWithOffset invoice.invoiceDate invoice.ownerOffset}}</div>
       {{#if invoice.dueDate}}<div class="meta-label">{{#if invoice.customLabels.dueDate}}{{invoice.customLabels.dueDate}}{{else}}Due Date{{/if}}</div><div>{{formateShortDateWithOffset invoice.dueDate invoice.ownerOffset}}</div>{{/if}}
-      {{#if mapped.visibility.showCountryOfSupply}}<div class="meta-label">{{#if invoice.customLabels.countryOfSupply}}{{invoice.customLabels.countryOfSupply}}{{else}}Country of Supply{{/if}}</div><div>{{formatCountryName invoice.countryOfSupply}}</div>{{/if}}
-      {{#if mapped.visibility.showPlaceOfSupply}}<div class="meta-label">{{#if invoice.customLabels.placeOfSupply}}{{invoice.customLabels.placeOfSupply}}{{else}}Place of Supply{{/if}}</div><div>{{formatCountryName invoice.placeOfSupply}}</div>{{/if}}
+      {{#if invoice.countryOfSupply}}<div class="meta-label" data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.countryOfSupply}}{{invoice.customLabels.countryOfSupply}}{{else}}Country of Supply{{/if}}</div><div data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.countryOfSupply}}</div>{{/if}}
+      {{#if invoice.placeOfSupply}}<div class="meta-label" data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.placeOfSupply}}{{invoice.customLabels.placeOfSupply}}{{else}}Place of Supply{{/if}}</div><div data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.placeOfSupply}}</div>{{/if}}
       {{#if invoice.purchaseOrderNumber}}<div class="meta-label">{{#if invoice.customLabels.purchaseOrderNumber}}{{invoice.customLabels.purchaseOrderNumber}}{{else}}PO No{{/if}}</div><div>{{invoice.purchaseOrderNumber}}</div>{{/if}}
       {{#each invoice.customHeaders}}<div class="meta-label">{{label}}</div><div>{{value}}</div>{{/each}}
     </div>
@@ -106,11 +106,11 @@
                 {{#if ../../mapped.visibility.showInlineClassification}}{{#if item.classification}}<span>Classification : {{item.classification}}</span>{{/if}}{{/if}}
                 {{#if ../../mapped.visibility.showUnitInName}}{{#if (itemUnit item ../../invoice)}}<span>Unit : {{itemUnit item ../../invoice}}</span>{{/if}}{{/if}}
               </p>
-              {{#unless ../../mapped.visibility.isDescriptionFullWidth}}
-                {{#if item.description}}
-                  <div class="item-description">{{> MarkdownViewer (prepareMarkdownViewerData item.description) }}</div>
-                {{/if}}
-              {{/unless}}
+              {{#if item.description}}<div data-ceres-description-inline>
+                {{#unless ../../mapped.visibility.isDescriptionFullWidth}}
+                  <div class="item-description" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData item.description) }}</div>
+                {{/unless}}
+              </div>{{/if}}
               {{#if ../../invoice.purchaseOrderNumber}}<p class="item-po"><strong>{{#if ../../invoice.customLabels.purchaseOrderNumber}}{{../../invoice.customLabels.purchaseOrderNumber}}{{else}}PO No{{/if}} :</strong> {{../../invoice.purchaseOrderNumber}}</p>{{/if}}
             {{else if (isQuantityColumn column)}}
               {{quantityWithUnit item ../../invoice ../../mapped.visibility.showUnitInQuantity}}
@@ -133,14 +133,16 @@
           {{/unless}}
         {{/each}}
       </tr>
-      {{#if ../mapped.visibility.isDescriptionFullWidth}}
-        {{#if item.description}}
-          <tr class="item-description-row">
+      {{#if item.description}}
+          <tr data-ceres-description-row{{#if ../mapped.visibility.isDescriptionFullWidth}} class="item-description-row"{{else}} style="display: none;"{{/if}}>
             <td colspan="{{../mapped.visibility.visibleColumnCount}}">
-              <div class="item-description">{{> MarkdownViewer (prepareMarkdownViewerData item.description) }}</div>
+              <div data-ceres-description-full-width>
+                {{#if ../mapped.visibility.isDescriptionFullWidth}}
+                  <div class="item-description" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData item.description) }}</div>
+                {{/if}}
+              </div>
             </td>
           </tr>
-        {{/if}}
       {{/if}}
       {{/each}}
       {{#if mapped.visibility.showTotalsRow}}<tr class="items-total-row">
@@ -180,7 +182,7 @@
         <div>{{#if mapped.visibility.isUtgst}}{{formatSolvinCurrency invoice.finalTotal.utgst invoice}}{{else}}{{formatSolvinCurrency invoice.finalTotal.sgst invoice}}{{/if}}</div>
       {{/if}}{{/if}}
       {{#each invoice.additionalCharges}}<div class="totals-label">{{#if label}}{{label}}{{else}}{{name}}{{/if}}</div><div>{{formatSolvinCurrency amount ../invoice}}</div>{{/each}}
-      <div class="totals-label grand-total">{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display: none;"{{/if}}>&nbsp;({{invoice.currency}})</span></div><div class="grand-total">{{formatSolvinCurrency invoice.finalTotal.total invoice}}</div>
+      <div class="totals-label grand-total">{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display: none;"{{/if}}>&nbsp;({{display.currency}})</span></div><div class="grand-total">{{formatSolvinCurrency invoice.finalTotal.total invoice}}</div>
       {{#if invoice.balance.tds}}<div class="totals-footer-label">{{display.labels.tdsAmountWithheld}}</div><div class="totals-footer-value">({{formatSolvinCurrency invoice.balance.tds invoice}})</div>{{/if}}
       {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{formatSolvinCurrency invoice.balance.paid invoice}})</div>{{/if}}
       {{#if invoice.balance.settledAmount}}<div class="totals-footer-label">{{display.labels.amountReceived}}</div><div class="totals-footer-value">{{formatSolvinCurrency invoice.balance.settledAmount invoice}}</div>{{/if}}
@@ -201,7 +203,7 @@
     </div>
   </section>{{/if}}
 
-  <section class="lower-grid">
+  <section class="lower-grid{{#unless mapped.visibility.showTerms}} without-terms{{/unless}}">
     {{#if mapped.visibility.showTerms}}<div class="terms-panel">
       <h2>{{#if invoice.customLabels.terms}}{{invoice.customLabels.terms}}{{else}}Terms and Conditions{{/if}}</h2>
       <ol>
@@ -227,37 +229,28 @@
     </div>
 
     {{#if mapped.visibility.showHsnSummary}}{{#if mapped.hsnSummary.hasRows}}<div class="hsn-panel" data-ceres-hsn-summary>
-      <table class="solvin-hsn-table{{#unless mapped.visibility.showIgst}} is-split-tax{{/unless}}">
-        <thead>
-          <tr>
-            <th rowspan="2">HSN</th>
-            <th rowspan="2">Taxable<br />Value</th>
-            {{#if mapped.visibility.showIgst}}
-              <th colspan="2">{{#if invoice.taxName}}{{invoice.taxName}}{{else}}IGST{{/if}}</th>
-            {{else}}
-              <th colspan="2">CGST</th>
-              <th colspan="2">{{#if mapped.visibility.isUtgst}}UTGST{{else}}SGST{{/if}}</th>
-            {{/if}}
-          </tr>
-          <tr><th>Rate</th><th>Amount</th>{{#unless mapped.visibility.showIgst}}<th>Rate</th><th>Amount</th>{{/unless}}</tr>
-        </thead>
+      <table class="solvin-hsn-table" data-layout="vertical">
         <tbody>
-          {{#each mapped.hsnSummary.hsnList}}<tr>
-            <td>{{hsn}}</td><td>{{formatSolvinCurrency taxableValue ../../invoice}}</td>
-            {{#if ../../mapped.visibility.showIgst}}
-              <td>{{igstRate}}%</td><td>{{formatSolvinCurrency igstAmount ../../invoice}}</td>
+          {{#each mapped.hsnSummary.hsnList}}
+            <tr class="solvin-hsn-meta-row"><th>HSN</th><td>{{hsn}}</td></tr>
+            <tr class="solvin-hsn-meta-row"><th>Taxable Value</th><td>{{formatSolvinCurrency taxableValue ../invoice}}</td></tr>
+            {{#if ../mapped.visibility.showIgst}}
+              <tr class="solvin-hsn-tax-title"><th colspan="2">{{#if ../invoice.taxName}}{{../invoice.taxName}}{{else}}IGST{{/if}}</th></tr>
+              <tr class="solvin-hsn-tax-head"><th>Rate</th><th>Amount</th></tr>
+              <tr class="solvin-hsn-tax-values"><td>{{igstRate}}%</td><td>{{formatSolvinCurrency igstAmount ../invoice}}</td></tr>
             {{else}}
-              <td>{{cgstRate}}%</td><td>{{formatSolvinCurrency cgstAmount ../../invoice}}</td>
-              <td>{{sgstRate}}%</td><td>{{formatSolvinCurrency sgstAmount ../../invoice}}</td>
+              <tr class="solvin-hsn-tax-title"><th colspan="2">CGST</th></tr>
+              <tr class="solvin-hsn-tax-head"><th>Rate</th><th>Amount</th></tr>
+              <tr class="solvin-hsn-tax-values"><td>{{cgstRate}}%</td><td>{{formatSolvinCurrency cgstAmount ../invoice}}</td></tr>
+              <tr class="solvin-hsn-tax-title"><th colspan="2">{{#if ../mapped.visibility.isUtgst}}UTGST{{else}}SGST{{/if}}</th></tr>
+              <tr class="solvin-hsn-tax-head"><th>Rate</th><th>Amount</th></tr>
+              <tr class="solvin-hsn-tax-values"><td>{{sgstRate}}%</td><td>{{formatSolvinCurrency sgstAmount ../invoice}}</td></tr>
             {{/if}}
-          </tr>{{/each}}
+          {{/each}}
         </tbody>
         <tfoot>
-          <tr class="solvin-hsn-total-row"><th>Total</th><td>{{formatSolvinCurrency mapped.hsnSummary.totalTaxableValue invoice}}</td>
-            {{#if mapped.visibility.showIgst}}<td></td><td>{{formatSolvinCurrency mapped.hsnSummary.totalIgstAmount invoice}}</td>
-            {{else}}<td></td><td>{{formatSolvinCurrency mapped.hsnSummary.totalCgstAmount invoice}}</td><td></td><td>{{formatSolvinCurrency mapped.hsnSummary.totalSgstAmount invoice}}</td>{{/if}}
-          </tr>
-          <tr><td colspan="{{#if mapped.visibility.showIgst}}4{{else}}6{{/if}}" class="solvin-hsn-words"><strong>Total Tax In Words:</strong> <span>{{titleCaseWords (amountInWords mapped.hsnSummary.totalTaxAmount)}}</span></td></tr>
+          <tr class="solvin-hsn-total-row"><th>Total</th><td>{{formatSolvinCurrency mapped.hsnSummary.totalTaxAmount invoice}}</td></tr>
+          <tr><td colspan="2" class="solvin-hsn-words"><strong>Total Tax In Words :</strong> <span>{{solvinTaxAmountInWords mapped.hsnSummary.totalTaxAmount}}</span></td></tr>
         </tfoot>
       </table>
     </div>{{/if}}{{/if}}
