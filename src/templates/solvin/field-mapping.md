@@ -65,6 +65,9 @@ template-specific `display` and `totals` view model in `mapper.ts`.
   `mapped.visibility.showBankAccount` is true.
 - HSN summary is rendered as a two-column vertical table whenever taxes are visible and HSN data exists: HSN and taxable value rows, followed by stacked IGST or CGST/SGST rate-and-amount sections, the total tax row, and total tax in words. Line tax cells are aggregated from invoice items, while the total row and words use the API HSN summary's authoritative rounded `tax`/`totalTaxAmount` when supplied (so a final paise-level adjustment is preserved). Tax words use the international thousand/million scale (for example, `216000` becomes `Two Hundred Sixteen Thousand Rupees Only`). Solvin recognizes the API's `showHSNSummaryInInvoice` shape but intentionally applies the supplied enabled profile even when older stored options differ. Its wrapper keeps the live-preview `data-ceres-hsn-summary` hook.
 - Signature and footer letterhead use their shared image/live-update hooks.
+- PDF page size and margins are left to the parent renderer. Solvin does not
+  declare a CSS `@page` box, allowing the business-level Pageless PDF option to
+  supply one continuous page height without being overridden by the template.
 - Notes and currency metadata are mapped as `display.notes`, `display.note`,
   `display.currency`, and `display.currencySymbol`. `display.notes` is the
   rendered note content. `display.note` preserves the combined legacy value

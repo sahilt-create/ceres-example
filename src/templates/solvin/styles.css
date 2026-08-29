@@ -1152,15 +1152,20 @@
   }
 }
 
-/* Page geometry is controlled by the parent PDF engine via pdfOptionParams
-   (format, xMargins, zoomSize). Only provide a margin fallback for direct
-   browser printing — never force a page size here, or the engine's
-   "Pageless PDF" mode (one continuous page) would be overridden. */
-@page {
-  margin: 10mm 9mm;
-}
+/* Page geometry (including Pageless PDF's continuous page height) belongs to
+   the parent PDF engine. Solvin intentionally does not declare an @page box,
+   because even a margin-only rule can make Chromium prefer its paged sheet. */
 
 @media print {
+  html,
+  body,
+  [id="documentOutput"] {
+    width: auto;
+    height: auto;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
   .solvin-invoice {
     width: 100%;
     max-width: none;
