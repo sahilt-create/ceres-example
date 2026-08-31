@@ -382,6 +382,34 @@ describe("Solvin compiled template", () => {
     expect(visibleHtml).toContain("money:660");
   });
 
+  it("honors all due amount show/hide visibility aliases", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      balance: { due: 660 },
+      advanceOptions: { hideDueAmount: true },
+      invoiceValueProps: { due: { isVisible: true } },
+    });
+
+    const hiddenHtml = template(mapSolvinTemplateData(input as any));
+    expect(hiddenHtml).toContain("Due Amount");
+
+    Object.assign(input.invoice, {
+      advanceOptions: { hideDueAmount: true },
+      invoiceValueProps: { due: { isHidden: true } },
+    });
+    expect(template(mapSolvinTemplateData(input as any))).not.toContain(
+      "Due Amount"
+    );
+
+    Object.assign(input.invoice, {
+      advanceOptions: { showDueAmount: true },
+      invoiceValueProps: {},
+    });
+    expect(template(mapSolvinTemplateData(input as any))).toContain(
+      "Due Amount"
+    );
+  });
+
   it("uses editable labels for the payment balance rows", () => {
     const input = payload(false);
     Object.assign(input.invoice, {

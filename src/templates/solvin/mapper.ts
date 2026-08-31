@@ -275,10 +275,28 @@ const configuredVisibility = (
       if (directValue !== undefined) return directValue;
 
       const settingRecord = asRecord(setting);
-      return (
+      const params = asRecord(settingRecord.params);
+      const shown =
         optionalBooleanValue(settingRecord.visible) ??
-        optionalBooleanValue(settingRecord.showInInvoice)
-      );
+        optionalBooleanValue(settingRecord.isVisible) ??
+        optionalBooleanValue(settingRecord.show) ??
+        optionalBooleanValue(settingRecord.showInInvoice) ??
+        optionalBooleanValue(params.visible) ??
+        optionalBooleanValue(params.isVisible) ??
+        optionalBooleanValue(params.show) ??
+        optionalBooleanValue(params.showInInvoice);
+      if (shown !== undefined) return shown;
+
+      const hidden =
+        optionalBooleanValue(settingRecord.hidden) ??
+        optionalBooleanValue(settingRecord.isHidden) ??
+        optionalBooleanValue(settingRecord.hide) ??
+        optionalBooleanValue(settingRecord.hideInInvoice) ??
+        optionalBooleanValue(params.hidden) ??
+        optionalBooleanValue(params.isHidden) ??
+        optionalBooleanValue(params.hide) ??
+        optionalBooleanValue(params.hideInInvoice);
+      return hidden === undefined ? undefined : !hidden;
     })
     .find((value) => value !== undefined);
 };
@@ -510,9 +528,26 @@ export const mapSolvinTemplateData = (payload: any) => {
     invoiceTotals.due,
     invoiceTotals.dueAmount
   );
+  const configuredDueVisibility = configuredVisibility(invoice, [
+    "dueAmount",
+    "balanceDue",
+    "due",
+    "toPay",
+  ]);
+  const explicitDueShown =
+    optionalBooleanValue(advanceOptions.showDueAmount) ??
+    optionalBooleanValue(advanceOptions.showBalanceDue) ??
+    optionalBooleanValue(invoice.showDueAmount) ??
+    optionalBooleanValue((invoice as UnknownRecord).showBalanceDue);
+  const explicitDueHidden =
+    optionalBooleanValue(advanceOptions.hideDueAmount) ??
+    optionalBooleanValue(advanceOptions.hideBalanceDue) ??
+    optionalBooleanValue((invoice as UnknownRecord).hideDueAmount) ??
+    optionalBooleanValue((invoice as UnknownRecord).hideBalanceDue);
   const explicitDueVisibility =
-    configuredVisibility(invoice, ["dueAmount", "balanceDue"]) ??
-    optionalBooleanValue(invoice.showDueAmount);
+    configuredDueVisibility ??
+    explicitDueShown ??
+    (explicitDueHidden === undefined ? undefined : !explicitDueHidden);
   const notes = firstText(invoice.notes);
   const showTerms =
     Array.isArray(invoice.terms) &&
@@ -530,11 +565,13 @@ export const mapSolvinTemplateData = (payload: any) => {
       optionalBooleanValue(invoice.showNotes) ??
       !(optionalBooleanValue(invoice.hideNotes) ?? false));
   // An outstanding due balance is a calculated invoice field, not additional
-  // information. Show it by default when it is non-zero; an explicit document
+  // information. Show it by default when it is positive; an explicit document
   // setting still takes precedence and can deliberately hide it.
+  const numericDueAmount = numericValue(dueAmount);
   const hasOutstandingDueAmount =
-    numericValue(dueAmount) !== undefined && numericValue(dueAmount) !== 0;
-  const showDueAmount = explicitDueVisibility ?? hasOutstandingDueAmount;
+    numericDueAmount !== undefined && numericDueAmount > 0;
+  const showDueAmount =
+    hasOutstandingDueAmount && (explicitDueVisibility ?? true);
   const isDescriptionFullWidth =
     optionalBooleanValue(advanceOptions.showDescriptionInFullWidth) ??
     optionalBooleanValue(advanceOptions.isDescriptionFullWidth) ??
