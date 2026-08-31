@@ -332,7 +332,7 @@ describe("Solvin compiled template", () => {
     expect(hiddenHtml).toContain("Amount Received");
   });
 
-  it("does not infer due-amount visibility from a payload value", () => {
+  it("shows a non-zero due amount from the invoice balance by default", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       balance: { due: 660 },
@@ -341,10 +341,10 @@ describe("Solvin compiled template", () => {
     const model = mapSolvinTemplateData(input as any);
     const html = template(model);
 
-    expect(model.mapped.visibility.showDueAmount).toBe(false);
+    expect(model.mapped.visibility.showDueAmount).toBe(true);
     expect(model.totals.dueAmount).toBe(660);
-    expect(html).not.toContain("Due Amount");
-    expect(html).not.toContain("money:660");
+    expect(html).toContain("Due Amount");
+    expect(html).toContain("money:660");
   });
 
   it("resolves due amount from toPay when the field is enabled", () => {

@@ -529,10 +529,12 @@ export const mapSolvinTemplateData = (payload: any) => {
       optionalBooleanValue(invoice.showNotesInInvoice) ??
       optionalBooleanValue(invoice.showNotes) ??
       !(optionalBooleanValue(invoice.hideNotes) ?? false));
-  // `toPay`/balance values are also used for payment calculations, so their
-  // presence does not mean the Due Amount field was added to the invoice.
-  // Only render it when the invoice configuration explicitly enables it.
-  const showDueAmount = explicitDueVisibility ?? false;
+  // An outstanding due balance is a calculated invoice field, not additional
+  // information. Show it by default when it is non-zero; an explicit document
+  // setting still takes precedence and can deliberately hide it.
+  const hasOutstandingDueAmount =
+    numericValue(dueAmount) !== undefined && numericValue(dueAmount) !== 0;
+  const showDueAmount = explicitDueVisibility ?? hasOutstandingDueAmount;
   const isDescriptionFullWidth =
     optionalBooleanValue(advanceOptions.showDescriptionInFullWidth) ??
     optionalBooleanValue(advanceOptions.isDescriptionFullWidth) ??
