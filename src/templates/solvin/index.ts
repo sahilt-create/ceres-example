@@ -72,7 +72,9 @@ if (hb) {
     amountInWords(numberValue(amount))
   );
   hb.registerHelper("titleCaseWords", toTitleCaseWords);
-  hb.registerHelper("solvinTaxAmountInWords", solvinTaxAmountInWords);
+  hb.registerHelper("solvinTaxAmountInWords", (amount: any, invoice: any) =>
+    solvinTaxAmountInWords(amount, invoice)
+  );
   hb.registerHelper("formatCountryName", formatCountryName);
   hb.registerHelper("partyAddressLines", getPartyAddressLines);
   hb.registerHelper("formatSolvinCurrency", formatSolvinCurrency);

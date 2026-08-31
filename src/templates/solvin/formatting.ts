@@ -115,11 +115,78 @@ const internationalIntegerWords = (value: number): string => {
   return words.join(" ");
 };
 
-/** Formats HSN tax totals with the international thousand/million scale. */
-export const solvinTaxAmountInWords = (amountValue: any): string => {
+type CurrencyWordForms = {
+  singular: string;
+  plural: string;
+  fractionalSingular: string;
+  fractionalPlural: string;
+};
+
+const HSN_CURRENCY_WORD_FORMS: Record<string, CurrencyWordForms> = {
+  INR: {
+    singular: "Rupee",
+    plural: "Rupees",
+    fractionalSingular: "Paisa",
+    fractionalPlural: "Paise",
+  },
+  USD: {
+    singular: "Dollar",
+    plural: "Dollars",
+    fractionalSingular: "Cent",
+    fractionalPlural: "Cents",
+  },
+  SAR: {
+    singular: "Saudi Riyal",
+    plural: "Saudi Riyals",
+    fractionalSingular: "Halala",
+    fractionalPlural: "Halalas",
+  },
+  AED: {
+    singular: "UAE Dirham",
+    plural: "UAE Dirhams",
+    fractionalSingular: "Fil",
+    fractionalPlural: "Fils",
+  },
+  EUR: {
+    singular: "Euro",
+    plural: "Euros",
+    fractionalSingular: "Cent",
+    fractionalPlural: "Cents",
+  },
+  GBP: {
+    singular: "Pound",
+    plural: "Pounds",
+    fractionalSingular: "Penny",
+    fractionalPlural: "Pence",
+  },
+};
+
+const getHsnCurrencyWordForms = (invoiceValue: any): CurrencyWordForms => {
+  const invoice = asRecord(invoiceValue);
+  const currency = String(invoice.currency ?? invoice.businessCurrency ?? "INR")
+    .trim()
+    .toUpperCase();
+  return (
+    HSN_CURRENCY_WORD_FORMS[currency] ?? {
+      singular: currency || "Currency",
+      plural: currency || "Currency",
+      fractionalSingular: "Subunit",
+      fractionalPlural: "Subunits",
+    }
+  );
+};
+
+/** Formats HSN tax totals with the invoice currency and international scale. */
+export const solvinTaxAmountInWords = (
+  amountValue: any,
+  invoiceValue?: any
+): string => {
   const amount = Number(amountValue);
-  if (!Number.isFinite(amount)) return "Zero Rupees Only";
-  if (amount < 0) return `Minus ${solvinTaxAmountInWords(Math.abs(amount))}`;
+  const currency = getHsnCurrencyWordForms(invoiceValue);
+  if (!Number.isFinite(amount)) return `Zero ${currency.plural} Only`;
+  if (amount < 0) {
+    return `Minus ${solvinTaxAmountInWords(Math.abs(amount), invoiceValue)}`;
+  }
 
   let rupees = Math.floor(amount);
   let paise = Math.round((amount - rupees) * 100);
@@ -127,15 +194,15 @@ export const solvinTaxAmountInWords = (amountValue: any): string => {
     rupees += 1;
     paise = 0;
   }
-  const rupeeWords = `${internationalIntegerWords(rupees)} ${
-    rupees === 1 ? "Rupee" : "Rupees"
+  const majorUnitWords = `${internationalIntegerWords(rupees)} ${
+    rupees === 1 ? currency.singular : currency.plural
   }`;
-  const paiseWords = paise
+  const fractionalWords = paise
     ? ` And ${internationalIntegerWords(paise)} ${
-        paise === 1 ? "Paisa" : "Paise"
+        paise === 1 ? currency.fractionalSingular : currency.fractionalPlural
       }`
     : "";
-  return `${rupeeWords}${paiseWords} Only`;
+  return `${majorUnitWords}${fractionalWords} Only`;
 };
 
 /** Resolves the supported item SKU aliases without leaking null-like text. */

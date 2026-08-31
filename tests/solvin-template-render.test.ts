@@ -10,6 +10,7 @@ import {
   getPartyAddressLines,
   getItemSerialNumbers,
   getItemUnit,
+  solvinTaxAmountInWords,
   shouldShowItemSku,
 } from "../src/templates/solvin/formatting";
 
@@ -171,7 +172,8 @@ beforeAll(() => {
   HandlebarsRuntime.registerHelper("amountInWords", () => "One Hundred");
   HandlebarsRuntime.registerHelper(
     "solvinTaxAmountInWords",
-    () => "Two Hundred Sixteen Thousand Rupees Only"
+    (amount: unknown, invoice: unknown) =>
+      solvinTaxAmountInWords(amount, invoice)
   );
   HandlebarsRuntime.registerHelper("formatCountryName", formatCountryName);
   HandlebarsRuntime.registerHelper("partyAddressLines", getPartyAddressLines);
@@ -228,6 +230,18 @@ const payload = (isDescriptionFullWidth: boolean) => ({
 });
 
 describe("Solvin compiled template", () => {
+  it("uses the invoice currency for HSN tax total words", () => {
+    expect(solvinTaxAmountInWords(180, { currency: "USD" })).toBe(
+      "One Hundred Eighty Dollars Only"
+    );
+    expect(solvinTaxAmountInWords(2.45, { currency: "SAR" })).toBe(
+      "Two Saudi Riyals And Forty Five Halalas Only"
+    );
+    expect(solvinTaxAmountInWords(2.45, { currency: "INR" })).toBe(
+      "Two Rupees And Forty Five Paise Only"
+    );
+  });
+
   it("renders integer item and total amounts with invoice precision", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
@@ -584,6 +598,7 @@ describe("Solvin compiled template", () => {
       amount: 100,
       igst: 18,
     });
+    input.invoice.currency = "USD";
 
     const html = template(mapSolvinTemplateData(input as any));
 
@@ -595,7 +610,7 @@ describe("Solvin compiled template", () => {
     expect(html).toContain("998311");
     expect(html).toContain('class="solvin-hsn-total-row"');
     expect(html).toContain("Total Tax In Words :");
-    expect(html).toContain("Two Hundred Sixteen Thousand Rupees Only");
+    expect(html).toContain("Eighteen Dollars Only");
   });
 
   it("normalizes API string values and HSN aliases for the HSN summary", () => {

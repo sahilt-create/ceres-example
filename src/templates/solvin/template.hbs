@@ -252,7 +252,7 @@
         </tbody>
         <tfoot>
           <tr class="solvin-hsn-total-row"><th>Total</th><td>{{{formatSolvinCurrencyMarkup mapped.hsnSummary.totalTaxAmount invoice}}}</td></tr>
-          <tr><td colspan="2" class="solvin-hsn-words"><strong>Total Tax In Words :</strong> <span>{{solvinTaxAmountInWords mapped.hsnSummary.totalTaxAmount}}</span></td></tr>
+          <tr><td colspan="2" class="solvin-hsn-words"><strong>Total Tax In Words :</strong> <span>{{solvinTaxAmountInWords mapped.hsnSummary.totalTaxAmount invoice}}</span></td></tr>
         </tfoot>
       </table>
     </div>{{/if}}{{/if}}
