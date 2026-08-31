@@ -1082,6 +1082,11 @@ describe("Solvin compiled template", () => {
         { label: "Brand", value: "MSI, LG" },
         { label: "Warranty", value: "3 Years" },
       ],
+      footers: [{ label: "Material", value: "Plastic" }],
+      customFields: [{ label: "Colour", value: "Black" }],
+      additionalInformation: [
+        { label: "Additional Reference", value: "REF-123" },
+      ],
     });
 
     const model = mapSolvinTemplateData(input as any);
@@ -1104,6 +1109,16 @@ describe("Solvin compiled template", () => {
     expect(html).not.toContain("MSI, LG");
     expect(html).not.toContain("Warranty");
     expect(html).not.toContain("3 Years");
+    expect(html).not.toContain("Material");
+    expect(html).not.toContain("Plastic");
+    expect(html).not.toContain("Colour");
+    expect(html).not.toContain("Black");
+    expect(html).not.toContain("Additional Reference");
+    expect(html).not.toContain("REF-123");
+    expect(model.invoice).not.toHaveProperty("customFooters");
+    expect(model.invoice).not.toHaveProperty("footers");
+    expect(model.invoice).not.toHaveProperty("customFields");
+    expect(model.invoice).not.toHaveProperty("additionalInformation");
 
     expect(html.indexOf("Cess 1")).toBeLessThan(
       html.indexOf("Promo Discount (10%)")

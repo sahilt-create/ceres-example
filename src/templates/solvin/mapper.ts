@@ -18,6 +18,15 @@ export const SOLVIN_DISPLAY_PROPERTIES = Object.freeze({
   showTotalInWords: true,
 });
 
+const SOLVIN_OMITTED_ADDITIONAL_INFORMATION_FIELDS = [
+  "customFooters",
+  "footers",
+  "customFields",
+  "additionalInfo",
+  "additionalInformation",
+  "additionalInformationFields",
+] as const;
+
 const asRecord = (value: any): UnknownRecord =>
   value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
@@ -476,6 +485,9 @@ export const mapSolvinTemplateData = (payload: any) => {
       ? normalizedState.invoice.items
       : [],
   };
+  SOLVIN_OMITTED_ADDITIONAL_INFORMATION_FIELDS.forEach((field) => {
+    delete (invoice as UnknownRecord)[field];
+  });
   const state = { ...normalizedState, invoice };
   const { columns } = state.mapped;
   const advanceOptions = asRecord(state.advanceOptions);
