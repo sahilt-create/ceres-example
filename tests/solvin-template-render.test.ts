@@ -1259,7 +1259,7 @@ describe("Solvin compiled template", () => {
 
     const html = template(mapSolvinTemplateData(input as any));
     expect(html).toContain("Promotional Discount");
-    expect(html).toContain("- money:10");
+    expect(html).toContain("(money:10)");
     expect(html.indexOf("Sub Total")).toBeLessThan(
       html.indexOf("Promotional Discount")
     );
