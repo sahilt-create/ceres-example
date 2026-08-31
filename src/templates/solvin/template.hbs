@@ -142,7 +142,7 @@
       {{#if mapped.visibility.showTotalsRow}}<tr class="items-total-row">
         {{#each mapped.columns as |column|}}
           {{#unless column.isHidden}}
-          <td class="{{column.className}} {{columnAlignmentClass column}}">
+          <td class="{{column.className}} {{columnAlignmentClass column}}" style="font-weight: 700 !important;">
             {{#if (isDescriptionColumn column ../mapped.columns)}}
               Total
             {{else if (isQuantityColumn column)}}

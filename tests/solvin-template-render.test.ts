@@ -1087,7 +1087,7 @@ describe("Solvin compiled template", () => {
 
     const html = template(mapSolvinTemplateData(input as any));
     expect(html).toMatch(
-      /class="items-total-row"[\s\S]*<td class="col-gst-rate [^"]+">\s*18%\s*<\/td>/
+      /class="items-total-row"[\s\S]*<td class="col-gst-rate [^"]+" style="font-weight: 700 !important;">\s*18%\s*<\/td>/
     );
   });
 
