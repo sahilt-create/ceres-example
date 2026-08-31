@@ -18,16 +18,7 @@
       <div class="address-lines">
         {{#each (partyAddressLines invoice.billedBy)}}<p>{{this}}</p>{{/each}}
       </div>
-      {{#if invoice.billedBy.gstin}}<p class="id-line"><strong>GSTIN :</strong> {{invoice.billedBy.gstin}}</p>{{/if}}
-      {{#if invoice.billedBy.panNumber}}<p class="id-line"><strong>PAN :</strong> {{invoice.billedBy.panNumber}}</p>{{/if}}
-      {{#if invoice.billedBy.trnNumber}}<p class="id-line"><strong>TRN :</strong> {{invoice.billedBy.trnNumber}}</p>{{/if}}
-      {{#if invoice.billedBy.tinNumber}}<p class="id-line"><strong>TIN :</strong> {{invoice.billedBy.tinNumber}}</p>{{/if}}
-      {{#if invoice.billedBy.vatNumber}}<p class="id-line"><strong>{{#if invoice.billedBy.vatLabel}}{{invoice.billedBy.vatLabel}}{{else}}VAT{{/if}} :</strong> {{invoice.billedBy.vatNumber}}</p>{{/if}}
-      {{#if invoice.billedBy.sstNumber}}<p class="id-line"><strong>SST :</strong> {{invoice.billedBy.sstNumber}}</p>{{/if}}
-      {{#if invoice.billedBy.phone}}<p class="id-line"><strong>Phone :</strong> {{formatPhoneNumber invoice.billedBy.phone}}</p>{{/if}}
-      {{#if invoice.billedBy.email}}<p class="id-line"><strong>Email :</strong> {{invoice.billedBy.email}}</p>{{/if}}
-      {{#each invoice.billedBy.additionalIds}}<p class="id-line"><strong>{{label}} :</strong> {{value}}</p>{{/each}}
-      {{#each invoice.billedBy.customFields}}<p class="id-line"><strong>{{label}} :</strong> {{value}}</p>{{/each}}
+      {{#each display.partyDetails.billedBy}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
     </div>
 
     <div class="party-card">
@@ -36,29 +27,35 @@
       <div class="address-lines">
         {{#each (partyAddressLines invoice.billedTo)}}<p>{{this}}</p>{{/each}}
       </div>
-      {{#if invoice.billedTo.gstin}}<p class="id-line"><strong>GSTIN :</strong> {{invoice.billedTo.gstin}}</p>{{/if}}
-      {{#if invoice.billedTo.panNumber}}<p class="id-line"><strong>PAN :</strong> {{invoice.billedTo.panNumber}}</p>{{/if}}
-      {{#if invoice.billedTo.trnNumber}}<p class="id-line"><strong>TRN :</strong> {{invoice.billedTo.trnNumber}}</p>{{/if}}
-      {{#if invoice.billedTo.tinNumber}}<p class="id-line"><strong>TIN :</strong> {{invoice.billedTo.tinNumber}}</p>{{/if}}
-      {{#if invoice.billedTo.vatNumber}}<p class="id-line"><strong>{{#if invoice.billedTo.vatLabel}}{{invoice.billedTo.vatLabel}}{{else}}VAT{{/if}} :</strong> {{invoice.billedTo.vatNumber}}</p>{{/if}}
-      {{#if invoice.billedTo.sstNumber}}<p class="id-line"><strong>SST :</strong> {{invoice.billedTo.sstNumber}}</p>{{/if}}
-      {{#if invoice.billedTo.phone}}<p class="id-line"><strong>Phone :</strong> {{formatPhoneNumber invoice.billedTo.phone}}</p>{{/if}}
-      {{#if invoice.billedTo.email}}<p class="id-line"><strong>Email :</strong> {{invoice.billedTo.email}}</p>{{/if}}
-      {{#each invoice.billedTo.additionalIds}}<p class="id-line"><strong>{{label}} :</strong> {{value}}</p>{{/each}}
-      {{#each invoice.billedTo.customFields}}<p class="id-line"><strong>{{label}} :</strong> {{value}}</p>{{/each}}
+      {{#each display.partyDetails.billedTo}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
     </div>
 
     <div class="invoice-meta-table">
-      <div class="meta-label">{{#if invoice.customLabels.invoiceNumber}}{{invoice.customLabels.invoiceNumber}}{{else}}Invoice No{{/if}}</div>
-      <div>{{invoice.invoiceNumber}}</div>
-      <div class="meta-label">{{#if invoice.customLabels.invoiceDate}}{{invoice.customLabels.invoiceDate}}{{else}}Invoice Date{{/if}}</div>
-      <div>{{formateShortDateWithOffset invoice.invoiceDate invoice.ownerOffset}}</div>
-      {{#if invoice.dueDate}}<div class="meta-label">{{#if invoice.customLabels.dueDate}}{{invoice.customLabels.dueDate}}{{else}}Due Date{{/if}}</div><div>{{formateShortDateWithOffset invoice.dueDate invoice.ownerOffset}}</div>{{/if}}
-      {{#if invoice.countryOfSupply}}<div class="meta-label" data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.countryOfSupply}}{{invoice.customLabels.countryOfSupply}}{{else}}Country of Supply{{/if}}</div><div data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.countryOfSupply}}</div>{{/if}}
-      {{#if invoice.placeOfSupply}}<div class="meta-label" data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.placeOfSupply}}{{invoice.customLabels.placeOfSupply}}{{else}}Place of Supply{{/if}}</div><div data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.placeOfSupply}}</div>{{/if}}
-      {{#if invoice.purchaseOrderNumber}}<div class="meta-label">{{#if invoice.customLabels.purchaseOrderNumber}}{{invoice.customLabels.purchaseOrderNumber}}{{else}}PO No{{/if}}</div><div>{{invoice.purchaseOrderNumber}}</div>{{/if}}
-      {{#each invoice.customHeaders}}<div class="meta-label">{{label}}</div><div>{{value}}</div>{{/each}}
+      {{#if display.documentDetails}}
+        {{#each display.documentDetails}}<div class="meta-label"{{#if isCountry}} data-ceres-country-of-supply style="display: none;"{{/if}}{{#if isPlace}} data-ceres-place-of-supply style="display: none;"{{/if}}>{{label}}</div><div{{#if isCountry}} data-ceres-country-of-supply style="display: none;"{{/if}}{{#if isPlace}} data-ceres-place-of-supply style="display: none;"{{/if}}>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</div>{{/each}}
+      {{else}}
+        <div class="meta-label">{{#if invoice.customLabels.invoiceNumber}}{{invoice.customLabels.invoiceNumber}}{{else}}Invoice No{{/if}}</div>
+        <div>{{invoice.invoiceNumber}}</div>
+        <div class="meta-label">{{#if invoice.customLabels.invoiceDate}}{{invoice.customLabels.invoiceDate}}{{else}}Invoice Date{{/if}}</div>
+        <div>{{formateShortDateWithOffset invoice.invoiceDate invoice.ownerOffset}}</div>
+        {{#if invoice.dueDate}}<div class="meta-label">{{#if invoice.customLabels.dueDate}}{{invoice.customLabels.dueDate}}{{else}}Due Date{{/if}}</div><div>{{formateShortDateWithOffset invoice.dueDate invoice.ownerOffset}}</div>{{/if}}
+        {{#if invoice.countryOfSupply}}<div class="meta-label" data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.countryOfSupply}}{{invoice.customLabels.countryOfSupply}}{{else}}Country of Supply{{/if}}</div><div data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.countryOfSupply}}</div>{{/if}}
+        {{#if invoice.placeOfSupply}}<div class="meta-label" data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.placeOfSupply}}{{invoice.customLabels.placeOfSupply}}{{else}}Place of Supply{{/if}}</div><div data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.placeOfSupply}}</div>{{/if}}
+        {{#if invoice.purchaseOrderNumber}}<div class="meta-label">{{#if invoice.customLabels.purchaseOrderNumber}}{{invoice.customLabels.purchaseOrderNumber}}{{else}}PO No{{/if}}</div><div>{{invoice.purchaseOrderNumber}}</div>{{/if}}
+        {{#each invoice.customHeaders}}<div class="meta-label">{{label}}</div><div>{{value}}</div>{{/each}}
+      {{/if}}
     </div>
+
+    {{#if mapped.visibility.shippedFrom}}
+    <div class="shipped-card">
+      <p class="section-label">{{#if invoice.customLabels.shippedFrom}}{{invoice.customLabels.shippedFrom}}{{else}}Shipped From{{/if}}</p>
+      <p class="party-name">{{invoice.shippedFrom.name}}</p>
+      <div class="address-lines">
+        {{#each (partyAddressLines invoice.shippedFrom)}}<p>{{this}}</p>{{/each}}
+      </div>
+      {{#each display.partyDetails.shippedFrom}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
+    </div>
+    {{/if}}
 
     {{#if mapped.visibility.shippedTo}}
     <div class="shipped-card">
@@ -67,10 +64,7 @@
       <div class="address-lines">
         {{#each (partyAddressLines invoice.shippedTo)}}<p>{{this}}</p>{{/each}}
       </div>
-      {{#if invoice.shippedTo.gstin}}<p class="id-line"><strong>GSTIN :</strong> {{invoice.shippedTo.gstin}}</p>{{/if}}
-      {{#if invoice.shippedTo.panNumber}}<p class="id-line"><strong>PAN :</strong> {{invoice.shippedTo.panNumber}}</p>{{/if}}
-      {{#if invoice.shippedTo.phone}}<p class="id-line"><strong>Phone :</strong> {{formatPhoneNumber invoice.shippedTo.phone}}</p>{{/if}}
-      {{#if invoice.shippedTo.email}}<p class="id-line"><strong>Email :</strong> {{invoice.shippedTo.email}}</p>{{/if}}
+      {{#each display.partyDetails.shippedTo}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
     </div>
     {{/if}}
   </section>

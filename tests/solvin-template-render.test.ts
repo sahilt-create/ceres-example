@@ -242,6 +242,59 @@ describe("Solvin compiled template", () => {
     );
   });
 
+  it("preserves document-defined party and document-detail field order", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      purchaseOrderNumber: "PO-100",
+      customHeaders: [
+        { label: "Reference", value: "REF-100" },
+        { label: "Project", value: "Solvin" },
+      ],
+      documentFieldOrder: [
+        "Project",
+        "purchaseOrderNumber",
+        "Reference",
+        "invoiceDate",
+        "invoiceNumber",
+      ],
+      shippedFrom: {
+        name: "Warehouse One",
+        gstin: "FROM-GST",
+        customFields: [{ label: "Dock", value: "D-4" }],
+        fieldOrder: ["Dock", "gstin"],
+      },
+      shippedTo: {
+        name: "Warehouse Two",
+        phone: "9999999999",
+        additionalIds: [{ label: "Delivery ID", value: "DEL-4" }],
+        fieldOrder: ["Delivery ID", "phone"],
+      },
+    });
+    Object.assign(input.invoice.billedBy, {
+      gstin: "BY-GST",
+      phone: "9999999999",
+      additionalIds: [{ label: "Business ID", value: "B-4" }],
+      customFields: [{ label: "Industry", value: "Technology" }],
+      fieldOrder: ["Industry", "gstin", "Business ID", "phone"],
+    });
+
+    const html = template(mapSolvinTemplateData(input as any));
+
+    expect(html.indexOf("Industry")).toBeLessThan(html.indexOf("BY-GST"));
+    expect(html.indexOf("BY-GST")).toBeLessThan(html.indexOf("Business ID"));
+    expect(html.indexOf("Business ID")).toBeLessThan(
+      html.indexOf("9999999999")
+    );
+    expect(html.indexOf("Project")).toBeLessThan(html.indexOf("PO-100"));
+    expect(html.indexOf("PO-100")).toBeLessThan(html.indexOf("Reference"));
+    expect(html).toContain("Warehouse One");
+    expect(html.indexOf("Dock")).toBeLessThan(html.indexOf("FROM-GST"));
+    expect(html).toContain("Warehouse Two");
+    expect(html.indexOf("Delivery ID")).toBeLessThan(
+      html.lastIndexOf("9999999999")
+    );
+  });
+
   it("renders integer item and total amounts with invoice precision", () => {
     const input = payload(false);
     Object.assign(input.invoice, {

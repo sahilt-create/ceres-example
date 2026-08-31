@@ -177,6 +177,176 @@ const mapInformationalRows = (value: any) =>
     })
     .filter((row) => row.label && row.value);
 
+type OrderedDisplayRow = {
+  key: string;
+  label: string;
+  value: any;
+  isPhone?: boolean;
+  isDate?: boolean;
+  isCountry?: boolean;
+  isPlace?: boolean;
+};
+
+const configuredOrderKeys = (...values: any[]): string[] =>
+  values
+    .flatMap((value) => (Array.isArray(value) ? value : []))
+    .map((entry) => {
+      if (typeof entry === "string") return normalizedName(entry);
+      const record = asRecord(entry);
+      return normalizedName(
+        firstText(
+          record.key,
+          record.field,
+          record.fieldKey,
+          record.name,
+          record.label
+        )
+      );
+    })
+    .filter(Boolean);
+
+const orderDisplayRows = <T extends { key: string; label: string }>(
+  rows: T[],
+  orderKeys: string[]
+): T[] => {
+  if (!orderKeys.length) return rows;
+
+  const remaining = [...rows];
+  const ordered: T[] = [];
+  orderKeys.forEach((orderKey) => {
+    const index = remaining.findIndex(
+      (row) =>
+        normalizedName(row.key) === orderKey ||
+        normalizedName(row.label) === orderKey
+    );
+    if (index >= 0) ordered.push(...remaining.splice(index, 1));
+  });
+  return [...ordered, ...remaining];
+};
+
+const isPartyEntryVisible = (field: UnknownRecord): boolean =>
+  isConfiguredFieldVisible(field) &&
+  optionalBooleanValue(field.isArchived) !== true;
+
+const mapPartyDetailRows = (partyValue: any): OrderedDisplayRow[] => {
+  const party = asRecord(partyValue);
+  const builtInRows: OrderedDisplayRow[] = [
+    { key: "gstin", label: "GSTIN", value: party.gstin },
+    { key: "panNumber", label: "PAN", value: party.panNumber },
+    { key: "trnNumber", label: "TRN", value: party.trnNumber },
+    { key: "tinNumber", label: "TIN", value: party.tinNumber },
+    {
+      key: "vatNumber",
+      label: firstText(party.vatLabel, "VAT"),
+      value: party.vatNumber,
+    },
+    { key: "sstNumber", label: "SST", value: party.sstNumber },
+    { key: "phone", label: "Phone", value: party.phone, isPhone: true },
+    { key: "email", label: "Email", value: party.email },
+  ].filter((row) => firstText(row.value));
+  const configuredRows = [party.additionalIds, party.customFields]
+    .flatMap(collectionRecords)
+    .filter(isPartyEntryVisible)
+    .map((field) => ({
+      key: firstText(field.key, field.name, field.label),
+      label: firstText(field.label, field.name, field.key),
+      value: firstText(field.value, field.defaultValue),
+    }))
+    .filter((row) => row.label && row.value);
+
+  return orderDisplayRows(
+    [...builtInRows, ...configuredRows],
+    configuredOrderKeys(
+      party.fieldOrder,
+      party.displayOrder,
+      party.fieldSequence,
+      party.customFieldOrder
+    )
+  );
+};
+
+const mapDocumentDetailRows = (invoiceValue: any): OrderedDisplayRow[] => {
+  const invoice = asRecord(invoiceValue);
+  const labels = asRecord(invoice.customLabels);
+  const rows: OrderedDisplayRow[] = [
+    {
+      key: "invoiceNumber",
+      label: firstText(labels.invoiceNumber, "Invoice No"),
+      value: invoice.invoiceNumber,
+    },
+    {
+      key: "invoiceDate",
+      label: firstText(labels.invoiceDate, "Invoice Date"),
+      value: invoice.invoiceDate,
+      isDate: true,
+    },
+    {
+      key: "dueDate",
+      label: firstText(labels.dueDate, "Due Date"),
+      value: invoice.dueDate,
+      isDate: true,
+    },
+    {
+      key: "countryOfSupply",
+      label: firstText(labels.countryOfSupply, "Country of Supply"),
+      value: invoice.countryOfSupply,
+      isCountry: true,
+    },
+    {
+      key: "placeOfSupply",
+      label: firstText(labels.placeOfSupply, "Place of Supply"),
+      value: invoice.placeOfSupply,
+      isPlace: true,
+    },
+    {
+      key: "purchaseOrderNumber",
+      label: firstText(labels.purchaseOrderNumber, "PO No"),
+      value: invoice.purchaseOrderNumber,
+    },
+    {
+      key: "quotationNumber",
+      label: firstText(labels.quotationNumber, "Quotation No"),
+      value: invoice.quotationNumber,
+    },
+    {
+      key: "salesOrderNumber",
+      label: firstText(labels.salesOrderNumber, "Sales Order No"),
+      value: invoice.salesOrderNumber,
+    },
+    {
+      key: "documentNumber",
+      label: firstText(labels.documentNumber, "Document No"),
+      value: invoice.documentNumber,
+    },
+    {
+      key: "documentDate",
+      label: firstText(labels.documentDate, "Document Date"),
+      value: invoice.documentDate,
+      isDate: true,
+    },
+  ].filter((row) => firstText(row.value));
+  const customRows = collectionRecords(invoice.customHeaders)
+    .filter(isConfiguredFieldVisible)
+    .map((field) => ({
+      key: firstText(field.key, field.name, field.label),
+      label: firstText(field.label, field.name, field.key),
+      value: firstText(field.value, field.defaultValue),
+    }))
+    .filter((row) => row.label && row.value);
+  const template = asRecord(invoice.template);
+
+  return orderDisplayRows(
+    [...rows, ...customRows],
+    configuredOrderKeys(
+      invoice.documentFieldOrder,
+      invoice.documentDetailsOrder,
+      invoice.headerFieldOrder,
+      template.documentFieldOrder,
+      template.documentDetailsOrder
+    )
+  );
+};
+
 const mapCessRows = (invoice: UnknownRecord) => {
   const finalTotal = asRecord(invoice.finalTotal);
   const invoiceTotals = asRecord(invoice.totals);
@@ -686,6 +856,13 @@ export const mapSolvinTemplateData = (payload: any) => {
       currencySymbol: resolveCurrencySymbol(invoice),
       note: buildNote(invoice),
       notes,
+      partyDetails: {
+        billedBy: mapPartyDetailRows(invoice.billedBy),
+        billedTo: mapPartyDetailRows(invoice.billedTo),
+        shippedFrom: mapPartyDetailRows(invoice.shippedFrom),
+        shippedTo: mapPartyDetailRows(invoice.shippedTo),
+      },
+      documentDetails: mapDocumentDetailRows(invoice),
       labels: {
         notes: firstText(customLabels.notes, "Notes"),
         subTotal:
