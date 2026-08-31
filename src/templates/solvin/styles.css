@@ -553,6 +553,11 @@
   font-weight: 700;
 }
 
+.items-table .items-total-row td,
+.items-table .items-total-row .solvin-money {
+  font-weight: 700;
+}
+
 .items-table thead th,
 .items-table .items-total-row td {
   text-align: center;
