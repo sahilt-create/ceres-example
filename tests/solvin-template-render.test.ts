@@ -1249,16 +1249,20 @@ describe("Solvin compiled template", () => {
     );
   });
 
-  it("does not render a standalone discount row in the totals section", () => {
+  it("renders a configured document discount below the subtotal", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       discount: "10",
+      finalTotal: { ...input.invoice.finalTotal, discount: "10" },
       customLabels: { discount: "Promotional Discount" },
     });
 
     const html = template(mapSolvinTemplateData(input as any));
-    expect(html).not.toContain("Promotional Discount");
-    expect(html).not.toContain("Discount");
+    expect(html).toContain("Promotional Discount");
+    expect(html).toContain("- money:10");
+    expect(html.indexOf("Sub Total")).toBeLessThan(
+      html.indexOf("Promotional Discount")
+    );
   });
 
   it("renders country values from the shared normalized invoice", () => {

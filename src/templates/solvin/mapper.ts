@@ -810,6 +810,15 @@ export const mapSolvinTemplateData = (payload: any) => {
   const subTotal = itemAmounts.length
     ? itemAmounts.reduce((sum, amount) => sum + amount, 0)
     : numericValue(invoice.subTotal) ?? 0;
+  const discountAmount = numericValue(
+    firstMonetaryValue(
+      finalTotal.discount,
+      finalTotal.totalDiscount,
+      invoice.discount,
+      asRecord(invoice.totals).discount,
+      asRecord(invoice.totals).totalDiscount
+    )
+  );
   const cessRows = mapCessRows(invoice);
   const taxAmount = state.mapped.visibility.showIgst
     ? numericValue(finalTotal.igst) ?? 0
@@ -870,6 +879,7 @@ export const mapSolvinTemplateData = (payload: any) => {
         notes: firstText(customLabels.notes, "Notes"),
         subTotal:
           amountColumn?.label || String(customLabels.subTotal || "Sub Total"),
+        discount: firstText(customLabels.discount, "Discount"),
         igst: appendTaxRates(
           labelFor(
             columns,
@@ -923,6 +933,10 @@ export const mapSolvinTemplateData = (payload: any) => {
       cessRows,
       additionalChargeRows,
       extraTotalRows,
+      discountAmount:
+        discountAmount && Number.isFinite(discountAmount)
+          ? Math.abs(discountAmount)
+          : undefined,
     },
     totals: { subTotal, dueAmount },
   };

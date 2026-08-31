@@ -168,6 +168,7 @@
     <div class="totals-spacer"></div>
     <div class="totals-table">
       <div class="totals-label">{{display.labels.subTotal}}</div><div>{{{formatSolvinCurrencyMarkup totals.subTotal invoice}}}</div>
+      {{#if display.discountAmount}}<div class="totals-label">{{display.labels.discount}}</div><div>- {{{formatSolvinCurrencyMarkup display.discountAmount invoice}}}</div>{{/if}}
       {{#if mapped.visibility.showTaxes}}{{#if mapped.visibility.showIgst}}
         <div class="totals-label">{{display.labels.igst}}</div><div>{{{formatSolvinCurrencyMarkup invoice.finalTotal.igst invoice}}}</div>
       {{else}}
