@@ -600,7 +600,6 @@ export const mapSolvinTemplateData = (payload: any) => {
     subTotal + taxAmount + cessAmount
   );
   const extraTotalRows = mapInformationalRows(invoice.extraTotalFields);
-  const customFooterRows = mapInformationalRows(invoice.customFooters);
 
   return {
     ...state,
@@ -691,7 +690,6 @@ export const mapSolvinTemplateData = (payload: any) => {
       cessRows,
       additionalChargeRows,
       extraTotalRows,
-      customFooterRows,
     },
     totals: { subTotal, dueAmount },
   };

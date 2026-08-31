@@ -1027,7 +1027,7 @@ describe("Solvin compiled template", () => {
     expect(mapSolvinTemplateData(input as any).totals.subTotal).toBe(100);
   });
 
-  it("maps every configured subtotal and custom-footer field", () => {
+  it("maps configured subtotal fields in document order without custom footers", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       items: [
@@ -1100,10 +1100,23 @@ describe("Solvin compiled template", () => {
     expect(html).toContain("money:-67200.11");
     expect(html).toContain("money:-500");
     expect(html).toContain("money:99");
-    expect(html).toContain("Brand");
-    expect(html).toContain("MSI, LG");
-    expect(html).toContain("Warranty");
-    expect(html).toContain("3 Years");
+    expect(html).not.toContain("Brand");
+    expect(html).not.toContain("MSI, LG");
+    expect(html).not.toContain("Warranty");
+    expect(html).not.toContain("3 Years");
+
+    expect(html.indexOf("Cess 1")).toBeLessThan(
+      html.indexOf("Promo Discount (10%)")
+    );
+    expect(html.indexOf("Promo Discount (10%)")).toBeLessThan(
+      html.indexOf("Instant Discount")
+    );
+    expect(html.indexOf("Instant Discount")).toBeLessThan(
+      html.indexOf("Secure Packing Charges")
+    );
+    expect(html.indexOf("Secure Packing Charges")).toBeLessThan(
+      html.indexOf(">Packing Charges</div>")
+    );
   });
 
   it("does not render a standalone discount row in the totals section", () => {
