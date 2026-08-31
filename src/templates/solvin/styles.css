@@ -558,6 +558,10 @@
   font-weight: 700 !important;
 }
 
+.items-table .items-total-row .solvin-money {
+  font-family: inherit !important;
+}
+
 .items-table thead th,
 .items-table .items-total-row td {
   text-align: center;
