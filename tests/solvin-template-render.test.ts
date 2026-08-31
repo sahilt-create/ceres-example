@@ -636,6 +636,22 @@ describe("Solvin compiled template", () => {
     expect(html).toMatch(/<th class="col-total [^"]+">Total<\/th>/);
   });
 
+  it("marks eleven-or-more-column invoices for bounded pageless PDF layout", () => {
+    const input = payload(false);
+    input.invoice.columns = Array.from({ length: 11 }, (_, index) => ({
+      key: index === 0 ? "item" : `custom${index}`,
+      label: index === 0 ? "Item" : `Custom ${index}`,
+      dataType: index === 0 ? "text" : "number",
+      isHidden: false,
+    })) as any;
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.mapped.visibility.denseItemsTable).toBe(true);
+    expect(html).toContain('class="items-table-wrap is-dense"');
+  });
+
   it("follows the full-width description setting from advanced options", () => {
     const disabled = mapSolvinTemplateData(payload(false) as any);
     const enabled = mapSolvinTemplateData(payload(true) as any);

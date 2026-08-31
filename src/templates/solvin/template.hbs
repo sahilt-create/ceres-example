@@ -75,7 +75,7 @@
     {{/if}}
   </section>
 
-  <div class="items-table-wrap" data-column-count="{{mapped.visibility.visibleColumnCount}}">
+  <div class="items-table-wrap{{#if mapped.visibility.denseItemsTable}} is-dense{{/if}}" data-column-count="{{mapped.visibility.visibleColumnCount}}">
   <table class="items-table">
     <colgroup>
       {{#each mapped.columns}}

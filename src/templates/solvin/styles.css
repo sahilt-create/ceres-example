@@ -359,6 +359,35 @@
   white-space: nowrap;
 }
 
+/* Eleven or more visible columns otherwise exceed an A4 width and Chromium
+   silently scales the whole print down. Keeping the dense table bounded makes
+   preview height and Pageless PDF height use the same geometry. */
+.items-table-wrap.is-dense .items-table {
+  table-layout: fixed;
+  font-size: 9px;
+}
+
+.items-table-wrap.is-dense .items-table th,
+.items-table-wrap.is-dense .items-table td {
+  padding-right: 3px;
+  padding-left: 3px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.items-table-wrap.is-dense col.col-index {
+  width: 4%;
+}
+
+.items-table-wrap.is-dense col.col-item {
+  width: 18%;
+}
+
+.items-table-wrap.is-dense .solvin-money {
+  white-space: normal;
+}
+
 .item-row {
   min-height: 101px;
 }
@@ -1316,6 +1345,21 @@
   .items-table td.col-item div {
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  /* Override the general numeric nowrap rules for dense invoices. This keeps
+     the table within the printable width instead of triggering PDF shrink. */
+  .items-table-wrap.is-dense .items-table {
+    table-layout: fixed;
+    font-size: 9px;
+  }
+
+  .items-table-wrap.is-dense .items-table th,
+  .items-table-wrap.is-dense .items-table td,
+  .items-table-wrap.is-dense .items-table span,
+  .items-table-wrap.is-dense .items-table .solvin-money {
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   /* Force the shaded cells' backgrounds into the PDF — needed because some

@@ -459,6 +459,9 @@ export const addItemSerialNumberColumn = (
       ? { ...column, label: "Total" }
       : column
   );
+  const visibleColumnCount = normalizedColumns.filter(
+    (column) => !column.isHidden
+  ).length;
 
   return {
     ...state,
@@ -467,9 +470,8 @@ export const addItemSerialNumberColumn = (
       columns: normalizedColumns,
       visibility: {
         ...state.mapped.visibility,
-        visibleColumnCount: normalizedColumns.filter(
-          (column) => !column.isHidden
-        ).length,
+        visibleColumnCount,
+        denseItemsTable: visibleColumnCount >= 11,
       },
     },
   };
