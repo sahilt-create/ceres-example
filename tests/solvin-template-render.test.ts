@@ -1067,6 +1067,20 @@ describe("Solvin compiled template", () => {
     expect(html).toContain("<p>Austin, United States 78701</p>");
   });
 
+  it("renders billed-to stateName aliases in the address", () => {
+    const input = payload(false);
+    Object.assign(input.invoice.billedTo, {
+      city: "Pune",
+      stateName: "Maharashtra",
+      country: "IN",
+      pincode: "411001",
+    });
+
+    const html = template(mapSolvinTemplateData(input as any));
+
+    expect(html).toContain("<p>Pune, Maharashtra, India 411001</p>");
+  });
+
   it.each([
     "INVOICE",
     "QUOTATION",

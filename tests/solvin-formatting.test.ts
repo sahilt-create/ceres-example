@@ -132,6 +132,37 @@ describe("Solvin party address formatting", () => {
       "Kochi, Ernakulam, Kerala, India 682001",
     ]);
   });
+
+  it("renders state-name aliases used by live billed-to payloads", () => {
+    expect(
+      getPartyAddressLines({
+        city: "Pune",
+        stateName: "Maharashtra",
+        country: "IN",
+        pincode: "411001",
+      })
+    ).toEqual(["Pune, Maharashtra, India 411001"]);
+
+    expect(
+      getPartyAddressLines({
+        city: "Bengaluru",
+        state: { name: "Karnataka", code: "29" },
+        country: "IN",
+        pincode: "560001",
+      })
+    ).toEqual(["Bengaluru, Karnataka, India 560001"]);
+  });
+
+  it("resolves an Indian GST state code when no state name is provided", () => {
+    expect(
+      getPartyAddressLines({
+        city: "Bengaluru",
+        gstState: "29",
+        country: "IN",
+        pincode: "560001",
+      })
+    ).toEqual(["Bengaluru, Karnataka, India 560001"]);
+  });
 });
 
 describe("Solvin item unit formatting", () => {

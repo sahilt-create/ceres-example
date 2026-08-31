@@ -1,4 +1,5 @@
 import formatCurrency from "../../widgets/shared/formatCurrency";
+import { normalizePlaceOfSupply } from "../../main/invoiceTemplateNormalization";
 
 type UnknownRecord = Record<string, any>;
 
@@ -243,6 +244,46 @@ const uniqueTexts = (values: any[]): string[] => {
     });
 };
 
+const partyLocationText = (value: any): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return String(value).trim();
+
+  const location = asRecord(value);
+  return String(
+    location.name ??
+      location.stateName ??
+      location.label ??
+      location.value ??
+      location.code ??
+      ""
+  ).trim();
+};
+
+const partyStateText = (party: UnknownRecord): string => {
+  const explicitState = partyLocationText(
+    party.stateName ??
+      party.state_name ??
+      party.state ??
+      party.province ??
+      party.region
+  );
+  if (explicitState && !/^0?\d{1,2}$/.test(explicitState)) {
+    return explicitState;
+  }
+
+  const gstState = partyLocationText(
+    party.gstState ?? party.stateCode ?? explicitState
+  );
+  if (!gstState) return "";
+  if (!/^0?\d{1,2}$/.test(gstState)) return gstState;
+
+  return normalizePlaceOfSupply({
+    billedTo: party,
+    countryOfSupply: party.country,
+    placeOfSupply: gstState,
+  } as any);
+};
+
 /** Builds consistent party-address lines for every supported document type. */
 export const getPartyAddressLines = (partyValue: any): string[] => {
   const party = asRecord(partyValue);
@@ -254,7 +295,7 @@ export const getPartyAddressLines = (partyValue: any): string[] => {
   const locality = uniqueTexts([
     party.city,
     party.district,
-    party.state,
+    partyStateText(party),
     formatCountryName(party.country),
   ]).join(", ");
   const postalCode = String(party.pincode ?? party.zipCode ?? "").trim();
