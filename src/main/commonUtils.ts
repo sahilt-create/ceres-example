@@ -69,7 +69,9 @@ export const loadTemplateManifest = async () => {
     );
   }
 
-  const response = await fetch(manifestUrl);
+  // Versioned template folders can be pruned during a deployment. Never use a
+  // stale cached root manifest that points at an already-pruned folder.
+  const response = await fetch(manifestUrl, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(
       `Failed to fetch template manifest from ${manifestUrl}: ${response.status}`

@@ -36,17 +36,19 @@ export function initDevBridge(): boolean {
         "Local Dev: Rewriting URL parameters to base64 for renderer compatibility..."
       );
 
-      fetch(`./templates/${tplName}/manifest.json`)
+      // Preview links must always resolve the current version. GitHub Pages
+      // retains the stable manifest but removes old versioned asset folders.
+      fetch(`./templates/${tplName}/manifest.json`, { cache: "no-store" })
         .then((r) => {
           if (!r.ok)
             throw new Error("Could not load local manifest for " + tplName);
           return r.json();
         })
-        .then((manifest) => {
+        .then(() => {
           const fullPath =
             window.location.origin +
             window.location.pathname.replace("index.html", "") +
-            `templates/${tplName}/${manifest.version}/manifest.json`;
+            `templates/${tplName}/manifest.json`;
           const newParams = new URLSearchParams(window.location.search);
           newParams.set("template", btoa(fullPath));
           window.location.replace(
