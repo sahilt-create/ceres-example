@@ -392,6 +392,8 @@ describe("Solvin compiled template", () => {
     expect(visibleHtml).toMatch(
       /Payment Reference[\s\S]*REF-001[\s\S]*TDS Amount Withheld[\s\S]*\(money:10\)[\s\S]*Amount Received[\s\S]*money:500[\s\S]*Transaction Charge[\s\S]*money:10[\s\S]*Amount Paid[\s\S]*\(money:510\)[\s\S]*Due Amount[\s\S]*money:660/
     );
+    expect(visibleHtml).toContain('class="totals-footer-label due-total"');
+    expect(visibleHtml).toContain('class="totals-footer-value due-total"');
 
     Object.assign(input.invoice, { showDueAmount: false });
     const hiddenHtml = template(mapSolvinTemplateData(input as any));

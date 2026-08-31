@@ -185,6 +185,7 @@ type OrderedDisplayRow = {
   isDate?: boolean;
   isCountry?: boolean;
   isPlace?: boolean;
+  supplyField?: "country-of-supply" | "place-of-supply";
 };
 
 const configuredOrderKeys = (...values: any[]): string[] =>
@@ -291,12 +292,14 @@ const mapDocumentDetailRows = (invoiceValue: any): OrderedDisplayRow[] => {
       label: firstText(labels.countryOfSupply, "Country of Supply"),
       value: invoice.countryOfSupply,
       isCountry: true,
+      supplyField: "country-of-supply" as const,
     },
     {
       key: "placeOfSupply",
       label: firstText(labels.placeOfSupply, "Place of Supply"),
       value: invoice.placeOfSupply,
       isPlace: true,
+      supplyField: "place-of-supply" as const,
     },
     {
       key: "purchaseOrderNumber",

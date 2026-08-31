@@ -631,6 +631,14 @@
   font-weight: 700;
 }
 
+/* Due Amount is the final payable amount, so keep the same visual emphasis
+   as Total even when payment/balance rows appear between them. */
+.totals-table > .due-total {
+  background: #f9fafc;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .totals-table > .totals-footer-label,
 .totals-table > .totals-footer-value {
   display: flex;
@@ -1367,6 +1375,7 @@
   .items-table th,
   .items-total-row,
   .grand-total,
+  .due-total,
   .amount-words-row strong {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

@@ -32,7 +32,7 @@
 
     <div class="invoice-meta-table">
       {{#if display.documentDetails}}
-        {{#each display.documentDetails}}<div class="meta-label"{{#if isCountry}} data-ceres-country-of-supply style="display: none;"{{/if}}{{#if isPlace}} data-ceres-place-of-supply style="display: none;"{{/if}}>{{label}}</div><div{{#if isCountry}} data-ceres-country-of-supply style="display: none;"{{/if}}{{#if isPlace}} data-ceres-place-of-supply style="display: none;"{{/if}}>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</div>{{/each}}
+        {{#each display.documentDetails}}<div class="meta-label"{{#if supplyField}} data-ceres-{{supplyField}} style="display: none;"{{/if}}>{{label}}</div><div{{#if supplyField}} data-ceres-{{supplyField}} style="display: none;"{{/if}}>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</div>{{/each}}
       {{else}}
         <div class="meta-label">{{#if invoice.customLabels.invoiceNumber}}{{invoice.customLabels.invoiceNumber}}{{else}}Invoice No{{/if}}</div>
         <div>{{invoice.invoiceNumber}}</div>
@@ -183,7 +183,7 @@
       {{#if invoice.balance.settledAmount}}<div class="totals-footer-label">{{display.labels.amountReceived}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.settledAmount invoice}}}</div>{{/if}}
       {{#if invoice.balance.transactionCharge}}<div class="totals-footer-label">{{display.labels.transactionCharge}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.transactionCharge invoice}}}</div>{{/if}}
       {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.paid invoice}}})</div>{{/if}}
-      {{#if mapped.visibility.showDueAmount}}{{#if totals.dueAmount}}<div class="totals-footer-label">{{display.labels.dueAmount}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup totals.dueAmount invoice}}}</div>{{/if}}{{/if}}
+      {{#if mapped.visibility.showDueAmount}}{{#if totals.dueAmount}}<div class="totals-footer-label due-total">{{display.labels.dueAmount}}</div><div class="totals-footer-value due-total">{{{formatSolvinCurrencyMarkup totals.dueAmount invoice}}}</div>{{/if}}{{/if}}
     </div>
   </div>{{/if}}
 
