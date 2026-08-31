@@ -181,8 +181,11 @@
         <div class="totals-label">{{#if mapped.visibility.isUtgst}}{{display.labels.utgst}}{{else}}{{display.labels.sgst}}{{/if}}</div>
         <div>{{#if mapped.visibility.isUtgst}}{{{formatSolvinCurrencyMarkup invoice.finalTotal.utgst invoice}}}{{else}}{{{formatSolvinCurrencyMarkup invoice.finalTotal.sgst invoice}}}{{/if}}</div>
       {{/if}}{{/if}}
-      {{#each invoice.additionalCharges}}<div class="totals-label">{{#if label}}{{label}}{{else}}{{name}}{{/if}}</div><div>{{{formatSolvinCurrencyMarkup amount ../invoice}}}</div>{{/each}}
+      {{#each display.cessRows}}<div class="totals-label">{{label}}</div><div>{{{formatSolvinCurrencyMarkup amount ../invoice}}}</div>{{/each}}
+      {{#each display.extraTotalRows}}<div class="totals-label">{{label}}</div><div>{{#if isMonetary}}{{{formatSolvinCurrencyMarkup value ../invoice}}}{{else}}{{value}}{{/if}}</div>{{/each}}
+      {{#each display.additionalChargeRows}}<div class="totals-label">{{label}}</div><div>{{{formatSolvinCurrencyMarkup amount ../invoice}}}</div>{{/each}}
       <div class="totals-label grand-total">{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display: none;"{{/if}}>&nbsp;({{display.currency}})</span></div><div class="grand-total">{{{formatSolvinCurrencyMarkup invoice.finalTotal.total invoice}}}</div>
+      {{#each display.customFooterRows}}<div class="totals-footer-label">{{label}}</div><div class="totals-footer-value">{{#if isMonetary}}{{{formatSolvinCurrencyMarkup value ../invoice}}}{{else}}{{value}}{{/if}}</div>{{/each}}
       {{#if invoice.balance.tds}}<div class="totals-footer-label">{{display.labels.tdsAmountWithheld}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.tds invoice}}})</div>{{/if}}
       {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.paid invoice}}})</div>{{/if}}
       {{#if invoice.balance.settledAmount}}<div class="totals-footer-label">{{display.labels.amountReceived}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.settledAmount invoice}}}</div>{{/if}}

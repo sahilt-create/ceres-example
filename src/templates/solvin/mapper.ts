@@ -134,6 +134,120 @@ const optionalBooleanValue = (value: any): boolean | undefined => {
   return undefined;
 };
 
+const collectionRecords = (value: any): UnknownRecord[] => {
+  if (Array.isArray(value)) return value.map(asRecord);
+
+  return Object.entries(asRecord(value)).map(([key, entry]) => {
+    const record = asRecord(entry);
+    return Object.keys(record).length
+      ? { key, ...record }
+      : { key, label: key, value: entry };
+  });
+};
+
+const isConfiguredFieldVisible = (field: UnknownRecord): boolean =>
+  (optionalBooleanValue(field.showInInvoice) ??
+    optionalBooleanValue(asRecord(field.params).showInInvoice) ??
+    true) &&
+  optionalBooleanValue(field.isHidden) !== true;
+
+const mapInformationalRows = (value: any) =>
+  collectionRecords(value)
+    .filter(isConfiguredFieldVisible)
+    .map((field) => {
+      const label = firstText(field.label, field.name, field.key);
+      const fieldValue = field.value ?? field.defaultValue;
+      return {
+        label,
+        value: String(fieldValue ?? "").trim(),
+        isMonetary:
+          field.dataType === "currency" ||
+          field.fxReturnType === "currency" ||
+          field.isCurrency === true,
+      };
+    })
+    .filter((row) => row.label && row.value);
+
+const mapCessRows = (invoice: UnknownRecord) => {
+  const finalTotal = asRecord(invoice.finalTotal);
+  const invoiceTotals = asRecord(invoice.totals);
+  const finalCessTotal = asRecord(finalTotal.cessTotal);
+  const invoiceCessTotal = asRecord(invoiceTotals.cessTotal);
+
+  return collectionRecords(invoice.cesses)
+    .filter(
+      (cess) =>
+        (optionalBooleanValue(cess.isApplied) ?? true) &&
+        optionalBooleanValue(cess.isArchived) !== true
+    )
+    .map((cess) => {
+      const amountKey = firstText(cess.cessAmountKey, cess.amountKey);
+      const cessKey = firstText(cess.cessKey, cess.key);
+      const amount = firstMonetaryValue(
+        cess.finalAmount,
+        cess.calculatedAmount,
+        cess.amount,
+        finalCessTotal[amountKey],
+        finalCessTotal[cessKey],
+        invoiceCessTotal[amountKey],
+        invoiceCessTotal[cessKey]
+      );
+
+      return {
+        label: firstText(cess.cessName, cess.label, cess.name, "Cess"),
+        amount,
+      };
+    })
+    .filter((row) => numericValue(row.amount) !== undefined);
+};
+
+const roundMoney = (value: number, invoice: UnknownRecord): number => {
+  const requestedPrecision = Number(invoice.subUnitLength ?? 2);
+  const precision =
+    Number.isInteger(requestedPrecision) && requestedPrecision >= 0
+      ? requestedPrecision
+      : 2;
+  const factor = 10 ** precision;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+};
+
+const mapAdditionalChargeRows = (
+  invoice: UnknownRecord,
+  calculationBase: number
+) =>
+  collectionRecords(invoice.additionalCharges)
+    .filter(isConfiguredFieldVisible)
+    .map((charge) => {
+      const multiplier = numericValue(charge.multiplier) ?? 1;
+      const explicitAmount = numericValue(
+        firstMonetaryValue(
+          charge.finalAmount,
+          charge.calculatedAmount,
+          charge.totalAmount,
+          charge.amountValue
+        )
+      );
+      const configuredAmount = numericValue(charge.amount);
+      const isPercentage = ["percentage", "percent", "%"].includes(
+        firstText(charge.amountType, charge.type).toLowerCase()
+      );
+      let unsignedAmount = explicitAmount;
+      if (unsignedAmount === undefined && configuredAmount !== undefined) {
+        unsignedAmount = isPercentage
+          ? (calculationBase * configuredAmount) / 100
+          : configuredAmount;
+      }
+
+      return {
+        label: firstText(charge.label, charge.name, charge.key),
+        amount:
+          unsignedAmount === undefined
+            ? undefined
+            : roundMoney(unsignedAmount * multiplier, invoice),
+      };
+    })
+    .filter((row) => row.label && row.amount !== undefined);
+
 const configuredVisibility = (
   invoice: UnknownRecord,
   keys: string[]
@@ -470,6 +584,23 @@ export const mapSolvinTemplateData = (payload: any) => {
   const subTotal = itemAmounts.length
     ? itemAmounts.reduce((sum, amount) => sum + amount, 0)
     : numericValue(invoice.subTotal) ?? 0;
+  const cessRows = mapCessRows(invoice);
+  const taxAmount = state.mapped.visibility.showIgst
+    ? numericValue(finalTotal.igst) ?? 0
+    : (numericValue(finalTotal.cgst) ?? 0) +
+      (numericValue(
+        state.mapped.visibility.isUtgst ? finalTotal.utgst : finalTotal.sgst
+      ) ?? 0);
+  const cessAmount = cessRows.reduce(
+    (sum, row) => sum + (numericValue(row.amount) ?? 0),
+    0
+  );
+  const additionalChargeRows = mapAdditionalChargeRows(
+    invoice,
+    subTotal + taxAmount + cessAmount
+  );
+  const extraTotalRows = mapInformationalRows(invoice.extraTotalFields);
+  const customFooterRows = mapInformationalRows(invoice.customFooters);
 
   return {
     ...state,
@@ -557,6 +688,10 @@ export const mapSolvinTemplateData = (payload: any) => {
           "Due Amount"
         ),
       },
+      cessRows,
+      additionalChargeRows,
+      extraTotalRows,
+      customFooterRows,
     },
     totals: { subTotal, dueAmount },
   };

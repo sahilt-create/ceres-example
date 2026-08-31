@@ -1027,18 +1027,83 @@ describe("Solvin compiled template", () => {
     expect(mapSolvinTemplateData(input as any).totals.subTotal).toBe(100);
   });
 
-  it("does not render custom footer fields in the totals section", () => {
+  it("maps every configured subtotal and custom-footer field", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
+      items: [
+        {
+          ...input.invoice.items[0],
+          amount: 600001,
+          igst: 60000.1,
+          total: 672001.1,
+        },
+      ],
+      finalTotal: {
+        subTotal: 600001,
+        igst: 60000.1,
+        cessTotal: { cessAmount: 12000 },
+        total: 604399.99,
+      },
+      totals: {
+        subTotal: 600001,
+        igst: 60000.1,
+        cessTotal: { cessAmount: 12000 },
+        total: 604399.99,
+      },
+      cesses: [
+        {
+          cessName: "Cess 1",
+          cessAmountKey: "cessAmount",
+          isApplied: true,
+        },
+      ],
+      extraTotalFields: [{ label: "Packing Charges", value: "None" }],
+      additionalCharges: [
+        {
+          label: "Promo Discount (10%)",
+          amount: 10,
+          amountType: "PERCENTAGE",
+          multiplier: -1,
+        },
+        {
+          label: "Instant Discount",
+          amount: 500,
+          amountType: "FIXED_AMOUNT",
+          multiplier: -1,
+        },
+        {
+          label: "Secure Packing Charges",
+          amount: 99,
+          amountType: "FIXED_AMOUNT",
+          multiplier: 1,
+        },
+      ],
       customFooters: [
-        { label: "Account Number", value: "123456789" },
-        { label: "IFSC Code", value: "BANK0001234" },
+        { label: "Brand", value: "MSI, LG" },
+        { label: "Warranty", value: "3 Years" },
       ],
     });
 
-    const html = template(mapSolvinTemplateData(input as any));
-    expect(html).not.toContain("Account Number");
-    expect(html).not.toContain("IFSC Code");
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.display.cessRows).toEqual([
+      { label: "Cess 1", amount: 12000 },
+    ]);
+    expect(model.display.additionalChargeRows).toEqual([
+      { label: "Promo Discount (10%)", amount: -67200.11 },
+      { label: "Instant Discount", amount: -500 },
+      { label: "Secure Packing Charges", amount: 99 },
+    ]);
+    expect(html).toContain("Packing Charges");
+    expect(html).toContain("None");
+    expect(html).toContain("money:-67200.11");
+    expect(html).toContain("money:-500");
+    expect(html).toContain("money:99");
+    expect(html).toContain("Brand");
+    expect(html).toContain("MSI, LG");
+    expect(html).toContain("Warranty");
+    expect(html).toContain("3 Years");
   });
 
   it("does not render a standalone discount row in the totals section", () => {
