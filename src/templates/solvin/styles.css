@@ -1327,17 +1327,6 @@
     table-layout: auto;
   }
 
-  /* Keep the preview at its normal 13px size. Compact only the PDF/printed
-     table when it has enough columns to need the extra horizontal room. */
-  .items-table-wrap:is(
-      [data-column-count="8"],
-      [data-column-count="9"],
-      [data-column-count="10"]
-    )
-    .items-table {
-    font-size: 11px;
-  }
-
   .items-table-wrap:is(
       [data-column-count="8"],
       [data-column-count="9"],
@@ -1417,22 +1406,10 @@
     overflow-wrap: anywhere;
   }
 
-  /* Dense printed tables use the same minimum size as other compact printed
-     tables. Every descendant inherits it, including the subtotal row. */
+  /* Dense layouts keep their bounded geometry. Font compaction is applied
+     only after the real 13px print layout is measured and found to overflow. */
   .items-table-wrap.is-dense .items-table {
     table-layout: fixed;
-    font-size: 11px;
-  }
-
-  .items-table-wrap:is(
-      [data-column-count="8"],
-      [data-column-count="9"],
-      [data-column-count="10"],
-      .is-dense
-    )
-    .items-table
-    * {
-    font-size: inherit;
   }
 
   .items-table-wrap.is-dense .items-table th,
@@ -1441,6 +1418,69 @@
   .items-table-wrap.is-dense .items-table .solvin-money {
     overflow-wrap: anywhere;
     white-space: normal;
+  }
+
+  /* Measure the table's natural 13px print width with numeric values kept on
+     one line. Descriptive item text can still wrap while fit is calculated. */
+  .solvin-invoice.is-measuring-print-fit .items-table {
+    width: 100%;
+    table-layout: auto !important;
+    font-size: 13px !important;
+  }
+
+  .solvin-invoice.is-measuring-print-fit .items-table thead th {
+    overflow-wrap: normal !important;
+    white-space: nowrap !important;
+  }
+
+  .solvin-invoice.is-measuring-print-fit
+    .items-table
+    :is(
+      .center,
+      .right,
+      .align-right,
+      .col-index,
+      .col-qty,
+      .col-unit,
+      .col-rate,
+      .col-discount,
+      .col-amount,
+      .col-total,
+      .col-gst-rate,
+      .col-cess-rate,
+      .col-tax,
+      .col-igst,
+      .col-cess,
+      .col-cess-amount,
+      .col-hsn-sac,
+      .solvin-money
+    ) {
+    overflow-wrap: normal !important;
+    white-space: nowrap !important;
+  }
+
+  /* Reduce typography only when the measured 13px table does not fit. Keep
+     the item table, its subtotal row, and the totals area fully consistent. */
+  .solvin-invoice.is-compact-print-table .items-table,
+  .solvin-invoice.is-compact-print-table .totals-table {
+    font-size: 11px;
+  }
+
+  .solvin-invoice.is-compact-print-table .items-table *,
+  .solvin-invoice.is-compact-print-table .totals-table * {
+    font-size: inherit;
+  }
+
+  .solvin-invoice.is-compact-print-table .items-table thead th {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  .solvin-invoice.is-compact-print-table .items-table th,
+  .solvin-invoice.is-compact-print-table .items-table td,
+  .solvin-invoice.is-compact-print-table .totals-table > div {
+    padding-right: 3px;
+    padding-left: 3px;
   }
 
   /* Force the shaded cells' backgrounds into the PDF — needed because some

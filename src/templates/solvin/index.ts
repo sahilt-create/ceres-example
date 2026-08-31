@@ -15,6 +15,7 @@ import {
   toTitleCaseWords,
 } from "./formatting";
 import amountInWords from "../../widgets/shared/amountInWords";
+import { registerSolvinPrintFit } from "./printFit";
 import "./styles.css";
 
 // Register every partial/helper used by the Solvin template before rendering.
@@ -196,3 +197,4 @@ if (hb) {
 
 window.CeresTemplateDataMapper = mapSolvinTemplateData as any;
 window.CeresTemplate = template;
+registerSolvinPrintFit();
