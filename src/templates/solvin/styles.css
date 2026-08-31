@@ -555,7 +555,7 @@
 
 .items-table .items-total-row td,
 .items-table .items-total-row .solvin-money {
-  font-weight: 700;
+  font-weight: 700 !important;
 }
 
 .items-table thead th,
