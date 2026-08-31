@@ -554,7 +554,7 @@
 }
 
 .items-table .items-total-row td,
-.items-table .items-total-row .solvin-money {
+.items-table .items-total-row td * {
   font-weight: 700 !important;
 }
 
