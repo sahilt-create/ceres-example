@@ -46,25 +46,29 @@
       {{/if}}
     </div>
 
-    {{#if mapped.visibility.shippedFrom}}
-    <div class="shipped-card">
-      <p class="section-label">{{#if invoice.customLabels.shippedFrom}}{{invoice.customLabels.shippedFrom}}{{else}}Shipped From{{/if}}</p>
-      <p class="party-name">{{invoice.shippedFrom.name}}</p>
-      <div class="address-lines">
-        {{#each (partyAddressLines invoice.shippedFrom)}}<p>{{this}}</p>{{/each}}
+    {{#if mapped.visibility.showShippingParties}}
+    <div class="shipped-grid{{#if mapped.visibility.singleShippingParty}} is-single{{/if}}">
+      {{#if mapped.visibility.shippedFrom}}
+      <div class="shipped-card">
+        <p class="section-label">{{#if invoice.customLabels.shippedFrom}}{{invoice.customLabels.shippedFrom}}{{else}}Shipped From{{/if}}</p>
+        <p class="party-name">{{invoice.shippedFrom.name}}</p>
+        <div class="address-lines">
+          {{#each (partyAddressLines invoice.shippedFrom)}}<p>{{this}}</p>{{/each}}
+        </div>
+        {{#each display.partyDetails.shippedFrom}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
       </div>
-      {{#each display.partyDetails.shippedFrom}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
-    </div>
-    {{/if}}
+      {{/if}}
 
-    {{#if mapped.visibility.shippedTo}}
-    <div class="shipped-card">
-      <p class="section-label">{{#if invoice.customLabels.shippedTo}}{{invoice.customLabels.shippedTo}}{{else}}Shipped To{{/if}}</p>
-      <p class="party-name">{{invoice.shippedTo.name}}</p>
-      <div class="address-lines">
-        {{#each (partyAddressLines invoice.shippedTo)}}<p>{{this}}</p>{{/each}}
+      {{#if mapped.visibility.shippedTo}}
+      <div class="shipped-card">
+        <p class="section-label">{{#if invoice.customLabels.shippedTo}}{{invoice.customLabels.shippedTo}}{{else}}Shipped To{{/if}}</p>
+        <p class="party-name">{{invoice.shippedTo.name}}</p>
+        <div class="address-lines">
+          {{#each (partyAddressLines invoice.shippedTo)}}<p>{{this}}</p>{{/each}}
+        </div>
+        {{#each display.partyDetails.shippedTo}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
       </div>
-      {{#each display.partyDetails.shippedTo}}<p class="id-line"><strong>{{label}} :</strong> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
+      {{/if}}
     </div>
     {{/if}}
   </section>
@@ -213,15 +217,17 @@
     <div class="bank-panel">
       <h2>{{#if invoice.customLabels.bankDetails}}{{invoice.customLabels.bankDetails}}{{else}}Bank Details{{/if}}</h2>
       {{#if mapped.visibility.showBankAccount}}
-      <div class="bank-table">
-        <div>{{#if invoice.customLabels.accountName}}{{invoice.customLabels.accountName}}{{else}}Account Name{{/if}}</div><div>{{#if invoice.bankAccount.name}}{{invoice.bankAccount.name}}{{else}}{{invoice.bankAccount.accountHolderName}}{{/if}}</div>
-        <div>{{#if invoice.customLabels.accountNumber}}{{invoice.customLabels.accountNumber}}{{else}}Account Number{{/if}}</div><div>{{#if invoice.bankAccount.accountNo}}{{invoice.bankAccount.accountNo}}{{else}}{{invoice.bankAccount.accountNumber}}{{/if}}</div>
-        <div>{{#if invoice.customLabels.ifsc}}{{invoice.customLabels.ifsc}}{{else}}IFSC{{/if}}</div><div>{{#if invoice.bankAccount.ifsc}}{{invoice.bankAccount.ifsc}}{{else}}{{invoice.bankAccount.ifscCode}}{{/if}}</div>
-        {{#if invoice.bankAccount.swift}}<div>{{#if invoice.customLabels.swift}}{{invoice.customLabels.swift}}{{else}}SWIFT{{/if}}</div><div>{{invoice.bankAccount.swift}}</div>{{/if}}
-        {{#if invoice.bankAccount.accountType}}<div>{{#if invoice.customLabels.accountType}}{{invoice.customLabels.accountType}}{{else}}Account Type{{/if}}</div><div>{{invoice.bankAccount.accountType}}</div>{{/if}}
-        <div>{{#if invoice.customLabels.bank}}{{invoice.customLabels.bank}}{{else}}Bank{{/if}}</div><div>{{#if invoice.bankAccount.bank}}{{invoice.bankAccount.bank}}{{else}}{{invoice.bankAccount.bankName}}{{/if}}</div>
-        {{#each invoice.bankAccount.customFields}}<div>{{label}}</div><div>{{value}}</div>{{/each}}
-      </div>
+      <table class="bank-table">
+        <tbody>
+          <tr><th>{{#if invoice.customLabels.accountName}}{{invoice.customLabels.accountName}}{{else}}Account Name{{/if}}</th><td>{{#if invoice.bankAccount.name}}{{invoice.bankAccount.name}}{{else}}{{invoice.bankAccount.accountHolderName}}{{/if}}</td></tr>
+          <tr><th>{{#if invoice.customLabels.accountNumber}}{{invoice.customLabels.accountNumber}}{{else}}Account Number{{/if}}</th><td class="bank-nowrap-value">{{#if invoice.bankAccount.accountNo}}{{invoice.bankAccount.accountNo}}{{else}}{{invoice.bankAccount.accountNumber}}{{/if}}</td></tr>
+          <tr><th>{{#if invoice.customLabels.ifsc}}{{invoice.customLabels.ifsc}}{{else}}IFSC{{/if}}</th><td class="bank-nowrap-value">{{#if invoice.bankAccount.ifsc}}{{invoice.bankAccount.ifsc}}{{else}}{{invoice.bankAccount.ifscCode}}{{/if}}</td></tr>
+          {{#if invoice.bankAccount.swift}}<tr><th>{{#if invoice.customLabels.swift}}{{invoice.customLabels.swift}}{{else}}SWIFT{{/if}}</th><td class="bank-nowrap-value">{{invoice.bankAccount.swift}}</td></tr>{{/if}}
+          {{#if invoice.bankAccount.accountType}}<tr><th>{{#if invoice.customLabels.accountType}}{{invoice.customLabels.accountType}}{{else}}Account Type{{/if}}</th><td>{{invoice.bankAccount.accountType}}</td></tr>{{/if}}
+          <tr><th>{{#if invoice.customLabels.bank}}{{invoice.customLabels.bank}}{{else}}Bank{{/if}}</th><td>{{#if invoice.bankAccount.bank}}{{invoice.bankAccount.bank}}{{else}}{{invoice.bankAccount.bankName}}{{/if}}</td></tr>
+          {{#each invoice.bankAccount.customFields}}<tr><th>{{label}}</th><td>{{value}}</td></tr>{{/each}}
+        </tbody>
+      </table>
       {{/if}}
     </div>
 
@@ -229,7 +235,7 @@
       <table class="solvin-hsn-table" data-layout="vertical">
         <tbody>
           {{#each mapped.hsnSummary.hsnList}}
-            <tr class="solvin-hsn-meta-row"><th>HSN</th><td>{{hsn}}</td></tr>
+            <tr class="solvin-hsn-meta-row"><th>HSN</th><td class="hsn-nowrap-value">{{hsn}}</td></tr>
             <tr class="solvin-hsn-meta-row"><th>Taxable Value</th><td>{{{formatSolvinCurrencyMarkup taxableValue ../invoice}}}</td></tr>
             {{#if ../mapped.visibility.showIgst}}
               <tr class="solvin-hsn-tax-title"><th colspan="2">{{#if ../invoice.taxName}}{{../invoice.taxName}}{{else}}IGST{{/if}}</th></tr>

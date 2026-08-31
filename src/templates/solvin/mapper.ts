@@ -737,14 +737,13 @@ export const mapSolvinTemplateData = (payload: any) => {
       optionalBooleanValue(invoice.showNotesInInvoice) ??
       optionalBooleanValue(invoice.showNotes) ??
       !(optionalBooleanValue(invoice.hideNotes) ?? false));
-  // An outstanding due balance is a calculated invoice field, not additional
-  // information. Show it by default when it is positive; an explicit document
-  // setting still takes precedence and can deliberately hide it.
+  // A balance value alone must not add Due Amount to the template. Render the
+  // row only when the invoice explicitly includes/enables that field.
   const numericDueAmount = numericValue(dueAmount);
   const hasOutstandingDueAmount =
     numericDueAmount !== undefined && numericDueAmount > 0;
   const showDueAmount =
-    hasOutstandingDueAmount && (explicitDueVisibility ?? true);
+    hasOutstandingDueAmount && explicitDueVisibility === true;
   const isDescriptionFullWidth =
     optionalBooleanValue(advanceOptions.showDescriptionInFullWidth) ??
     optionalBooleanValue(advanceOptions.isDescriptionFullWidth) ??
@@ -842,6 +841,12 @@ export const mapSolvinTemplateData = (payload: any) => {
       ...state.mapped,
       visibility: {
         ...state.mapped.visibility,
+        showShippingParties:
+          state.mapped.visibility.shippedFrom ||
+          state.mapped.visibility.shippedTo,
+        singleShippingParty:
+          state.mapped.visibility.shippedFrom !==
+          state.mapped.visibility.shippedTo,
         showDueAmount,
         showHsnSummary,
         showCountryOfSupply: false,

@@ -56,10 +56,12 @@ template-specific `display` and `totals` view model in `mapper.ts`.
 | Additional information    | `invoice.customFooters`, `footers`, invoice-level `customFields`, and aliases   | Removed at the Solvin mapper boundary. These fields cannot leak into the subtotal, another invoice section, or a generic live-preview renderer.                                                                                                                                                            |
 | Total in words             | Custom value, then `amountInWords(invoice.finalTotal.total)`                    | Always shown by the enabled Solvin display profile; title-cased custom value uses the shared number conversion fallback.                                                                                                                                                                                   |
 
-All monetary cells use PDF-safe currency markup. The standard `₹` character is
-kept visually unchanged and rendered through an explicit currency-capable font
-stack, preventing custom PDF fonts from replacing it with a missing-glyph
-square. Other currency and custom symbols retain their configured formatting.
+All monetary cells use PDF-safe currency markup. The formatter reads the actual
+invoice currency dynamically and prints an ASCII-safe currency label (`INR`,
+`USD`, `EUR`, `GBP`, `SAR`, and so on) in screen, live-business, paged, Pageless
+PDF, and downloaded-PDF renderers. An ASCII custom currency label is preserved;
+a non-ASCII custom symbol falls back to the invoice currency code so it cannot
+become a missing-glyph square.
 
 ## Lower sections and intentional omissions
 

@@ -209,3 +209,14 @@ Use this checklist:
   border-bottom: 2px solid #333;
 }
 ```
+
+### Responsive mixed-content summary sections
+
+For side-by-side Terms, Bank Details, and Tax/HSN panels:
+
+- Use a responsive grid with `minmax(0, ...)` columns and stack the panels when the actual invoice container becomes narrow. Prefer a container query when PDF page width may differ from the browser viewport.
+- Use semantic tables for label/value data.
+- Let prose, labels, names, and other descriptive text wrap only at normal word boundaries.
+- Keep account numbers, routing codes, IFSC/SWIFT codes, HSN/SAC codes, percentages, and monetary values on one line with `white-space: nowrap`, `overflow-wrap: normal`, and `word-break: normal`.
+- Do not solve overflow by shrinking all text or applying `overflow-wrap: anywhere` to numeric/code cells.
+- Visually verify both a normal-width paged PDF and a narrow/Pageless PDF for overlap, clipping, unwanted number wrapping, and correct panel stacking.

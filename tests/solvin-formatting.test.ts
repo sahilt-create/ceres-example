@@ -20,23 +20,38 @@ describe("Solvin currency formatting", () => {
     ).toBe("₹1,35,000.00");
   });
 
-  it("renders INR with its standard currency symbol in a font-safe wrapper", () => {
-    const markup = formatSolvinCurrencyMarkup(135000, {
-      currency: "INR",
-      locale: "en-IN",
-    });
+  it.each([
+    ["INR", "en-IN", "INR 1,35,000.00"],
+    ["USD", "en-US", "USD 135,000.00"],
+    ["EUR", "en-US", "EUR 135,000.00"],
+    ["GBP", "en-GB", "GBP 135,000.00"],
+    ["SAR", "en-US", "SAR 135,000.00"],
+    ["AED", "en-US", "AED 135,000.00"],
+  ])(
+    "renders %s dynamically in paged and Pageless PDF markup",
+    (currency, locale, expected) => {
+      expect(formatSolvinCurrencyMarkup(135000, { currency, locale })).toBe(
+        `<span class="solvin-money">${expected}</span>`
+      );
+    }
+  );
 
-    expect(markup).toContain('class="solvin-money"');
-    expect(markup).toContain("₹");
-    expect(markup).toContain("1,35,000.00");
-    expect(markup).not.toContain("<svg");
+  it("uses a configured ASCII custom currency label", () => {
+    expect(
+      formatSolvinCurrencyMarkup(100, {
+        currency: "RC",
+        customCurrencySymbol: "RCoins",
+        locale: "en-US",
+      })
+    ).toBe('<span class="solvin-money">RCoins 100.00</span>');
   });
 
-  it("keeps non-INR currency text escaped and unchanged", () => {
+  it("falls back to the currency code for a non-ASCII custom symbol", () => {
     expect(
       formatSolvinCurrencyMarkup(100, {
         currency: "SAR",
-        customCurrencySymbol: "SAR",
+        customCurrencySymbol: "⃁",
+        locale: "en-US",
       })
     ).toBe('<span class="solvin-money">SAR 100.00</span>');
   });

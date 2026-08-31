@@ -280,6 +280,10 @@ describe("Solvin compiled template", () => {
 
     const html = template(mapSolvinTemplateData(input as any));
 
+    expect(html).toMatch(
+      /<div class="shipped-grid">[\s\S]*Shipped From[\s\S]*Shipped To[\s\S]*<\/div>\s*<\/section>/
+    );
+
     expect(html.indexOf("Industry")).toBeLessThan(html.indexOf("BY-GST"));
     expect(html.indexOf("BY-GST")).toBeLessThan(html.indexOf("Business ID"));
     expect(html.indexOf("Business ID")).toBeLessThan(
@@ -401,7 +405,7 @@ describe("Solvin compiled template", () => {
     expect(hiddenHtml).toContain("Amount Received");
   });
 
-  it("shows a non-zero due amount from the invoice balance by default", () => {
+  it("does not add Due Amount when the invoice has a balance but no field visibility", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       balance: { due: 660 },
@@ -410,10 +414,10 @@ describe("Solvin compiled template", () => {
     const model = mapSolvinTemplateData(input as any);
     const html = template(model);
 
-    expect(model.mapped.visibility.showDueAmount).toBe(true);
+    expect(model.mapped.visibility.showDueAmount).toBe(false);
     expect(model.totals.dueAmount).toBe(660);
-    expect(html).toContain("Due Amount");
-    expect(html).toContain("money:660");
+    expect(html).not.toContain("Due Amount");
+    expect(html).not.toContain("money:660");
   });
 
   it("resolves due amount from toPay when the field is enabled", () => {
@@ -657,7 +661,9 @@ describe("Solvin compiled template", () => {
 
     const html = template(mapSolvinTemplateData(input as any));
 
-    expect(html).toMatch(/<th>HSN<\/th><td>998311<\/td>/);
+    expect(html).toMatch(
+      /<th>HSN<\/th><td class="hsn-nowrap-value">998311<\/td>/
+    );
     expect(html).toMatch(/<th>Taxable Value<\/th><td>money:100<\/td>/);
     expect(html).toMatch(/<th colspan="2">VAT<\/th>/);
     expect(html).toMatch(/<th>Rate<\/th><th>Amount<\/th>/);
@@ -666,6 +672,36 @@ describe("Solvin compiled template", () => {
     expect(html).toContain('class="solvin-hsn-total-row"');
     expect(html).toContain("Total Tax In Words :");
     expect(html).toContain("Eighteen Dollars Only");
+  });
+
+  it("renders responsive lower panels with non-wrapping bank codes", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      terms: [
+        {
+          label: "Payment",
+          terms: ["Quote the invoice number when making payment."],
+        },
+      ],
+      paymentOptions: { accountTransfer: true },
+      bankAccount: {
+        name: "A long account holder name that may wrap",
+        accountNo: "50100097578020",
+        ifsc: "HDFC0003688",
+        swift: "HDFCINBBXXX",
+        accountType: "Savings Account",
+        bank: "A long descriptive bank name that may wrap",
+      },
+    });
+
+    const html = template(mapSolvinTemplateData(input as any));
+
+    expect(html).toContain('class="lower-grid"');
+    expect(html).toContain('class="terms-panel"');
+    expect(html).toContain('<table class="bank-table">');
+    expect(html).toContain('<td class="bank-nowrap-value">50100097578020</td>');
+    expect(html).toContain('<td class="bank-nowrap-value">HDFC0003688</td>');
+    expect(html).toContain('<td class="bank-nowrap-value">HDFCINBBXXX</td>');
   });
 
   it("normalizes API string values and HSN aliases for the HSN summary", () => {
