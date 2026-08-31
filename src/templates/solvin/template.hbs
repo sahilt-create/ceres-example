@@ -186,9 +186,9 @@
       <div class="totals-label grand-total">{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display: none;"{{/if}}>&nbsp;({{display.currency}})</span></div><div class="grand-total">{{{formatSolvinCurrencyMarkup invoice.finalTotal.total invoice}}}</div>
       {{#each display.extraTotalRows}}<div class="totals-footer-label">{{label}}</div><div class="totals-footer-value">{{#if isMonetary}}{{{formatSolvinCurrencyMarkup value ../invoice}}}{{else}}{{value}}{{/if}}</div>{{/each}}
       {{#if invoice.balance.tds}}<div class="totals-footer-label">{{display.labels.tdsAmountWithheld}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.tds invoice}}})</div>{{/if}}
-      {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.paid invoice}}})</div>{{/if}}
       {{#if invoice.balance.settledAmount}}<div class="totals-footer-label">{{display.labels.amountReceived}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.settledAmount invoice}}}</div>{{/if}}
       {{#if invoice.balance.transactionCharge}}<div class="totals-footer-label">{{display.labels.transactionCharge}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup invoice.balance.transactionCharge invoice}}}</div>{{/if}}
+      {{#if invoice.balance.paid}}<div class="totals-footer-label">{{display.labels.amountPaid}}</div><div class="totals-footer-value">({{{formatSolvinCurrencyMarkup invoice.balance.paid invoice}}})</div>{{/if}}
       {{#if mapped.visibility.showDueAmount}}{{#if totals.dueAmount}}<div class="totals-footer-label">{{display.labels.dueAmount}}</div><div class="totals-footer-value">{{{formatSolvinCurrencyMarkup totals.dueAmount invoice}}}</div>{{/if}}{{/if}}
     </div>
   </div>{{/if}}
