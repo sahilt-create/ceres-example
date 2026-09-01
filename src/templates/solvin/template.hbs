@@ -1,5 +1,5 @@
 <div class="solvin-invoice">
-  <div class="no-dibella invoice-letterhead{{#unless invoice.letterHead}} is-empty{{/unless}}">
+  <div class="invoice-letterhead{{#unless invoice.letterHead}} is-empty{{/unless}}">
     {{#if invoice.letterHead}}
       <img src="{{invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
     {{else}}
@@ -268,7 +268,7 @@
     </div>
   </section>
 
-  <div class="no-dibella invoice-letterhead-footer{{#unless invoice.letterHeadFooter}} is-empty{{/unless}}">
+  <div class="invoice-letterhead-footer{{#unless invoice.letterHeadFooter}} is-empty{{/unless}}">
     {{#if invoice.letterHeadFooter}}
       <img src="{{invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
     {{else}}

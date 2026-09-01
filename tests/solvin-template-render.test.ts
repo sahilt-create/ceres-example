@@ -260,6 +260,25 @@ describe("Solvin compiled template", () => {
     expect(css).not.toContain("--ceres-font-family");
   });
 
+  it("keeps configured letterhead images visible in downloaded PDFs", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      letterHead: "https://cdn.example.com/header.png",
+      letterHeadFooter: "https://cdn.example.com/footer.png",
+    });
+
+    const html = template(mapSolvinTemplateData(input as any));
+
+    expect(html).toContain(
+      '<div class="invoice-letterhead">\n      <img src="https://cdn.example.com/header.png"'
+    );
+    expect(html).toContain(
+      '<div class="invoice-letterhead-footer">\n      <img src="https://cdn.example.com/footer.png"'
+    );
+    expect(html).not.toContain("no-dibella invoice-letterhead");
+    expect(html).not.toContain("no-dibella invoice-letterhead-footer");
+  });
+
   it("uses the invoice currency for HSN tax total words", () => {
     expect(solvinTaxAmountInWords(180, { currency: "USD" })).toBe(
       "One Hundred Eighty Dollars Only"
