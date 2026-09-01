@@ -243,6 +243,23 @@ describe("Solvin compiled template", () => {
     expect(printCss).not.toMatch(/min-height:\s*0\s*!important/);
   });
 
+  it("uses the font and color variables supplied by Lydia", () => {
+    const css = readFileSync(
+      join(process.cwd(), "src/templates/solvin/styles.css"),
+      "utf8"
+    );
+
+    expect(css).toContain(
+      "font-family: var(--subtitle-font, Inter, Arial, Helvetica, sans-serif);"
+    );
+    expect(css).toContain(
+      "font-family: var(--title-font, Arial, Helvetica, sans-serif);"
+    );
+    expect(css).toContain("background: var(--primary-background, #fff);");
+    expect(css).toContain("color: var(--secondary-color, #11151e);");
+    expect(css).not.toContain("--ceres-font-family");
+  });
+
   it("uses the invoice currency for HSN tax total words", () => {
     expect(solvinTaxAmountInWords(180, { currency: "USD" })).toBe(
       "One Hundred Eighty Dollars Only"
