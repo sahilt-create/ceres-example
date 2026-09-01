@@ -39,6 +39,26 @@ const normalizedName = (value: any): string =>
 const firstText = (...values: any[]): string =>
   values.map((value) => String(value ?? "").trim()).find(Boolean) || "";
 
+const imageSource = (value: any): string => {
+  const record = asRecord(value);
+  const source = firstText(
+    typeof value === "string" ? value : "",
+    record.url,
+    record.src,
+    record.image,
+    record.value,
+    record.data,
+    record.base64
+  );
+  if (!source) return "";
+  if (/^(?:data:|https?:|blob:|\/)/i.test(source)) return source;
+
+  return `data:image/png;base64,${source}`;
+};
+
+const firstImageSource = (...values: any[]): string =>
+  values.map(imageSource).find(Boolean) ?? "";
+
 const resolveCurrencySymbol = (invoice: UnknownRecord): string =>
   firstText(invoice.customCurrencySymbol);
 
@@ -702,6 +722,7 @@ export const addItemSerialNumberColumn = (
 };
 
 export const mapSolvinTemplateData = (payload: any) => {
+  const rawPayload = asRecord(payload);
   const normalizedState = addItemSerialNumberColumn(
     normalizeInvoiceTemplateState(payload)
   );
@@ -711,6 +732,52 @@ export const mapSolvinTemplateData = (payload: any) => {
       ? normalizedState.invoice.items
       : [],
   };
+  const rawInvoice = asRecord(rawPayload.invoice);
+  const template = asRecord(rawPayload.template);
+  const invoiceRecord = invoice as UnknownRecord;
+  const billedBy = asRecord(invoice.billedBy);
+  const owner = asRecord(invoice.owner);
+  const ownerBusiness = asRecord(invoice.ownerBusiness);
+  const business = asRecord(invoice.business);
+
+  invoice.letterHead = firstImageSource(
+    invoice.letterHead,
+    invoiceRecord.letterhead,
+    invoiceRecord.headerImage,
+    rawInvoice.letterHead,
+    rawInvoice.letterhead,
+    rawInvoice.headerImage,
+    template.letterHead,
+    template.letterhead,
+    template.headerImage,
+    billedBy.letterHead,
+    billedBy.letterhead,
+    owner.letterHead,
+    owner.letterhead,
+    ownerBusiness.letterHead,
+    ownerBusiness.letterhead,
+    business.letterHead,
+    business.letterhead
+  );
+  invoice.letterHeadFooter = firstImageSource(
+    invoice.letterHeadFooter,
+    invoiceRecord.letterheadFooter,
+    invoiceRecord.footerImage,
+    rawInvoice.letterHeadFooter,
+    rawInvoice.letterheadFooter,
+    rawInvoice.footerImage,
+    template.letterHeadFooter,
+    template.letterheadFooter,
+    template.footerImage,
+    billedBy.letterHeadFooter,
+    billedBy.letterheadFooter,
+    owner.letterHeadFooter,
+    owner.letterheadFooter,
+    ownerBusiness.letterHeadFooter,
+    ownerBusiness.letterheadFooter,
+    business.letterHeadFooter,
+    business.letterheadFooter
+  );
   SOLVIN_OMITTED_ADDITIONAL_INFORMATION_FIELDS.forEach((field) => {
     delete (invoice as UnknownRecord)[field];
   });

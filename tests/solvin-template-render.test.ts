@@ -279,6 +279,56 @@ describe("Solvin compiled template", () => {
     expect(html).not.toContain("no-dibella invoice-letterhead-footer");
   });
 
+  it("normalizes PDF artwork objects, base64 values, and owner fallbacks", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      letterHead: { url: "https://cdn.example.com/header-object.png" },
+      letterHeadFooter: "footer-base64",
+    });
+
+    const directModel = mapSolvinTemplateData(input as any);
+    expect(directModel.invoice.letterHead).toBe(
+      "https://cdn.example.com/header-object.png"
+    );
+    expect(directModel.invoice.letterHeadFooter).toBe(
+      "data:image/png;base64,footer-base64"
+    );
+
+    Object.assign(input.invoice, {
+      letterHead: null,
+      letterHeadFooter: null,
+      owner: {
+        letterHead: "https://cdn.example.com/owner-header.png",
+        letterHeadFooter: "https://cdn.example.com/owner-footer.png",
+      },
+    });
+
+    const fallbackHtml = template(mapSolvinTemplateData(input as any));
+    expect(fallbackHtml).toContain(
+      'src="https://cdn.example.com/owner-header.png"'
+    );
+    expect(fallbackHtml).toContain(
+      'src="https://cdn.example.com/owner-footer.png"'
+    );
+  });
+
+  it("forces populated header and footer artwork visible in print CSS", () => {
+    const css = readFileSync(
+      join(process.cwd(), "src/templates/solvin/styles.css"),
+      "utf8"
+    );
+    const printCss = css.slice(css.lastIndexOf("@media print"));
+
+    expect(printCss).toContain(
+      ".solvin-invoice > .invoice-letterhead:not(.is-empty)"
+    );
+    expect(printCss).toContain(
+      ".solvin-invoice > .invoice-letterhead-footer:not(.is-empty)"
+    );
+    expect(printCss).toContain("display: block !important;");
+    expect(printCss).toContain("visibility: visible !important;");
+  });
+
   it("uses the invoice currency for HSN tax total words", () => {
     expect(solvinTaxAmountInWords(180, { currency: "USD" })).toBe(
       "One Hundred Eighty Dollars Only"

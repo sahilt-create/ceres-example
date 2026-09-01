@@ -7,7 +7,7 @@ template-specific `display` and `totals` view model in `mapper.ts`.
 
 | Rendered field        | Template source and fallbacks                                                 | Visibility / formatting                                                            |
 | --------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Letterhead            | `invoice.letterHead`                                                          | Empty image hook remains for live preview updates.                                 |
+| Letterhead            | Invoice/template artwork, then billed-by/owner/business fallback             | URL, image-object, and raw base64 values are normalized for preview and PDF output; the empty image hook remains for live updates. |
 | Document title        | `invoice.invoiceTitle`, then `Invoice`                                        | Always shown.                                                                      |
 | Status                | `InvoiceStatus invoice`                                                       | Widget-owned status rules.                                                         |
 | Billed By / To        | `invoice.billedBy`, `invoice.billedTo`                                        | Address fields render only when populated; configured custom labels are preferred. |

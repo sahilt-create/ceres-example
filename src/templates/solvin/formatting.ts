@@ -551,6 +551,23 @@ const escapeHtml = (value: string): string =>
       }[character] || character)
   );
 
+const wrapCurrencyLabels = (formatted: string): string => {
+  const labelPattern = /[^\d.,\s()-]+/gu;
+  let cursor = 0;
+  const markup = Array.from(formatted.matchAll(labelPattern)).reduce(
+    (result, match) => {
+      const index = match.index ?? cursor;
+      const precedingText = escapeHtml(formatted.slice(cursor, index));
+      const currencyLabel = escapeHtml(match[0]);
+      cursor = index + match[0].length;
+      return `${result}${precedingText}<span class="solvin-currency-symbol">${currencyLabel}</span>`;
+    },
+    ""
+  );
+
+  return markup + escapeHtml(formatted.slice(cursor));
+};
+
 /**
  * Wraps the shared currency widget's formatted value so its actual symbol and
  * configured precision stay consistent in preview, paged, and Pageless PDFs.
@@ -561,5 +578,5 @@ export const formatSolvinCurrencyMarkup = (
 ): string => {
   const formatted = formatSolvinCurrency(amount, invoiceValue);
 
-  return `<span class="solvin-money">${escapeHtml(formatted)}</span>`;
+  return `<span class="solvin-money">${wrapCurrencyLabels(formatted)}</span>`;
 };

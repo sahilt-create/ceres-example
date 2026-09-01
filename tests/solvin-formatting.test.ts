@@ -30,8 +30,16 @@ describe("Solvin currency formatting", () => {
   ])(
     "renders %s dynamically in paged and Pageless PDF markup",
     (currency, locale, expected) => {
+      const symbolMatch = expected.match(/^([^\d.,\s]+)/u);
+      const expectedMarkup = symbolMatch
+        ? expected.replace(
+            symbolMatch[1],
+            `<span class="solvin-currency-symbol">${symbolMatch[1]}</span>`
+          )
+        : expected;
+
       expect(formatSolvinCurrencyMarkup(135000, { currency, locale })).toBe(
-        `<span class="solvin-money">${expected}</span>`
+        `<span class="solvin-money">${expectedMarkup}</span>`
       );
     }
   );
@@ -43,7 +51,9 @@ describe("Solvin currency formatting", () => {
         customCurrencySymbol: "RCoins",
         locale: "en-US",
       })
-    ).toBe('<span class="solvin-money">RCoins 100.00</span>');
+    ).toBe(
+      '<span class="solvin-money"><span class="solvin-currency-symbol">RCoins</span> 100.00</span>'
+    );
   });
 
   it("preserves a configured non-ASCII custom currency symbol", () => {
@@ -53,7 +63,31 @@ describe("Solvin currency formatting", () => {
         customCurrencySymbol: "⃁",
         locale: "en-US",
       })
-    ).toBe('<span class="solvin-money">⃁ 100.00</span>');
+    ).toBe(
+      '<span class="solvin-money"><span class="solvin-currency-symbol">⃁</span> 100.00</span>'
+    );
+  });
+
+  it("isolates the currency glyph for negative amounts too", () => {
+    expect(
+      formatSolvinCurrencyMarkup(-100, {
+        currency: "INR",
+        locale: "en-IN",
+      })
+    ).toBe(
+      '<span class="solvin-money">(<span class="solvin-currency-symbol">₹</span>100.00)</span>'
+    );
+  });
+
+  it("isolates currency symbols placed after the amount by the locale", () => {
+    expect(
+      formatSolvinCurrencyMarkup(100, {
+        currency: "EUR",
+        locale: "de-DE",
+      })
+    ).toBe(
+      '<span class="solvin-money">100,00 <span class="solvin-currency-symbol">€</span></span>'
+    );
   });
 
   it("honors the invoice sub-unit length", () => {

@@ -40,6 +40,11 @@
   white-space: nowrap;
 }
 
+.solvin-currency-symbol {
+  font-family: Roboto, "Noto Sans", "DejaVu Sans", "Arial Unicode MS",
+    "Segoe UI Symbol", Arial, sans-serif !important;
+}
+
 /* Letterhead (header) and footer image — filled from invoice.letterHead /
    invoice.letterHeadFooter by applyPreviewAssets (img[data-ceres-height]). */
 .solvin-invoice > .invoice-letterhead,
@@ -1288,6 +1293,23 @@
     padding: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .solvin-invoice > .invoice-letterhead:not(.is-empty),
+  .solvin-invoice > .invoice-letterhead-footer:not(.is-empty),
+  .solvin-invoice > .invoice-letterhead:not(.is-empty) img,
+  .solvin-invoice > .invoice-letterhead-footer:not(.is-empty) img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-width: 100%;
+    break-inside: avoid-page;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .solvin-invoice > .invoice-letterhead-footer:not(.is-empty) {
+    break-before: avoid-page;
   }
 
   /* Printed pages can report a narrow viewport and accidentally activate the
