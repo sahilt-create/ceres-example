@@ -529,17 +529,12 @@ export const formatSolvinCurrency = (
     .trim()
     .toUpperCase();
 
-  let { customCurrencySymbol } = invoice;
-  if (!customCurrencySymbol && ["RC", "SAR"].includes(currency)) {
-    customCurrencySymbol = currency;
-  }
-
   return formatCurrency(
     amount,
     currency === "RC" ? "USD" : currency,
     invoice.locale || invoice.businessLocale || "en-IN",
     precision,
-    customCurrencySymbol
+    invoice.customCurrencySymbol
   ).replace(/\u00a0/g, " ");
 };
 
@@ -556,38 +551,15 @@ const escapeHtml = (value: string): string =>
       }[character] || character)
   );
 
-const isPdfSafeCurrencyLabel = (value: string): boolean =>
-  Boolean(value) && /^[\x20-\x7e]+$/.test(value);
-
 /**
- * Uses the invoice's actual currency as an ASCII-safe label for every monetary
- * value. This avoids missing-glyph boxes for any currency in screen-based,
- * paged, and Pageless PDF renderers without hardcoding one currency symbol.
+ * Wraps the shared currency widget's formatted value so its actual symbol and
+ * configured precision stay consistent in preview, paged, and Pageless PDFs.
  */
 export const formatSolvinCurrencyMarkup = (
   amount: any,
   invoiceValue?: any
 ): string => {
-  const invoice = asRecord(invoiceValue);
-  const currency = String(invoice.currency || invoice.businessCurrency || "INR")
-    .trim()
-    .toUpperCase();
-  const subUnitLength = Number(invoice.subUnitLength ?? 2);
-  const precision =
-    Number.isInteger(subUnitLength) && subUnitLength >= 0 ? subUnitLength : 2;
-  const customCurrencySymbol = String(
-    invoice.customCurrencySymbol ?? ""
-  ).trim();
-  const currencyLabel = isPdfSafeCurrencyLabel(customCurrencySymbol)
-    ? customCurrencySymbol
-    : currency;
-  const formatted = formatCurrency(
-    amount,
-    currency === "RC" ? "USD" : currency,
-    invoice.locale || invoice.businessLocale || "en-IN",
-    precision,
-    currencyLabel
-  ).replace(/\u00a0/g, " ");
+  const formatted = formatSolvinCurrency(amount, invoiceValue);
 
   return `<span class="solvin-money">${escapeHtml(formatted)}</span>`;
 };

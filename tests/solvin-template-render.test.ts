@@ -378,6 +378,102 @@ describe("Solvin compiled template", () => {
     expect(html).toContain("Pay before dispatch.");
   });
 
+  it("maps the editable terms heading instead of hardcoding it", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      customLabels: { terms: "Payment Terms" },
+      terms: [{ label: "Payment", terms: ["Pay before dispatch."] }],
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.display.labels.terms).toBe("Payment Terms");
+    expect(html).toContain("<h2>Payment Terms</h2>");
+    expect(html).not.toContain("<h2>Terms and Conditions</h2>");
+  });
+
+  it("maps editable labels across parties, items, bank details, and summaries", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      customLabels: {
+        billedBy: "Provided By",
+        billedTo: "Provided To",
+        gstin: "Tax Registration",
+        phone: "Contact Number",
+        purchaseOrderNumber: "Order Ref",
+        totalInWords: "Payable In Words",
+        sku: "Product Code",
+        serialNumber: "Asset Serial",
+        hsn: "Tax Code",
+        classification: "Item Class",
+        unit: "UOM",
+        taxableValue: "Tax Base",
+        rate: "Tax Rate",
+        amount: "Tax Amount",
+        totalTaxInWords: "Tax In Words",
+        signature: "Approved By",
+        for: "On Behalf Of",
+      },
+      bankAccount: {
+        name: "Seller",
+        accountNo: "1234567890",
+        ifsc: "BANK0001",
+        bank: "Example Bank",
+        customLabels: {
+          bankDetails: "Payment Account",
+          accountHolderName: "Beneficiary",
+          accountNumber: "Account Ref",
+          ifscCode: "Routing Code",
+          bankName: "Financial Institution",
+        },
+      },
+      paymentOptions: { accountTransfer: true },
+    });
+    Object.assign(input.invoice.billedBy, {
+      gstin: "GST-001",
+      phone: "9999999999",
+    });
+
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
+
+    expect(model.display.labels).toMatchObject({
+      billedBy: "Provided By",
+      billedTo: "Provided To",
+      purchaseOrderNumber: "Order Ref",
+      totalInWords: "Payable In Words",
+      sku: "Product Code",
+      serialNumber: "Asset Serial",
+      hsn: "Tax Code",
+      classification: "Item Class",
+      unit: "UOM",
+      bankDetails: "Payment Account",
+      accountName: "Beneficiary",
+      accountNumber: "Account Ref",
+      ifsc: "Routing Code",
+      bank: "Financial Institution",
+      taxableValue: "Tax Base",
+      rate: "Tax Rate",
+      amount: "Tax Amount",
+      totalTaxInWords: "Tax In Words",
+      signature: "Approved By",
+      signatureFor: "On Behalf Of",
+    });
+    expect(model.display.partyDetails.billedBy).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Tax Registration" }),
+        expect.objectContaining({ label: "Contact Number" }),
+      ])
+    );
+    expect(html).toContain("Provided By");
+    expect(html).toContain("Provided To");
+    expect(html).toContain("Payment Account");
+    expect(html).toContain("Beneficiary");
+    expect(html).toContain("Approved By");
+    expect(html).toContain("On Behalf Of Seller");
+  });
+
   it("renders the payment balance rows below total in their accounting order", () => {
     const input = payload(false);
     Object.assign(input.invoice, {

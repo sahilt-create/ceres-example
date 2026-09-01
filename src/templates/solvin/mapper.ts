@@ -229,21 +229,54 @@ const isPartyEntryVisible = (field: UnknownRecord): boolean =>
   isConfiguredFieldVisible(field) &&
   optionalBooleanValue(field.isArchived) !== true;
 
-const mapPartyDetailRows = (partyValue: any): OrderedDisplayRow[] => {
+const mapPartyDetailRows = (
+  partyValue: any,
+  labelsValue?: any
+): OrderedDisplayRow[] => {
   const party = asRecord(partyValue);
+  const labels = asRecord(labelsValue);
   const builtInRows: OrderedDisplayRow[] = [
-    { key: "gstin", label: "GSTIN", value: party.gstin },
-    { key: "panNumber", label: "PAN", value: party.panNumber },
-    { key: "trnNumber", label: "TRN", value: party.trnNumber },
-    { key: "tinNumber", label: "TIN", value: party.tinNumber },
+    {
+      key: "gstin",
+      label: firstText(labels.gstin, "GSTIN"),
+      value: party.gstin,
+    },
+    {
+      key: "panNumber",
+      label: firstText(labels.pan, labels.panNumber, "PAN"),
+      value: party.panNumber,
+    },
+    {
+      key: "trnNumber",
+      label: firstText(labels.trn, labels.trnNumber, "TRN"),
+      value: party.trnNumber,
+    },
+    {
+      key: "tinNumber",
+      label: firstText(labels.tin, labels.tinNumber, "TIN"),
+      value: party.tinNumber,
+    },
     {
       key: "vatNumber",
-      label: firstText(party.vatLabel, "VAT"),
+      label: firstText(labels.vat, labels.vatNumber, party.vatLabel, "VAT"),
       value: party.vatNumber,
     },
-    { key: "sstNumber", label: "SST", value: party.sstNumber },
-    { key: "phone", label: "Phone", value: party.phone, isPhone: true },
-    { key: "email", label: "Email", value: party.email },
+    {
+      key: "sstNumber",
+      label: firstText(labels.sst, labels.sstNumber, "SST"),
+      value: party.sstNumber,
+    },
+    {
+      key: "phone",
+      label: firstText(labels.phone, "Phone"),
+      value: party.phone,
+      isPhone: true,
+    },
+    {
+      key: "email",
+      label: firstText(labels.email, "Email"),
+      value: party.email,
+    },
   ].filter((row) => firstText(row.value));
   const configuredRows = [party.additionalIds, party.customFields]
     .flatMap(collectionRecords)
@@ -685,6 +718,8 @@ export const mapSolvinTemplateData = (payload: any) => {
   const { columns } = state.mapped;
   const advanceOptions = asRecord(state.advanceOptions);
   const customLabels = asRecord(invoice.customLabels);
+  const bankAccount = asRecord(invoice.bankAccount);
+  const bankLabels = asRecord(bankAccount.customLabels);
   const balance = asRecord(invoice.balance);
   const toPay = asRecord(invoice.toPay);
   const finalTotal = asRecord(invoice.finalTotal);
@@ -874,14 +909,93 @@ export const mapSolvinTemplateData = (payload: any) => {
       note: buildNote(invoice),
       notes,
       partyDetails: {
-        billedBy: mapPartyDetailRows(invoice.billedBy),
-        billedTo: mapPartyDetailRows(invoice.billedTo),
-        shippedFrom: mapPartyDetailRows(invoice.shippedFrom),
-        shippedTo: mapPartyDetailRows(invoice.shippedTo),
+        billedBy: mapPartyDetailRows(invoice.billedBy, customLabels),
+        billedTo: mapPartyDetailRows(invoice.billedTo, customLabels),
+        shippedFrom: mapPartyDetailRows(invoice.shippedFrom, customLabels),
+        shippedTo: mapPartyDetailRows(invoice.shippedTo, customLabels),
       },
       documentDetails: mapDocumentDetailRows(invoice),
       labels: {
+        billedBy: firstText(customLabels.billedBy, "Billed By"),
+        billedTo: firstText(customLabels.billedTo, "Billed To"),
+        shippedFrom: firstText(customLabels.shippedFrom, "Shipped From"),
+        shippedTo: firstText(customLabels.shippedTo, "Shipped To"),
         notes: firstText(customLabels.notes, "Notes"),
+        terms: firstText(
+          customLabels.terms,
+          customLabels.termsAndConditions,
+          (invoice as UnknownRecord).termsLabel,
+          (invoice as UnknownRecord).termsAndConditionsLabel,
+          "Terms and Conditions"
+        ),
+        purchaseOrderNumber: firstText(
+          customLabels.purchaseOrderNumber,
+          "PO No"
+        ),
+        totalInWords: firstText(customLabels.totalInWords, "Total In Words"),
+        sku: firstText(customLabels.sku, "SKU"),
+        serialNumber: firstText(customLabels.serialNumber, "Serial No."),
+        hsn: firstText(customLabels.hsn, customLabels.hsnSac, "HSN/SAC"),
+        hsnSummary: firstText(customLabels.hsn, customLabels.hsnSac, "HSN"),
+        classification: firstText(
+          customLabels.classification,
+          "Classification"
+        ),
+        unit: firstText(customLabels.unit, "Unit"),
+        bankDetails: firstText(
+          customLabels.bankDetails,
+          bankLabels.bankDetails,
+          "Bank Details"
+        ),
+        accountName: firstText(
+          customLabels.accountName,
+          customLabels.accountHolderName,
+          bankLabels.accountName,
+          bankLabels.accountHolderName,
+          "Account Name"
+        ),
+        accountNumber: firstText(
+          customLabels.accountNumber,
+          customLabels.accountNo,
+          bankLabels.accountNumber,
+          bankLabels.accountNo,
+          "Account Number"
+        ),
+        ifsc: firstText(
+          customLabels.ifsc,
+          customLabels.ifscCode,
+          bankLabels.ifsc,
+          bankLabels.ifscCode,
+          "IFSC"
+        ),
+        swift: firstText(
+          customLabels.swift,
+          customLabels.swiftCode,
+          bankLabels.swift,
+          bankLabels.swiftCode,
+          "SWIFT"
+        ),
+        accountType: firstText(
+          customLabels.accountType,
+          bankLabels.accountType,
+          "Account Type"
+        ),
+        bank: firstText(
+          customLabels.bank,
+          customLabels.bankName,
+          bankLabels.bank,
+          bankLabels.bankName,
+          "Bank"
+        ),
+        taxableValue: firstText(customLabels.taxableValue, "Taxable Value"),
+        rate: firstText(customLabels.rate, "Rate"),
+        amount: firstText(customLabels.amount, "Amount"),
+        totalTaxInWords: firstText(
+          customLabels.totalTaxInWords,
+          "Total Tax In Words"
+        ),
+        signature: firstText(customLabels.signature, "Authorized Signatory"),
+        signatureFor: firstText(customLabels.for, "For"),
         subTotal:
           amountColumn?.label || String(customLabels.subTotal || "Sub Total"),
         discount: firstText(customLabels.discount, "Discount"),

@@ -56,22 +56,29 @@ template-specific `display` and `totals` view model in `mapper.ts`.
 | Additional information    | `invoice.customFooters`, `footers`, invoice-level `customFields`, and aliases   | Removed at the Solvin mapper boundary. These fields cannot leak into the subtotal, another invoice section, or a generic live-preview renderer.                                                                                                                                                            |
 | Total in words             | Custom value, then `amountInWords(invoice.finalTotal.total)`                    | Always shown by the enabled Solvin display profile; title-cased custom value uses the shared number conversion fallback.                                                                                                                                                                                   |
 
-All monetary cells use PDF-safe currency markup. The formatter reads the actual
-invoice currency dynamically and prints an ASCII-safe currency label (`INR`,
-`USD`, `EUR`, `GBP`, `SAR`, and so on) in screen, live-business, paged, Pageless
-PDF, and downloaded-PDF renderers. An ASCII custom currency label is preserved;
-a non-ASCII custom symbol falls back to the invoice currency code so it cannot
-become a missing-glyph square.
+All monetary cells use the shared currency widget through Solvin's PDF-safe
+markup wrapper. The formatter reads the actual invoice currency dynamically and
+renders its currency symbol (`₹`, `$`, `€`, `£`, and so on) consistently in the
+screen preview, live business, paged, Pageless, and downloaded-PDF renderers.
+When `customCurrencySymbol` is supplied, that configured symbol is preserved.
 
 ## Lower sections and intentional omissions
 
-- Terms render from grouped `invoice.terms[].terms[]`.
+- Terms render from grouped `invoice.terms[].terms[]`. The section heading uses
+  the editable `customLabels.terms` value (with supported label aliases) and
+  falls back to `Terms and Conditions` only when the invoice supplies no label.
+- Editable `customLabels` are normalized into `display.labels` for party
+  headings and identifiers, PO number, item metadata (SKU, serial number,
+  HSN/SAC, classification and unit), totals, total in words, HSN-summary
+  headings, and signature text. Template literals are only fallback defaults.
 - Notes render in a full-width Markdown block using `invoice.notes` and the
   editable `customLabels.notes` heading. This supports API payloads that store
   lengthy terms and conditions in `notes`; the block can continue across
   printed/PDF pages and respects notes visibility settings.
 - Bank account fields and bank custom fields render only when
-  `mapped.visibility.showBankAccount` is true.
+  `mapped.visibility.showBankAccount` is true. Their headings prefer invoice
+  `customLabels`, then `bankAccount.customLabels`, including the API aliases
+  for account holder, account number, IFSC/SWIFT and bank name.
 - HSN summary is rendered as a two-column vertical table whenever taxes are visible and HSN data exists: HSN and taxable value rows, followed by stacked IGST or CGST/SGST rate-and-amount sections, the total tax row, and total tax in words. Line tax cells are aggregated from invoice items, while the total row and words use the API HSN summary's authoritative rounded `tax`/`totalTaxAmount` when supplied (so a final paise-level adjustment is preserved). Tax words use the international thousand/million scale and the invoice currency (for example, USD `180` becomes `One Hundred Eighty Dollars Only`; INR `216000` becomes `Two Hundred Sixteen Thousand Rupees Only`). Solvin recognizes the API's `showHSNSummaryInInvoice` shape but intentionally applies the supplied enabled profile even when older stored options differ. Its wrapper keeps the live-preview `data-ceres-hsn-summary` hook.
 - Signature and footer letterhead use their shared image/live-update hooks.
 - PDF page size and margins are left to the parent renderer. Solvin does not

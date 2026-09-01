@@ -16,6 +16,14 @@
   print-color-adjust: exact;
 }
 
+/* The local renderer places the document output inside a centered flex body.
+   Give only the Solvin preview host a definite width so its 100%-wide invoice
+   cannot collapse to its min-content width after a template-only build. */
+[id="documentOutput"]:has(> .solvin-invoice) {
+  width: 100%;
+  min-width: 0;
+}
+
 .solvin-invoice,
 .solvin-invoice * {
   box-sizing: border-box;
@@ -417,10 +425,10 @@
 .item-codes {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 8px 16px;
   color: #66666f;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: inherit;
+  font-size: 11px;
   line-height: 1.15;
   white-space: normal;
 }
@@ -1284,6 +1292,41 @@
     padding: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Printed pages can report a narrow viewport and accidentally activate the
+     responsive rules above. Preserve the preview's three-column header and
+     horizontal shipping layout in the generated PDF. */
+  .party-meta-grid {
+    grid-template-columns: 31.3% 31.4% 37.3%;
+  }
+
+  .party-card,
+  .party-card:nth-child(2) {
+    border-right: 1px solid #bec3c8;
+    border-bottom: 0;
+  }
+
+  .invoice-meta-table {
+    grid-column: auto;
+    border-top: 0;
+  }
+
+  .shipped-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shipped-grid.is-single {
+    grid-template-columns: 1fr;
+  }
+
+  .shipped-card {
+    border-right: 1px solid #bec3c8;
+    border-bottom: 0;
+  }
+
+  .shipped-card:last-child {
+    border-right: 0;
   }
 
   .solvin-invoice,

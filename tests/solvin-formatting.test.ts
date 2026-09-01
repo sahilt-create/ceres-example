@@ -21,11 +21,11 @@ describe("Solvin currency formatting", () => {
   });
 
   it.each([
-    ["INR", "en-IN", "INR 1,35,000.00"],
-    ["USD", "en-US", "USD 135,000.00"],
-    ["EUR", "en-US", "EUR 135,000.00"],
-    ["GBP", "en-GB", "GBP 135,000.00"],
-    ["SAR", "en-US", "SAR 135,000.00"],
+    ["INR", "en-IN", "₹1,35,000.00"],
+    ["USD", "en-US", "$135,000.00"],
+    ["EUR", "en-US", "€135,000.00"],
+    ["GBP", "en-GB", "£135,000.00"],
+    ["SAR", "en-US", "⃁ 135,000.00"],
     ["AED", "en-US", "AED 135,000.00"],
   ])(
     "renders %s dynamically in paged and Pageless PDF markup",
@@ -46,14 +46,14 @@ describe("Solvin currency formatting", () => {
     ).toBe('<span class="solvin-money">RCoins 100.00</span>');
   });
 
-  it("falls back to the currency code for a non-ASCII custom symbol", () => {
+  it("preserves a configured non-ASCII custom currency symbol", () => {
     expect(
       formatSolvinCurrencyMarkup(100, {
         currency: "SAR",
         customCurrencySymbol: "⃁",
         locale: "en-US",
       })
-    ).toBe('<span class="solvin-money">SAR 100.00</span>');
+    ).toBe('<span class="solvin-money">⃁ 100.00</span>');
   });
 
   it("honors the invoice sub-unit length", () => {
@@ -76,13 +76,13 @@ describe("Solvin currency formatting", () => {
     ).toBe("$100.00");
   });
 
-  it("uses the PDF-safe ISO code for lowercase SAR currency", () => {
+  it("uses the shared currency symbol for lowercase SAR currency", () => {
     expect(
       formatSolvinCurrency(51.45, {
         currency: "sar",
         locale: "en-US",
       })
-    ).toBe("SAR 51.45");
+    ).toBe("⃁ 51.45");
   });
 });
 
