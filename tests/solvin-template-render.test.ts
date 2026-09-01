@@ -1,4 +1,6 @@
 import HandlebarsRuntime from "handlebars/runtime";
+import { readFileSync } from "fs";
+import { join } from "path";
 import template from "../src/templates/solvin/template.hbs";
 import { normalizeInvoiceTemplateState } from "../src/main/invoiceTemplateNormalization";
 import { mapSolvinTemplateData } from "../src/templates/solvin/mapper";
@@ -230,6 +232,17 @@ const payload = (isDescriptionFullWidth: boolean) => ({
 });
 
 describe("Solvin compiled template", () => {
+  it("leaves pageless print height under Lydia bridge control", () => {
+    const css = readFileSync(
+      join(process.cwd(), "src/templates/solvin/styles.css"),
+      "utf8"
+    );
+    const printCss = css.slice(css.lastIndexOf("@media print"));
+
+    expect(css).not.toContain("@page {");
+    expect(printCss).not.toMatch(/min-height:\s*0\s*!important/);
+  });
+
   it("uses the invoice currency for HSN tax total words", () => {
     expect(solvinTaxAmountInWords(180, { currency: "USD" })).toBe(
       "One Hundred Eighty Dollars Only"
@@ -791,6 +804,10 @@ describe("Solvin compiled template", () => {
     });
 
     const html = template(mapSolvinTemplateData(input as any));
+    const css = readFileSync(
+      join(process.cwd(), "src/templates/solvin/styles.css"),
+      "utf8"
+    );
 
     expect(html).toContain('class="lower-grid"');
     expect(html).toContain('class="terms-panel"');
@@ -798,6 +815,10 @@ describe("Solvin compiled template", () => {
     expect(html).toContain('<td class="bank-nowrap-value">50100097578020</td>');
     expect(html).toContain('<td class="bank-nowrap-value">HDFC0003688</td>');
     expect(html).toContain('<td class="bank-nowrap-value">HDFCINBBXXX</td>');
+    expect(css).toMatch(/\.bank-table\s*\{[^}]*table-layout:\s*auto;/);
+    expect(css).toMatch(
+      /\.bank-table \.bank-nowrap-value,[\s\S]*white-space:\s*nowrap;/
+    );
   });
 
   it("normalizes API string values and HSN aliases for the HSN summary", () => {

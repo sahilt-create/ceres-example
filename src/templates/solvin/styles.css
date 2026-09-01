@@ -823,6 +823,9 @@
   width: 100%;
   border-top: 1px solid #e0e0e0;
   border-collapse: collapse;
+
+  /* Let unbreakable account identifiers claim the space they need while
+     ordinary text cells wrap within the remaining width. */
   table-layout: auto;
 }
 
@@ -840,17 +843,13 @@
 }
 
 .bank-table th {
-  width: 45%;
+  width: 42%;
   border-right: 1px solid #e0e0e0;
   color: #1d1d1d;
 }
 
 .bank-table td {
   color: #21272e;
-}
-
-.bank-table tr:last-child > * {
-  border-bottom: 0;
 }
 
 .bank-table .bank-nowrap-value,
@@ -1278,7 +1277,6 @@
   [id="documentOutput"] {
     width: auto;
     height: auto;
-    min-height: 0 !important;
     overflow: visible !important;
   }
 
