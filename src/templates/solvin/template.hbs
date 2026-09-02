@@ -1,5 +1,5 @@
 <div class="solvin-invoice">
-  <div class="invoice-letterhead{{#unless invoice.letterHead}} is-empty{{/unless}}">
+  <div class="no-dibella invoice-letterhead{{#unless invoice.letterHead}} is-empty{{/unless}}">
     {{#if invoice.letterHead}}
       <img src="{{invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
     {{else}}
@@ -32,13 +32,13 @@
 
     <div class="invoice-meta-table">
       {{#if display.documentDetails}}
-        {{#each display.documentDetails}}<div class="meta-label"{{#if supplyField}} data-ceres-{{supplyField}} style="display: none;"{{/if}}>{{label}}</div><div{{#if supplyField}} data-ceres-{{supplyField}} style="display: none;"{{/if}}>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</div>{{/each}}
+        {{#each display.documentDetails}}<div class="meta-label"{{#if supplyField}} data-ceres-{{supplyField}} style="display: none;"{{/if}}>{{label}}</div><div{{#if supplyField}} data-ceres-{{supplyField}} style="display: none;"{{/if}}>{{#if isDate}}{{formatSolvinDate value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</div>{{/each}}
       {{else}}
         <div class="meta-label">{{#if invoice.customLabels.invoiceNumber}}{{invoice.customLabels.invoiceNumber}}{{else}}Invoice No{{/if}}</div>
         <div>{{invoice.invoiceNumber}}</div>
         <div class="meta-label">{{#if invoice.customLabels.invoiceDate}}{{invoice.customLabels.invoiceDate}}{{else}}Invoice Date{{/if}}</div>
-        <div>{{formateShortDateWithOffset invoice.invoiceDate invoice.ownerOffset}}</div>
-        {{#if invoice.dueDate}}<div class="meta-label">{{#if invoice.customLabels.dueDate}}{{invoice.customLabels.dueDate}}{{else}}Due Date{{/if}}</div><div>{{formateShortDateWithOffset invoice.dueDate invoice.ownerOffset}}</div>{{/if}}
+        <div>{{formatSolvinDate invoice.invoiceDate invoice.ownerOffset}}</div>
+        {{#if invoice.dueDate}}<div class="meta-label">{{#if invoice.customLabels.dueDate}}{{invoice.customLabels.dueDate}}{{else}}Due Date{{/if}}</div><div>{{formatSolvinDate invoice.dueDate invoice.ownerOffset}}</div>{{/if}}
         {{#if invoice.countryOfSupply}}<div class="meta-label" data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.countryOfSupply}}{{invoice.customLabels.countryOfSupply}}{{else}}Country of Supply{{/if}}</div><div data-ceres-country-of-supply{{#unless mapped.visibility.showCountryOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.countryOfSupply}}</div>{{/if}}
         {{#if invoice.placeOfSupply}}<div class="meta-label" data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{#if invoice.customLabels.placeOfSupply}}{{invoice.customLabels.placeOfSupply}}{{else}}Place of Supply{{/if}}</div><div data-ceres-place-of-supply{{#unless mapped.visibility.showPlaceOfSupply}} style="display: none;"{{/unless}}>{{formatCountryName invoice.placeOfSupply}}</div>{{/if}}
         {{#if invoice.purchaseOrderNumber}}<div class="meta-label">{{display.labels.purchaseOrderNumber}}</div><div>{{invoice.purchaseOrderNumber}}</div>{{/if}}
@@ -268,7 +268,7 @@
     </div>
   </section>
 
-  <div class="invoice-letterhead-footer{{#unless invoice.letterHeadFooter}} is-empty{{/unless}}">
+  <div class="no-dibella invoice-letterhead-footer{{#unless invoice.letterHeadFooter}} is-empty{{/unless}}">
     {{#if invoice.letterHeadFooter}}
       <img src="{{invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
     {{else}}

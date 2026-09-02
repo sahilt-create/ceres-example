@@ -3,6 +3,7 @@ import { getItemColumnValue, mapSolvinTemplateData } from "./mapper";
 import {
   formatCountryName,
   formatQuantityWithUnit,
+  formatSolvinDate,
   formatSolvinCurrency,
   formatSolvinCurrencyMarkup,
   getItemSku,
@@ -93,6 +94,7 @@ if (hb) {
   );
   hb.registerHelper("formatCountryName", formatCountryName);
   hb.registerHelper("partyAddressLines", getPartyAddressLines);
+  hb.registerHelper("formatSolvinDate", formatSolvinDate);
   hb.registerHelper("formatSolvinCurrency", formatSolvinCurrency);
   hb.registerHelper(
     "formatSolvinCurrencyMarkup",

@@ -90,6 +90,15 @@
   transform: none !important;
 }
 
+/* Dibella owns paged-PDF letterheads and applies the first/last-page options.
+   Hide Solvin's in-flow preview copy in that mode to prevent duplicate assets. */
+body[class~="isDibella"] .solvin-invoice > .no-dibella.invoice-letterhead,
+body[class~="isDibella"] .solvin-invoice
+  > .no-dibella.invoice-letterhead-footer {
+  display: none !important;
+  visibility: hidden !important;
+}
+
 .solvin-title {
   position: relative;
   display: flex;

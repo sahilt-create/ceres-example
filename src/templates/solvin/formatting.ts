@@ -1,5 +1,6 @@
 import formatCurrency from "../../widgets/shared/formatCurrency";
 import { normalizePlaceOfSupply } from "../../main/invoiceTemplateNormalization";
+import { parseOffset, safeDate } from "../../widgets/date-time";
 
 type UnknownRecord = Record<string, any>;
 
@@ -36,6 +37,28 @@ const optionalBoolean = (value: any): boolean | undefined => {
   if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
   if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
   return undefined;
+};
+
+const twoDigitDatePart = (value: number | string): string =>
+  String(Number(value)).padStart(2, "0");
+
+/** Formats Solvin document dates as DD-MM-YYYY. */
+export const formatSolvinDate = (value: any, offset = "+5:30"): string => {
+  const raw = String(value ?? "").trim();
+  const dateOnly = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (dateOnly) {
+    return `${twoDigitDatePart(dateOnly[3])}-${twoDigitDatePart(dateOnly[2])}-${
+      dateOnly[1]
+    }`;
+  }
+
+  const date = safeDate(value);
+  if (!date) return "";
+
+  const shifted = new Date(date.getTime() + parseOffset(offset) * 60_000);
+  return `${twoDigitDatePart(shifted.getUTCDate())}-${twoDigitDatePart(
+    shifted.getUTCMonth() + 1
+  )}-${shifted.getUTCFullYear()}`;
 };
 
 /** Converts uppercase amount-in-words output to title case. */

@@ -733,50 +733,26 @@ export const mapSolvinTemplateData = (payload: any) => {
       : [],
   };
   const rawInvoice = asRecord(rawPayload.invoice);
-  const template = asRecord(rawPayload.template);
   const invoiceRecord = invoice as UnknownRecord;
-  const billedBy = asRecord(invoice.billedBy);
-  const owner = asRecord(invoice.owner);
-  const ownerBusiness = asRecord(invoice.ownerBusiness);
-  const business = asRecord(invoice.business);
 
+  // Letterhead artwork is an invoice/template choice in Lydia. Do not inherit
+  // generic business or owner branding here: the hidden template hooks are
+  // populated later when Lydia explicitly sends a template update.
   invoice.letterHead = firstImageSource(
-    invoice.letterHead,
-    invoiceRecord.letterhead,
-    invoiceRecord.headerImage,
     rawInvoice.letterHead,
+    invoiceRecord.letterHead,
+    invoiceRecord.letterhead,
     rawInvoice.letterhead,
-    rawInvoice.headerImage,
-    template.letterHead,
-    template.letterhead,
-    template.headerImage,
-    billedBy.letterHead,
-    billedBy.letterhead,
-    owner.letterHead,
-    owner.letterhead,
-    ownerBusiness.letterHead,
-    ownerBusiness.letterhead,
-    business.letterHead,
-    business.letterhead
+    invoiceRecord.headerImage,
+    rawInvoice.headerImage
   );
   invoice.letterHeadFooter = firstImageSource(
-    invoice.letterHeadFooter,
-    invoiceRecord.letterheadFooter,
-    invoiceRecord.footerImage,
     rawInvoice.letterHeadFooter,
+    invoiceRecord.letterHeadFooter,
+    invoiceRecord.letterheadFooter,
     rawInvoice.letterheadFooter,
-    rawInvoice.footerImage,
-    template.letterHeadFooter,
-    template.letterheadFooter,
-    template.footerImage,
-    billedBy.letterHeadFooter,
-    billedBy.letterheadFooter,
-    owner.letterHeadFooter,
-    owner.letterheadFooter,
-    ownerBusiness.letterHeadFooter,
-    ownerBusiness.letterheadFooter,
-    business.letterHeadFooter,
-    business.letterheadFooter
+    invoiceRecord.footerImage,
+    rawInvoice.footerImage
   );
   SOLVIN_OMITTED_ADDITIONAL_INFORMATION_FIELDS.forEach((field) => {
     delete (invoice as UnknownRecord)[field];

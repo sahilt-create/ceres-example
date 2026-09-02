@@ -1,6 +1,7 @@
 import {
   formatCountryName,
   formatQuantityWithUnit,
+  formatSolvinDate,
   formatSolvinCurrency,
   formatSolvinCurrencyMarkup,
   getItemSku,
@@ -12,6 +13,19 @@ import {
   solvinTaxAmountInWords,
   toTitleCaseWords,
 } from "../src/templates/solvin/formatting";
+
+describe("Solvin date formatting", () => {
+  it("uses zero-padded DD-MM-YYYY output", () => {
+    expect(formatSolvinDate("2026-08-29")).toBe("29-08-2026");
+    expect(formatSolvinDate("2026-09-13")).toBe("13-09-2026");
+  });
+
+  it("applies the owner offset to timestamp values", () => {
+    expect(formatSolvinDate("2026-08-29T20:00:00.000Z", "+05:30")).toBe(
+      "30-08-2026"
+    );
+  });
+});
 
 describe("Solvin currency formatting", () => {
   it("keeps two decimal places for integer monetary values by default", () => {

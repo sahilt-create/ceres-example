@@ -7,6 +7,7 @@ import { mapSolvinTemplateData } from "../src/templates/solvin/mapper";
 import {
   formatCountryName,
   formatQuantityWithUnit,
+  formatSolvinDate,
   formatSolvinCurrency,
   getItemSku,
   getPartyAddressLines,
@@ -178,6 +179,7 @@ beforeAll(() => {
       solvinTaxAmountInWords(amount, invoice)
   );
   HandlebarsRuntime.registerHelper("formatCountryName", formatCountryName);
+  HandlebarsRuntime.registerHelper("formatSolvinDate", formatSolvinDate);
   HandlebarsRuntime.registerHelper("partyAddressLines", getPartyAddressLines);
   HandlebarsRuntime.registerHelper("computeHsnSummary", () => ({}));
 });
@@ -232,6 +234,19 @@ const payload = (isDescriptionFullWidth: boolean) => ({
 });
 
 describe("Solvin compiled template", () => {
+  it("formats document dates as DD-MM-YYYY with zero padding", () => {
+    const input = payload(false);
+    Object.assign(input.invoice, {
+      invoiceDate: "2026-08-29",
+      dueDate: "2026-09-13",
+    });
+
+    const html = template(mapSolvinTemplateData(input as any));
+
+    expect(html).toContain("29-08-2026");
+    expect(html).toContain("13-09-2026");
+  });
+
   it("leaves pageless print height under Lydia bridge control", () => {
     const css = readFileSync(
       join(process.cwd(), "src/templates/solvin/styles.css"),
@@ -260,26 +275,33 @@ describe("Solvin compiled template", () => {
     expect(css).not.toContain("--ceres-font-family");
   });
 
-  it("keeps configured letterhead images visible in downloaded PDFs", () => {
+  it("marks configured letterhead images as Dibella-managed PDF assets", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       letterHead: "https://cdn.example.com/header.png",
       letterHeadFooter: "https://cdn.example.com/footer.png",
+      template: {
+        pdfOptions: {
+          letterHeadOnFirstPage: false,
+          footerOnLastPage: false,
+        },
+      },
     });
 
-    const html = template(mapSolvinTemplateData(input as any));
+    const model = mapSolvinTemplateData(input as any);
+    const html = template(model);
 
+    expect(model.mapped.visibility.letterHeadOnFirstPage).toBe(false);
+    expect(model.mapped.visibility.footerOnLastPage).toBe(false);
     expect(html).toContain(
-      '<div class="invoice-letterhead">\n      <img src="https://cdn.example.com/header.png"'
+      '<div class="no-dibella invoice-letterhead">\n      <img src="https://cdn.example.com/header.png"'
     );
     expect(html).toContain(
-      '<div class="invoice-letterhead-footer">\n      <img src="https://cdn.example.com/footer.png"'
+      '<div class="no-dibella invoice-letterhead-footer">\n      <img src="https://cdn.example.com/footer.png"'
     );
-    expect(html).not.toContain("no-dibella invoice-letterhead");
-    expect(html).not.toContain("no-dibella invoice-letterhead-footer");
   });
 
-  it("normalizes PDF artwork objects, base64 values, and owner fallbacks", () => {
+  it("normalizes explicitly configured invoice artwork", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
       letterHead: { url: "https://cdn.example.com/header-object.png" },
@@ -293,26 +315,38 @@ describe("Solvin compiled template", () => {
     expect(directModel.invoice.letterHeadFooter).toBe(
       "data:image/png;base64,footer-base64"
     );
+  });
 
+  it("does not pre-add inherited business header or footer artwork", () => {
+    const input = payload(false) as any;
+    Object.assign(input, {
+      template: {
+        letterHead: "https://cdn.example.com/template-header.png",
+        letterHeadFooter: "https://cdn.example.com/template-footer.png",
+      },
+    });
     Object.assign(input.invoice, {
-      letterHead: null,
-      letterHeadFooter: null,
       owner: {
         letterHead: "https://cdn.example.com/owner-header.png",
         letterHeadFooter: "https://cdn.example.com/owner-footer.png",
       },
+      business: {
+        letterHead: "https://cdn.example.com/business-header.png",
+        letterHeadFooter: "https://cdn.example.com/business-footer.png",
+      },
     });
 
-    const fallbackHtml = template(mapSolvinTemplateData(input as any));
-    expect(fallbackHtml).toContain(
-      'src="https://cdn.example.com/owner-header.png"'
+    const html = template(mapSolvinTemplateData(input));
+    expect(html).toContain('class="no-dibella invoice-letterhead is-empty"');
+    expect(html).toContain(
+      'class="no-dibella invoice-letterhead-footer is-empty"'
     );
-    expect(fallbackHtml).toContain(
-      'src="https://cdn.example.com/owner-footer.png"'
+    expect(html).not.toMatch(
+      /src="https:\/\/cdn\.example\.com\/(?:template|owner|business)-(?:header|footer)\.png"/
     );
   });
 
-  it("forces populated header and footer artwork visible in print CSS", () => {
+  it("lets Dibella own paged-PDF header and footer placement", () => {
     const css = readFileSync(
       join(process.cwd(), "src/templates/solvin/styles.css"),
       "utf8"
@@ -327,6 +361,10 @@ describe("Solvin compiled template", () => {
     );
     expect(printCss).toContain("display: block !important;");
     expect(printCss).toContain("visibility: visible !important;");
+    expect(css).toContain(
+      'body[class~="isDibella"] .solvin-invoice > .no-dibella.invoice-letterhead'
+    );
+    expect(css).toContain("> .no-dibella.invoice-letterhead-footer");
   });
 
   it("uses the invoice currency for HSN tax total words", () => {
