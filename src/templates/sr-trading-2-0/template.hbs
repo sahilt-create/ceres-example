@@ -1,0 +1,217 @@
+<div class="sr-trading-document">
+  <div class="document-frame">
+    <div class="no-dibella invoice-letterhead{{#unless display.assets.letterHead}} is-empty{{/unless}}">
+      {{#if display.assets.letterHead}}
+        <img src="{{display.assets.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+      {{else}}
+        <img alt="Letterhead" data-ceres-height="letterhead" />
+      {{/if}}
+    </div>
+
+    <header class="document-title"><h1>{{display.document.title}}</h1></header>
+
+    <section class="quotation-meta">
+      <div class="quotation-to">
+        <p class="muted-label">{{display.document.labels.quotationTo}}</p>
+        <p class="party-name">{{invoice.billedTo.name}}</p>
+        <div class="address-lines">
+          {{#each (partyAddressLines invoice.billedTo)}}<p>{{this}}</p>{{/each}}
+        </div>
+        {{#if invoice.billedTo.gstin}}{{#if (partyFieldVisible invoice.billedTo invoice "gstin")}}<p class="party-detail"><strong>{{display.document.labels.gstin}}:</strong> {{invoice.billedTo.gstin}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.panNumber}}{{#if (partyFieldVisible invoice.billedTo invoice "panNumber")}}<p class="party-detail"><strong>{{display.document.labels.pan}}:</strong> {{invoice.billedTo.panNumber}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.trnNumber}}{{#if (partyFieldVisible invoice.billedTo invoice "trnNumber")}}<p class="party-detail"><strong>{{display.document.labels.trn}}:</strong> {{invoice.billedTo.trnNumber}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.tinNumber}}{{#if (partyFieldVisible invoice.billedTo invoice "tinNumber")}}<p class="party-detail"><strong>{{display.document.labels.tin}}:</strong> {{invoice.billedTo.tinNumber}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.vatNumber}}{{#if (partyFieldVisible invoice.billedTo invoice "vatNumber")}}<p class="party-detail"><strong>{{#if invoice.billedTo.vatLabel}}{{invoice.billedTo.vatLabel}}{{else}}{{display.document.labels.vat}}{{/if}}:</strong> {{invoice.billedTo.vatNumber}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.sstNumber}}{{#if (partyFieldVisible invoice.billedTo invoice "sstNumber")}}<p class="party-detail"><strong>{{display.document.labels.sst}}:</strong> {{invoice.billedTo.sstNumber}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.email}}{{#if (partyFieldVisible invoice.billedTo invoice "email")}}<p class="party-detail"><strong>{{display.document.labels.email}}:</strong> {{invoice.billedTo.email}}</p>{{/if}}{{/if}}
+        {{#if invoice.billedTo.phone}}{{#if (partyFieldVisible invoice.billedTo invoice "phone")}}<p class="party-detail"><strong>{{display.document.labels.phone}}:</strong> {{formatPhoneNumber invoice.billedTo.phone}}</p>{{/if}}{{/if}}
+        {{#each invoice.billedTo.additionalIds}}{{#if (partyEntryVisible this)}}{{#if value}}<p class="party-detail"><strong>{{label}}:</strong> {{value}}</p>{{/if}}{{/if}}{{/each}}
+        {{#each invoice.billedTo.customFields}}{{#if (partyEntryVisible this)}}{{#if value}}<p class="party-detail"><strong>{{label}}:</strong> {{value}}</p>{{/if}}{{/if}}{{/each}}
+
+        {{#if mapped.visibility.shippedTo}}
+        <div class="shipping-block">
+          <p class="muted-label">{{display.document.labels.shippedTo}}</p>
+          <p class="party-name">{{invoice.shippedTo.name}}</p>
+          <div class="address-lines">{{#each (partyAddressLines invoice.shippedTo)}}<p>{{this}}</p>{{/each}}</div>
+          {{#if invoice.shippedTo.gstin}}{{#if (partyFieldVisible invoice.shippedTo invoice "gstin")}}<p class="party-detail"><strong>{{display.document.labels.gstin}}:</strong> {{invoice.shippedTo.gstin}}</p>{{/if}}{{/if}}
+          {{#if invoice.shippedTo.phone}}{{#if (partyFieldVisible invoice.shippedTo invoice "phone")}}<p class="party-detail"><strong>{{display.document.labels.phone}}:</strong> {{formatPhoneNumber invoice.shippedTo.phone}}</p>{{/if}}{{/if}}
+          {{#if invoice.shippedTo.email}}{{#if (partyFieldVisible invoice.shippedTo invoice "email")}}<p class="party-detail"><strong>{{display.document.labels.email}}:</strong> {{invoice.shippedTo.email}}</p>{{/if}}{{/if}}
+          {{#each invoice.shippedTo.additionalIds}}{{#if (partyEntryVisible this)}}{{#if value}}<p class="party-detail"><strong>{{label}}:</strong> {{value}}</p>{{/if}}{{/if}}{{/each}}
+          {{#each invoice.shippedTo.customFields}}{{#if (partyEntryVisible this)}}{{#if value}}<p class="party-detail"><strong>{{label}}:</strong> {{value}}</p>{{/if}}{{/if}}{{/each}}
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="quotation-details">
+        <div class="details-list">
+          <div><span>{{display.document.labels.number}}</span><strong>{{display.document.number}}</strong></div>
+          <div><span>{{display.document.labels.date}}</span><strong>{{formateShortDateWithOffset display.document.date invoice.ownerOffset}}</strong></div>
+          {{#if display.document.validTill}}<div><span>{{display.document.labels.validTill}}</span><strong>{{formateShortDateWithOffset display.document.validTill invoice.ownerOffset}}</strong></div>{{/if}}
+          {{#if invoice.purchaseOrderNumber}}<div><span>{{display.document.labels.purchaseOrderNumber}}</span><strong>{{invoice.purchaseOrderNumber}}</strong></div>{{/if}}
+          {{#each invoice.customHeaders}}{{#if (partyEntryVisible this)}}{{#if value}}<div><span>{{label}}</span><strong>{{value}}</strong></div>{{/if}}{{/if}}{{/each}}
+        </div>
+        <div class="catalogue-block{{#unless display.document.catalogueLogo}} is-empty{{/unless}}" data-ceres-field-container="logo">
+          <img{{#if display.document.catalogueLogo}} src="{{display.document.catalogueLogo}}"{{/if}} alt="Product catalogue QR logo" data-ceres-field="logo" />
+          <div><strong>{{display.document.labels.catalogueTitle}}</strong><p>{{display.document.labels.catalogueDescription}}</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="compliance-section" aria-label="Electronic invoice details">
+      <div class="irn-copy"><strong>{{display.document.labels.irn}}:</strong> <span class="irn-value" data-ceres-field="irn">{{display.compliance.irnValue}}</span></div>
+      <div class="compliance-qr{{#unless display.compliance.eInvoiceQr}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img{{#if display.compliance.eInvoiceQr}} src="{{display.compliance.eInvoiceQr}}"{{/if}} alt="E-Invoice QR Code" data-ceres-field="qrCode" /></div>
+      <div class="compliance-qr{{#unless display.compliance.zatcaQrCode}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img{{#if display.compliance.zatcaQrCode}} src="{{display.compliance.zatcaQrCode}}"{{/if}} alt="ZATCA QR Code" data-ceres-field="zatcaQrCode" /></div>
+      <div class="compliance-qr{{#unless display.compliance.lhdnQrCode}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img{{#if display.compliance.lhdnQrCode}} src="{{display.compliance.lhdnQrCode}}"{{/if}} alt="LHDN QR Code" data-ceres-field="lhdnQrCode" /></div>
+    </section>
+
+    <div class="items-table-wrap" data-column-count="{{mapped.visibility.visibleColumnCount}}" style="--sr-items-table-min-width: {{display.tableMinWidth}}px">
+      <table class="items-table">
+        <colgroup>{{#each mapped.columns}}{{#unless isHidden}}<col class="{{className}}" />{{/unless}}{{/each}}</colgroup>
+        <thead><tr>{{#each mapped.columns}}{{#unless isHidden}}<th class="{{className}} {{columnAlignmentClass this}}">{{label}}</th>{{/unless}}{{/each}}</tr></thead>
+        <tbody>
+          {{#each invoice.items as |item|}}
+          <tr class="item-row">
+            {{#each ../mapped.columns as |column|}}{{#unless column.isHidden}}
+            <td class="{{column.className}} {{columnAlignmentClass column}}">
+              {{#if (isRowNumberColumn column)}}{{addOne @../index}}.
+              {{else if (isDescriptionColumn column)}}
+                <div class="item-main"><div><p class="item-name">{{itemNameValue item column}}</p>
+                  <p class="item-codes">
+                    {{#if (showItemSku item ../../mapped.visibility.showSkuInName)}}<span class="item-code item-code-sku"><span class="item-code-label">{{../../display.document.labels.sku}}:</span> <span class="item-code-value">{{itemSku item}}</span></span>{{/if}}
+                    {{#if ../../mapped.visibility.showSerialNumbersInDescription}}{{#if (itemSerialNumbers item)}}<span class="item-code item-code-serial"><span class="item-code-label">{{../../display.document.labels.serialNumber}}:</span> <span class="item-code-value">{{itemSerialNumbers item}}</span></span>{{/if}}{{/if}}
+                    {{#if ../../mapped.visibility.showInlineHsn}}{{#if (itemHsn item)}}<span class="item-code item-code-hsn"><span class="item-code-label">{{../../display.document.labels.hsn}}:</span> <span class="item-code-value">{{itemHsn item}}</span></span>{{/if}}{{/if}}
+                    {{#if ../../mapped.visibility.showInlineClassification}}{{#if item.classification}}<span class="item-code item-code-classification"><span class="item-code-label">{{../../display.document.labels.classification}}:</span> <span class="item-code-value">{{item.classification}}</span></span>{{/if}}{{/if}}
+                    {{#if ../../mapped.visibility.showUnitInName}}{{#if (itemUnit item ../../invoice)}}<span class="item-code item-code-unit"><span class="item-code-label">{{../../display.document.labels.unit}}:</span> <span class="item-code-value">{{itemUnit item ../../invoice}}</span></span>{{/if}}{{/if}}
+                  </p>
+                  {{#if item.description}}<div data-ceres-description-inline{{#if ../../mapped.visibility.isDescriptionFullWidth}} style="display:none"{{/if}}>{{#unless ../../mapped.visibility.isDescriptionFullWidth}}<div class="item-description" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData item.description) }}</div>{{/unless}}</div>{{/if}}
+                </div></div>
+              {{else if (isQuantityColumn column)}}<span class="item-quantity">{{quantityOnly item ../../invoice}}</span>{{#if ../../mapped.visibility.showUnitInQuantity}}{{#if (itemUnit item ../../invoice)}} <span class="item-quantity-unit">{{itemUnit item ../../invoice}}</span>{{/if}}{{/if}}
+              {{else if (isUnitColumn column)}}{{itemUnit item ../../invoice}}
+              {{else if (isHsnColumn column)}}{{itemHsn item}}
+              {{else if (isDateColumn column)}}{{#if (hasDisplayValue (itemColumnValue item column))}}{{formateShortDateWithOffset (itemColumnValue item column) ../../invoice.ownerOffset}}{{/if}}
+              {{else if (isCurrencyColumn column)}}{{#if (hasDisplayValue (itemColumnValue item column))}}{{formatSrCurrency (itemColumnValue item column) ../../invoice}}{{/if}}
+              {{else if (isPercentageColumn column)}}{{#if (hasDisplayValue (itemColumnValue item column))}}{{formatItemNumber item column ../../invoice}}%{{/if}}
+              {{else if (isBooleanColumn column)}}{{formatSrBoolean (itemColumnValue item column)}}
+              {{else if (isNumericColumn column)}}{{#if (hasDisplayValue (itemColumnValue item column))}}{{formatItemNumber item column ../../invoice}}{{/if}}
+              {{else}}{{itemColumnValue item column}}{{/if}}
+            </td>
+            {{/unless}}{{/each}}
+          </tr>
+          {{#if item.description}}
+          <tr data-ceres-description-row{{#if ../mapped.visibility.isDescriptionFullWidth}} class="item-description-row"{{else}} style="display:none"{{/if}}><td colspan="{{../mapped.visibility.visibleColumnCount}}"><div data-ceres-description-full-width>{{#if ../mapped.visibility.isDescriptionFullWidth}}<div class="item-description" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData item.description) }}</div>{{/if}}</div></td></tr>
+          {{/if}}
+          {{/each}}
+          {{#if mapped.visibility.showTotalsRow}}<tr class="items-total-row">
+            {{#each mapped.columns as |column|}}{{#unless column.isHidden}}
+            <td class="{{column.className}} {{columnAlignmentClass column}}">
+              {{#if (isDescriptionColumn column)}}{{../display.labels.total}}
+              {{else if (isQuantityColumn column)}}{{formatTotalQuantity ../invoice.items ../invoice}}
+              {{else if (isAmountColumn column)}}{{formatSrCurrency ../totals.subTotal ../invoice}}
+              {{else if (isTotalColumn column)}}{{formatSrCurrency ../invoice.finalTotal.total ../invoice}}
+              {{else if (isPercentageColumn column)}}{{columnRateSummaryValue ../invoice.items column ../invoice}}
+              {{else if column.summarise}}{{#if (isCurrencyColumn column)}}{{formatSrCurrency (columnSummaryValue ../invoice.items column) ../invoice}}{{else}}{{columnSummaryValue ../invoice.items column}}{{/if}}{{/if}}
+            </td>
+            {{/unless}}{{/each}}
+          </tr>{{/if}}
+        </tbody>
+      </table>
+    </div>
+
+    {{#if mapped.visibility.showTotals}}
+    <section class="totals-section">
+      <div class="totals-row"><strong>{{display.labels.subTotal}}</strong><strong>{{formatSrCurrency totals.subTotal invoice}}</strong></div>
+      {{#if mapped.visibility.showTaxes}}
+        {{#if mapped.visibility.showIgst}}<div class="totals-row"><strong>{{display.labels.igst}}</strong><strong>{{formatSrCurrency invoice.finalTotal.igst invoice}}</strong></div>
+        {{else}}
+          <div class="totals-row"><strong>{{display.labels.cgst}}</strong><strong>{{formatSrCurrency invoice.finalTotal.cgst invoice}}</strong></div>
+          <div class="totals-row"><strong>{{#if mapped.visibility.isUtgst}}{{display.labels.utgst}}{{else}}{{display.labels.sgst}}{{/if}}</strong><strong>{{#if mapped.visibility.isUtgst}}{{formatSrCurrency invoice.finalTotal.utgst invoice}}{{else}}{{formatSrCurrency invoice.finalTotal.sgst invoice}}{{/if}}</strong></div>
+        {{/if}}
+      {{/if}}
+      {{#if mapped.visibility.showTaxes}}{{#each display.cessRows}}<div class="totals-row"><strong>{{label}}</strong><strong>{{formatSrCurrency amount ../invoice}}</strong></div>{{/each}}{{/if}}
+      {{#each display.additionalChargeRows}}<div class="totals-row"><strong>{{label}}</strong><strong>{{formatSrCurrency amount ../invoice}}</strong></div>{{/each}}
+      {{#each display.extraTotalRows}}<div class="totals-row"><strong>{{label}}</strong><strong>{{#if isMonetary}}{{formatSrCurrency value ../invoice}}{{else}}{{value}}{{/if}}</strong></div>{{/each}}
+      <div class="totals-row grand-total"><strong>{{display.labels.total}}<span data-ceres-currency-code{{#if mapped.visibility.hideCurrencyCode}} style="display:none"{{/if}}> ({{display.currency}})</span></strong><strong>{{formatSrCurrency invoice.finalTotal.total invoice}}</strong></div>
+      {{#each display.paymentBalanceRows}}<div class="totals-row secondary-total"><span>{{label}}</span><span>{{#if deduction}}{{formatDeductionCurrency amount ../invoice}}{{else}}{{formatSrCurrency amount ../invoice}}{{/if}}</span></div>{{/each}}
+      {{!-- Due uses the primary API label and renders when payload visibility or invoice status requires it. --}}
+      {{#if mapped.visibility.showDueAmount}}{{#if totals.dueAmount}}<div class="totals-row secondary-total"><span>{{display.labels.dueAmount}}</span><span>{{formatSrCurrency totals.dueAmount invoice}}</span></div>{{/if}}{{/if}}
+    </section>
+    {{/if}}
+
+    {{#if mapped.visibility.showTotalInWords}}
+    <section class="amount-in-words">
+      <span>{{display.document.labels.totalInWords}}:</span>
+      <strong>{{#if display.totalInWordsValue}}{{titleCaseWords display.totalInWordsValue}}{{else}}{{titleCaseWords (amountInWords invoice.finalTotal.total)}}{{/if}}</strong>
+    </section>
+    {{/if}}
+
+    {{#if mapped.visibility.showLowerSection}}<section class="lower-grid">
+      <div class="terms-panel">
+        {{#if mapped.visibility.showTerms}}<h2>{{display.labels.terms}}</h2><ol class="terms-list">{{#each invoice.terms}}{{#each terms}}<li>{{this}}</li>{{/each}}{{/each}}</ol>{{/if}}
+        {{#if mapped.visibility.showNotes}}<div class="notes-block"><strong>{{display.labels.notes}}</strong>{{> MarkdownViewer (prepareMarkdownViewerData display.notes) }}</div>{{/if}}
+        {{#each display.additionalInformationRows}}<p class="party-detail"><strong>{{label}}:</strong> {{value}}</p>{{/each}}
+      </div>
+      {{#if mapped.visibility.showBankUpiSection}}
+      <div class="bank-panel"><h2>{{display.document.labels.bankDetails}}</h2>
+        {{#if mapped.visibility.showBankAccount}}<div class="bank-table-wrap">
+          <table class="bank-table"><tbody>
+            {{#each display.bankRows}}<tr><th scope="row">{{label}}</th>{{#each values}}<td class="bank-value{{#if ../nowrap}} is-code{{/if}}">{{#if ../isCountry}}{{formatCountryName this}}{{else}}{{this}}{{/if}}</td>{{/each}}</tr>{{/each}}
+          </tbody></table>
+        </div>{{/if}}
+        {{#if mapped.visibility.showUpi}}<div class="upi-block"><strong>{{display.document.labels.scanToPay}}</strong><div class="upi-qr-container{{#unless display.upiQr}} is-empty{{/unless}}"><img{{#if display.upiQr}} src="{{display.upiQr}}"{{/if}} alt="UPI QR" /></div></div>{{/if}}
+      </div>
+      {{/if}}
+    </section>{{/if}}
+
+    <section class="summary-tables{{#unless mapped.visibility.showSummaryTables}} is-empty{{/unless}}"{{#unless mapped.visibility.showSummaryTables}} style="display:none"{{/unless}}>
+      <div class="summary-panel" data-ceres-tax-summary{{#unless mapped.visibility.showTaxSummary}} style="display:none"{{/unless}}>
+        {{#if mapped.taxSummary.hasRows}}
+        <h2>{{display.document.labels.taxSummary}}</h2>
+        <div class="summary-table-wrap"><table class="summary-table tax-summary-table">
+          <thead>
+            <tr><th rowspan="2">{{display.document.labels.taxRate}}</th>{{#if mapped.visibility.showIgst}}<th colspan="2">{{display.document.labels.igst}}</th>{{else}}<th colspan="2">{{display.document.labels.cgst}}</th><th colspan="2">{{#if mapped.visibility.isUtgst}}{{display.document.labels.utgst}}{{else}}{{display.document.labels.sgst}}{{/if}}</th>{{/if}}<th rowspan="2">{{display.document.labels.totalTax}}</th></tr>
+            <tr>{{#if mapped.visibility.showIgst}}<th>{{display.document.labels.rate}}</th><th>{{display.document.labels.amount}}</th>{{else}}<th>{{display.document.labels.rate}}</th><th>{{display.document.labels.amount}}</th><th>{{display.document.labels.rate}}</th><th>{{display.document.labels.amount}}</th>{{/if}}</tr>
+          </thead>
+          <tbody>{{#each mapped.taxSummary.taxList}}<tr><td>{{gstRate}}%</td>{{#if ../mapped.visibility.showIgst}}<td>{{igstRate}}%</td><td>{{formatSrCurrency igstAmount ../invoice}}</td>{{else}}<td>{{cgstRate}}%</td><td>{{formatSrCurrency cgstAmount ../invoice}}</td><td>{{sgstRate}}%</td><td>{{formatSrCurrency sgstAmount ../invoice}}</td>{{/if}}<td>{{formatSrCurrency taxAmount ../invoice}}</td></tr>{{/each}}</tbody>
+          <tfoot>
+            <tr><th>{{display.labels.total}}</th>{{#if mapped.visibility.showIgst}}<td></td><th>{{formatSrCurrency mapped.taxSummary.totalIgstAmount invoice}}</th>{{else}}<td></td><th>{{formatSrCurrency mapped.taxSummary.totalCgstAmount invoice}}</th><td></td><th>{{formatSrCurrency mapped.taxSummary.totalSgstAmount invoice}}</th>{{/if}}<th>{{formatSrCurrency mapped.taxSummary.totalTaxAmount invoice}}</th></tr>
+            <tr class="summary-words-row"><th>{{display.document.labels.totalTaxInWords}}</th>{{#if mapped.visibility.showIgst}}<td colspan="3">{{srTaxAmountInWords mapped.taxSummary.totalTaxAmount invoice}}</td>{{else}}<td colspan="5">{{srTaxAmountInWords mapped.taxSummary.totalTaxAmount invoice}}</td>{{/if}}</tr>
+          </tfoot>
+        </table></div>
+        {{/if}}
+      </div>
+
+      <div class="summary-panel" data-ceres-hsn-summary{{#unless mapped.visibility.showHsnSummary}} style="display:none"{{/unless}}>
+        {{#if mapped.hsnSummary.hasRows}}
+        <h2>{{display.document.labels.hsnSummary}}</h2>
+        <div class="summary-table-wrap"><table class="summary-table hsn-summary-table">
+          <thead>
+            <tr><th rowspan="2">{{display.document.labels.hsn}}</th><th rowspan="2">{{display.document.labels.taxableValue}}</th>{{#if mapped.visibility.showIgst}}<th colspan="2">{{display.document.labels.igst}}</th>{{else}}<th colspan="2">{{display.document.labels.cgst}}</th><th colspan="2">{{#if mapped.visibility.isUtgst}}{{display.document.labels.utgst}}{{else}}{{display.document.labels.sgst}}{{/if}}</th>{{/if}}<th rowspan="2">{{display.document.labels.totalTax}}</th></tr>
+            <tr>{{#if mapped.visibility.showIgst}}<th>{{display.document.labels.rate}}</th><th>{{display.document.labels.amount}}</th>{{else}}<th>{{display.document.labels.rate}}</th><th>{{display.document.labels.amount}}</th><th>{{display.document.labels.rate}}</th><th>{{display.document.labels.amount}}</th>{{/if}}</tr>
+          </thead>
+          <tbody>{{#each mapped.hsnSummary.hsnList}}<tr><td class="summary-code">{{hsn}}</td><td>{{formatSrCurrency taxableValue ../invoice}}</td>{{#if ../mapped.visibility.showIgst}}<td>{{igstRate}}%</td><td>{{formatSrCurrency igstAmount ../invoice}}</td>{{else}}<td>{{cgstRate}}%</td><td>{{formatSrCurrency cgstAmount ../invoice}}</td><td>{{sgstRate}}%</td><td>{{formatSrCurrency sgstAmount ../invoice}}</td>{{/if}}<td>{{formatSrCurrency taxAmount ../invoice}}</td></tr>{{/each}}</tbody>
+          <tfoot>
+            <tr><th>{{display.labels.total}}</th><th>{{formatSrCurrency mapped.hsnSummary.totalTaxableValue invoice}}</th>{{#if mapped.visibility.showIgst}}<td></td><th>{{formatSrCurrency mapped.hsnSummary.totalIgstAmount invoice}}</th>{{else}}<td></td><th>{{formatSrCurrency mapped.hsnSummary.totalCgstAmount invoice}}</th><td></td><th>{{formatSrCurrency mapped.hsnSummary.totalSgstAmount invoice}}</th>{{/if}}<th>{{formatSrCurrency mapped.hsnSummary.totalTaxAmount invoice}}</th></tr>
+            <tr class="summary-words-row"><th>{{display.document.labels.totalTaxInWords}}</th>{{#if mapped.visibility.showIgst}}<td colspan="4">{{srTaxAmountInWords mapped.hsnSummary.totalTaxAmount invoice}}</td>{{else}}<td colspan="6">{{srTaxAmountInWords mapped.hsnSummary.totalTaxAmount invoice}}</td>{{/if}}</tr>
+          </tfoot>
+        </table></div>
+        {{/if}}
+      </div>
+    </section>
+
+    {{#if mapped.visibility.showSignature}}
+    <section class="signature-section">
+      <div class="signature-box">
+        <h2>{{display.labels.signatureFor}}{{#if invoice.billedBy.name}} {{invoice.billedBy.name}}{{/if}}</h2>
+        {{#if display.signature}}<img class="signature-image" src="{{display.signature}}" alt="{{display.labels.signature}}" referrerpolicy="no-referrer" />{{/if}}
+        <div class="signature-line"></div>
+        <strong>{{display.labels.signature}}</strong>
+      </div>
+    </section>
+    {{/if}}
+
+    <div class="no-dibella invoice-letterhead-footer{{#unless display.assets.letterHeadFooter}} is-empty{{/unless}}">
+      {{#if display.assets.letterHeadFooter}}<img src="{{display.assets.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{else}}<img alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{/if}}
+    </div>
+  </div>
+  {{> RefrensBranding invoice}}
+</div>
