@@ -31,6 +31,16 @@
   margin: 0;
 }
 
+.sr-money {
+  display: inline;
+  white-space: nowrap;
+}
+
+.sr-currency-symbol {
+  font-family: Roboto, "Noto Sans", "DejaVu Sans", "Arial Unicode MS",
+    "Segoe UI Symbol", Arial, sans-serif !important;
+}
+
 .document-frame {
   background: #fff;
   border: 1px solid var(--sr-border-color);
@@ -38,10 +48,26 @@
   width: 100%;
 }
 
-.invoice-letterhead,
-.invoice-letterhead-footer {
+.sr-trading-document > .document-frame > .invoice-letterhead,
+.sr-trading-document > .document-frame > .invoice-letterhead-footer {
   display: block;
   width: 100%;
+}
+
+/* Keep populated artwork in normal flow despite generic business-shell image
+   positioning, so browser/Pageless PDF reserves its rendered height. */
+.sr-trading-document > .document-frame > .invoice-letterhead:not(.is-empty),
+.sr-trading-document
+  > .document-frame
+  > .invoice-letterhead-footer:not(.is-empty) {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  clear: both;
+  float: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .invoice-letterhead {
@@ -62,19 +88,26 @@
   width: 0;
 }
 
-.invoice-letterhead img,
-.invoice-letterhead-footer img {
+.sr-trading-document > .document-frame > .invoice-letterhead img,
+.sr-trading-document > .document-frame > .invoice-letterhead-footer img {
   display: block;
+  position: static !important;
   height: auto;
+  max-height: none;
+  transform: none !important;
   width: 100%;
 }
 
 /* Dibella owns repeated first/last-page artwork. Keep the in-flow copies for
    preview/browser print, but do not duplicate them in Dibella PDF output. */
-/* stylelint-disable-next-line selector-class-pattern */
-body.isDibella
+body[class~="isDibella"]
   .sr-trading-document
-  .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+  > .document-frame
+  > .no-dibella.invoice-letterhead,
+body[class~="isDibella"]
+  .sr-trading-document
+  > .document-frame
+  > .no-dibella.invoice-letterhead-footer {
   display: none !important;
   visibility: hidden !important;
 }
@@ -859,6 +892,33 @@ body.isDibella
     background: #fff !important;
     overflow: visible !important;
     print-color-adjust: exact;
+  }
+
+  .sr-trading-document > .document-frame > .invoice-letterhead:not(.is-empty),
+  .sr-trading-document
+    > .document-frame
+    > .invoice-letterhead-footer:not(.is-empty),
+  .sr-trading-document
+    > .document-frame
+    > .invoice-letterhead:not(.is-empty)
+    img,
+  .sr-trading-document
+    > .document-frame
+    > .invoice-letterhead-footer:not(.is-empty)
+    img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-width: 100%;
+    break-inside: avoid-page;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sr-trading-document
+    > .document-frame
+    > .invoice-letterhead-footer:not(.is-empty) {
+    break-before: avoid-page;
   }
 
   /* The host page's default body/output spacing sits outside the template and

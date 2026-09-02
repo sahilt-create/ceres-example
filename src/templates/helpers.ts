@@ -1691,7 +1691,10 @@ const escapeHtml = (value: string): string =>
       }[character] || character)
   );
 
-const wrapCurrencyLabels = (formatted: string): string => {
+const wrapCurrencyLabels = (
+  formatted: string,
+  symbolClassName = "solvin-currency-symbol"
+): string => {
   const labelPattern = /[^\d.,\s()-]+/gu;
   let cursor = 0;
   const markup = Array.from(formatted.matchAll(labelPattern)).reduce(
@@ -1700,7 +1703,7 @@ const wrapCurrencyLabels = (formatted: string): string => {
       const precedingText = escapeHtml(formatted.slice(cursor, index));
       const currencyLabel = escapeHtml(match[0]);
       cursor = index + match[0].length;
-      return `${result}${precedingText}<span class="solvin-currency-symbol">${currencyLabel}</span>`;
+      return `${result}${precedingText}<span class="${symbolClassName}">${currencyLabel}</span>`;
     },
     ""
   );
@@ -1719,6 +1722,22 @@ export const formatSolvinCurrencyMarkup = (
   const formatted = formatSolvinCurrency(amount, invoiceValue);
 
   return `<span class="solvin-money">${wrapCurrencyLabels(formatted)}</span>`;
+};
+
+/**
+ * Keeps SR Trading currency glyphs on a known PDF-safe font while preserving
+ * the template's ISO-driven precision and locale-specific symbol placement.
+ */
+export const formatSrTradingCurrencyMarkup = (
+  amount: any,
+  invoiceValue?: any
+): string => {
+  const formatted = formatSrTradingCurrency(amount, invoiceValue);
+
+  return `<span class="sr-money">${wrapCurrencyLabels(
+    formatted,
+    "sr-currency-symbol"
+  )}</span>`;
 };
 
 // Shared print-fit helpers used by the Solvin template.
