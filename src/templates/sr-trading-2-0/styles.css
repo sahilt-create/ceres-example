@@ -48,10 +48,6 @@
   width: 100%;
 }
 
-.sr-document-content {
-  display: contents;
-}
-
 .sr-trading-document > .document-frame > .invoice-letterhead,
 .sr-trading-document > .document-frame > .invoice-letterhead-footer {
   display: block;
@@ -102,16 +98,17 @@
   width: 100%;
 }
 
-/* Dibella owns repeated first/last-page artwork. Keep the in-flow copies for
-   preview/browser print, but do not duplicate them in Dibella PDF output. */
+/* Dibella owns PDF header/footer placement, including first/last-page and
+   repeat-on-every-page options. Keep exactly one in-flow copy for preview and
+   hide it from Dibella so the PDF engine never receives duplicate artwork. */
 body[class~="isDibella"]
   .sr-trading-document
   > .document-frame
-  > .no-dibella.invoice-letterhead:not(.sr-repeat-pdf-header),
+  > .no-dibella.invoice-letterhead,
 body[class~="isDibella"]
   .sr-trading-document
   > .document-frame
-  > .no-dibella.invoice-letterhead-footer:not(.sr-repeat-pdf-footer) {
+  > .no-dibella.invoice-letterhead-footer {
   display: none !important;
   visibility: hidden !important;
 }
@@ -885,33 +882,6 @@ body[class~="isDibella"]
 /* The parent PDF engine owns page size and margins. Declaring an @page box here
    makes Chromium prefer paged output and breaks Lydia's Pageless PDF mode. */
 @media print {
-  body[class~="isDibella"]
-    .document-frame:has(.sr-repeat-pdf-header, .sr-repeat-pdf-footer) {
-    display: table;
-    table-layout: fixed;
-    width: 100%;
-  }
-
-  body[class~="isDibella"]
-    .document-frame:has(.sr-repeat-pdf-header, .sr-repeat-pdf-footer)
-    > .sr-document-content {
-    display: table-row-group;
-  }
-
-  body[class~="isDibella"]
-    .document-frame
-    > .invoice-letterhead.sr-repeat-pdf-header:not(.is-empty) {
-    display: table-header-group !important;
-    visibility: visible !important;
-  }
-
-  body[class~="isDibella"]
-    .document-frame
-    > .invoice-letterhead-footer.sr-repeat-pdf-footer:not(.is-empty) {
-    display: table-footer-group !important;
-    visibility: visible !important;
-  }
-
   html,
   body,
   [id="documentOutput"] {
