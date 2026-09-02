@@ -1,0 +1,1342 @@
+.sr-trading-document {
+  --sr-border-color: var(--ceres-border-color, #95949f);
+  --sr-muted-color: #555;
+  --sr-page-gutter: 32px;
+
+  background: var(--primary-background, #fff);
+  color: var(--secondary-color, #000);
+  font-family: var(--subtitle-font, Inter, Arial, Helvetica, sans-serif);
+  font-size: 13px;
+  line-height: normal;
+  margin: 0 auto;
+  max-width: 1000px;
+  min-height: 1414px;
+  padding: var(--sr-page-gutter);
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+}
+
+.sr-trading-document,
+.sr-trading-document * {
+  box-sizing: border-box;
+}
+
+.sr-trading-document h1,
+.sr-trading-document h2,
+.sr-trading-document ol,
+.sr-trading-document ul,
+.sr-trading-document p {
+  margin: 0;
+}
+
+.document-frame {
+  background: #fff;
+  border: 1px solid var(--sr-border-color);
+  min-width: 0;
+  width: 100%;
+}
+
+.invoice-letterhead,
+.invoice-letterhead-footer {
+  display: block;
+  width: 100%;
+}
+
+.invoice-letterhead {
+  border-bottom: 1px solid var(--sr-border-color);
+}
+
+.invoice-letterhead-footer {
+  border-top: 1px solid var(--sr-border-color);
+}
+
+.invoice-letterhead-footer.is-empty,
+.invoice-letterhead.is-empty {
+  border: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+}
+
+.invoice-letterhead img,
+.invoice-letterhead-footer img {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+/* Dibella owns repeated first/last-page artwork. Keep the in-flow copies for
+   preview/browser print, but do not duplicate them in Dibella PDF output. */
+/* stylelint-disable-next-line selector-class-pattern */
+body.isDibella
+  .sr-trading-document
+  .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.document-title {
+  align-items: center;
+  border-bottom: 1px solid var(--sr-border-color);
+  display: flex;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px;
+}
+
+.document-title h1 {
+  color: var(--primary-color, #000);
+  font-family: var(--title-font, Inter, Arial, Helvetica, sans-serif);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: normal;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.sr-trading-document h2 {
+  font-family: var(--title-font, Inter, Arial, Helvetica, sans-serif);
+}
+
+.quotation-meta {
+  border-bottom: 1px solid var(--sr-border-color);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.quotation-to {
+  border-right: 1px solid var(--sr-border-color);
+  min-height: 193px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.muted-label {
+  color: var(--sr-muted-color);
+  font-weight: 500;
+}
+
+.muted-label,
+.party-name {
+  margin-bottom: 6px !important;
+}
+
+.party-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.address-lines {
+  color: var(--sr-muted-color);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.party-detail {
+  color: var(--sr-muted-color);
+  margin-top: 4px !important;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.party-detail strong {
+  color: #000;
+}
+
+.shipping-block {
+  border-top: 1px solid var(--sr-border-color);
+  margin: 12px -12px -12px;
+  padding: 12px;
+}
+
+.quotation-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.details-list {
+  align-content: start;
+  border-bottom: 1px solid var(--sr-border-color);
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.details-list > div {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.details-list span {
+  color: var(--sr-muted-color);
+}
+
+.details-list strong {
+  overflow-wrap: normal;
+  text-align: right;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.catalogue-block {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-height: 108px;
+  padding: 12px;
+}
+
+.catalogue-block.is-empty {
+  display: none;
+}
+
+.catalogue-block img {
+  border: 1px solid #000;
+  display: block;
+  flex: 0 0 84px;
+  height: 84px;
+  object-fit: contain;
+  width: 84px;
+}
+
+.catalogue-block strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.catalogue-block p {
+  color: var(--sr-muted-color);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.compliance-section {
+  align-items: center;
+  border-bottom: 1px solid var(--sr-border-color);
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.compliance-section:has(.irn-value:empty):not(
+    :has(.compliance-qr:not(.is-empty))
+  ) {
+  display: none;
+}
+
+.irn-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.irn-value:empty,
+.compliance-qr.is-empty {
+  display: none;
+}
+
+.compliance-qr,
+.compliance-qr img {
+  height: 100px;
+  width: 100px;
+}
+
+.compliance-qr {
+  flex: 0 0 100px;
+}
+
+.compliance-qr img {
+  display: block;
+  object-fit: contain;
+}
+
+.items-table thead,
+.summary-table thead,
+.bank-table th {
+  background: var(--secondary-background, transparent);
+}
+
+.items-table-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: visible;
+  width: 100%;
+}
+
+.items-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 0;
+  table-layout: auto;
+  width: 100%;
+}
+
+.items-table td,
+.items-table th {
+  border-bottom: 1px solid var(--sr-border-color);
+  border-right: 1px solid var(--sr-border-color);
+  padding: 6px;
+  vertical-align: top;
+}
+
+.items-table td:last-child,
+.items-table th:last-child {
+  border-right: 0;
+}
+
+.items-table th {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: normal;
+  text-align: center;
+  overflow-wrap: normal;
+  white-space: normal;
+  word-break: normal;
+}
+
+.items-table col.col-index {
+  width: 34px;
+}
+
+.items-table col.col-item {
+  width: auto;
+}
+
+/* The item track absorbs spare space; every other data track stays only as
+   wide as its header/value needs. This prevents short fields such as Date or
+   Qty from taking space away from monetary values. */
+.items-table col:not(.col-index, .col-item) {
+  width: 1%;
+}
+
+.align-left,
+.items-table td.col-item,
+.items-table th.col-item {
+  text-align: left;
+}
+
+.items-table td.col-index,
+.items-table th.col-index {
+  text-align: center;
+}
+
+.items-table td.align-right,
+.items-table th.align-right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.items-table td.is-date-column,
+.items-table th.is-date-column {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.items-table th.align-right {
+  text-align: center;
+}
+
+/* Serial numbers always stay centred even when the source column carries a
+   generic right-alignment preference. */
+.items-table td.col-index,
+.items-table th.col-index {
+  text-align: center;
+}
+
+.items-table td.col-hsn-sac,
+.items-table td.col-qty,
+.items-table td.col-unit,
+.items-table td.col-gst-rate,
+.items-table td.col-taxrate,
+.items-table td.col-cess-rate {
+  overflow-wrap: normal;
+  text-align: center;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.items-table tbody .item-row > td:not(.col-item, .col-index) {
+  text-align: center;
+  vertical-align: top;
+}
+
+.item-main {
+  display: block;
+}
+
+.item-name {
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.item-description {
+  color: var(--sr-muted-color);
+  font-size: 13px;
+  line-height: normal;
+  margin-top: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.item-description .markdown-viewer-widget,
+.item-description .toastui-editor-contents,
+.item-description .toastui-editor-contents p {
+  color: var(--sr-muted-color) !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0 !important;
+  max-width: 100%;
+}
+
+.item-description .toastui-editor-contents ul,
+.item-description .toastui-editor-contents ol {
+  color: var(--sr-muted-color) !important;
+  margin: 0 !important;
+  padding-left: 14px;
+}
+
+.item-description .toastui-editor-contents li {
+  color: var(--sr-muted-color) !important;
+  margin: 0 0 4px;
+}
+
+.item-description .toastui-editor-contents li:last-child {
+  margin-bottom: 0;
+}
+
+.item-description .markdown-viewer-widget,
+.item-description .toastui-editor-contents {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.item-description .markdown-viewer-widget table,
+.item-description .toastui-editor-contents table {
+  border-collapse: collapse;
+  box-sizing: border-box;
+  margin: 8px 0;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.item-description .markdown-viewer-widget table th,
+.item-description .markdown-viewer-widget table td,
+.item-description .toastui-editor-contents table th,
+.item-description .toastui-editor-contents table td {
+  height: auto;
+  overflow-wrap: anywhere;
+  padding: 4px;
+  white-space: normal;
+}
+
+.item-description-row > td {
+  padding: 6px;
+}
+
+.item-codes {
+  color: var(--sr-muted-color);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  gap: 10px;
+  margin-top: 8px !important;
+}
+
+.item-code {
+  font-size: 11px;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.item-code-label {
+  color: #000;
+  font-weight: 500;
+}
+
+.item-code-value {
+  font-weight: 400;
+}
+
+.item-codes:not(:has(.item-code)) {
+  display: none;
+}
+
+.items-total-row {
+  font-weight: 700;
+}
+
+.totals-row {
+  border-bottom: 1px solid var(--sr-border-color);
+  display: grid;
+
+  /* Keep one aligned value track for every total row, but give formatted
+     currency enough responsive room to remain on a single line. */
+  grid-template-columns: minmax(0, 1fr) clamp(135px, 18%, 180px);
+  min-height: 27px;
+}
+
+.totals-row > :first-child,
+.totals-row > :last-child {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px;
+  text-align: right;
+}
+
+.totals-row > :first-child {
+  border-right: 1px solid var(--sr-border-color);
+}
+
+.totals-row > :last-child {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.grand-total {
+  font-size: 13px;
+  min-height: 31px;
+}
+
+.secondary-total {
+  color: #333;
+  font-weight: 400;
+}
+
+.amount-in-words {
+  align-items: center;
+  border-bottom: 1px solid var(--sr-border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 39px;
+  padding: 12px;
+}
+
+.amount-in-words > * {
+  padding: 0;
+  text-align: left;
+}
+
+.amount-in-words strong {
+  background: transparent;
+  border: 0;
+  font-weight: 700;
+}
+
+.amount-in-words span {
+  font-weight: 400;
+}
+
+.summary-tables {
+  border-top: 1px solid var(--sr-border-color);
+}
+
+.summary-panel {
+  padding: 12px;
+}
+
+.summary-panel:not([style*="display:none"])
+  + .summary-panel:not([style*="display:none"]) {
+  border-top: 1px solid var(--sr-border-color);
+}
+
+.summary-panel h2 {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.summary-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.summary-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 620px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid var(--sr-border-color);
+  padding: 6px;
+  text-align: center;
+  vertical-align: top;
+}
+
+.summary-table th {
+  font-weight: 700;
+}
+
+.summary-table .summary-code {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.summary-table tfoot th {
+  white-space: nowrap;
+}
+
+.summary-table .summary-words-row th {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.summary-table .summary-words-row td {
+  text-align: left;
+  white-space: normal;
+}
+
+.lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 252px;
+}
+
+.bank-panel,
+.terms-panel {
+  min-width: 0;
+  padding: 16px;
+}
+
+.terms-panel {
+  border-right: 1px solid var(--sr-border-color);
+}
+
+.lower-grid h2 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.bank-panel > h2,
+.bank-panel > .upi-block {
+  margin-left: 6px;
+}
+
+.terms-panel ol {
+  color: var(--sr-muted-color);
+  font-size: 13px;
+  line-height: 1.4;
+  padding-left: 14px;
+}
+
+.terms-panel li + li {
+  margin-top: 6px;
+}
+
+.notes-block {
+  color: var(--sr-muted-color);
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+.bank-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.bank-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: auto;
+  width: 100%;
+}
+
+.bank-table th,
+.bank-table td {
+  line-height: 1.3;
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.bank-table th {
+  color: var(--sr-muted-color);
+  font-weight: 400;
+  min-width: 122px;
+  overflow-wrap: normal;
+  width: 122px;
+  word-break: normal;
+}
+
+.bank-value {
+  min-width: 120px;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.bank-value.is-code {
+  white-space: nowrap;
+}
+
+.upi-block {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.upi-qr-container {
+  height: 100px;
+  margin-left: -8px;
+  width: 100px;
+}
+
+.upi-qr-container.is-empty {
+  display: none;
+}
+
+.upi-qr-container img {
+  display: block;
+  height: 100px;
+  object-fit: contain;
+  width: 100px;
+}
+
+.signature-section {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 220px;
+  padding: 32px 16px 24px;
+}
+
+/* Add one section boundary only when the visible lower details flow directly
+   into the signature. Keep the summary-to-signature boundary borderless. */
+.lower-grid + .summary-tables.is-empty + .signature-section {
+  border-top: 1px solid var(--sr-border-color);
+}
+
+.signature-box {
+  text-align: center;
+  width: min(266px, 100%);
+}
+
+.signature-box h2 {
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.signature-image {
+  display: block;
+  height: 98px;
+  margin: 0 auto 18px;
+  object-fit: contain;
+  width: 121px;
+}
+
+.signature-line {
+  border-top: 1px dashed var(--sr-muted-color);
+  margin-bottom: 10px;
+}
+
+.signature-box > strong {
+  font-size: 13px;
+}
+
+@media (width <= 1000px) {
+  .sr-trading-document {
+    --sr-page-gutter: clamp(16px, 3.2vw, 32px);
+
+    min-height: 0;
+  }
+
+  .document-frame {
+    max-width: 936px;
+    margin-inline: auto;
+  }
+
+}
+
+@media (width <= 760px) {
+  .sr-trading-document {
+    --sr-page-gutter: 16px;
+  }
+
+  .lower-grid,
+  .quotation-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .quotation-to,
+  .terms-panel {
+    border-bottom: 1px solid var(--sr-border-color);
+    border-right: 0;
+    min-height: 0;
+  }
+
+  .details-list {
+    padding-block: 12px;
+  }
+
+  .catalogue-block {
+    min-height: 0;
+  }
+
+  .lower-grid {
+    min-height: 0;
+  }
+}
+
+@media (width <= 520px) {
+  .sr-trading-document {
+    --sr-page-gutter: 8px;
+
+    font-size: 13px;
+  }
+
+  .document-title h1 {
+    font-size: 20px;
+  }
+
+  .bank-table {
+    font-size: 13px;
+  }
+
+  .bank-table th {
+    min-width: 82px;
+    width: 82px;
+  }
+
+  .bank-table td {
+    min-width: 110px;
+  }
+
+  .signature-section {
+    justify-content: stretch;
+    min-height: 200px;
+  }
+
+  .signature-box {
+    width: 100%;
+  }
+
+  .catalogue-block {
+    align-items: flex-start;
+  }
+
+  .catalogue-block img {
+    flex-basis: 72px;
+    height: 72px;
+    width: 72px;
+  }
+}
+
+/* The parent PDF engine owns page size and margins. Declaring an @page box here
+   makes Chromium prefer paged output and breaks Lydia's Pageless PDF mode. */
+@media print {
+  html,
+  body,
+  [id="documentOutput"] {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+    print-color-adjust: exact;
+  }
+
+  /* The host page's default body/output spacing sits outside the template and
+     can spill a fully occupied final sheet by a few pixels. Chromium then
+     reports that spill as a completely blank trailing PDF page. */
+  html,
+  body {
+    max-height: none !important;
+  }
+
+  [id="ceresManifestBadge"],
+  [id="ceresExampleModal"] {
+    display: none !important;
+  }
+
+  .sr-trading-document {
+    --sr-page-gutter: 0;
+
+    margin: 0;
+    max-width: none;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+    width: 100%;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Keep the outer frame decoration on the document's real start/end only.
+     Cloning it at every fragment paints a detached line at the physical page
+     bottom and stacks another line over a page-starting section border. */
+  .document-frame {
+    border-right: 0;
+    border-left: 0;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-box-decoration-break: slice;
+    box-decoration-break: slice;
+  }
+
+  .invoice-letterhead,
+  .document-title,
+  .quotation-meta,
+  .compliance-section,
+  .items-table,
+  .totals-section,
+  .amount-in-words,
+  .lower-grid,
+  .summary-tables,
+  .signature-section,
+  .invoice-letterhead-footer {
+    border-right: 1px solid var(--sr-border-color);
+    border-left: 1px solid var(--sr-border-color);
+  }
+
+  /* A4's printable width can satisfy the screen's <=760px breakpoint. Reset
+     those narrow-screen rules so PDF keeps the same two-column structure as
+     the normal document preview. */
+  .quotation-meta,
+  .lower-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .quotation-to,
+  .terms-panel {
+    border-bottom: 0;
+    border-right: 1px solid var(--sr-border-color);
+  }
+
+  .quotation-to {
+    min-height: 193px;
+  }
+
+  .catalogue-block {
+    min-height: 108px;
+  }
+
+  .items-table-wrap {
+    /* Merge the first header cap with the preceding section boundary. The
+       repeated thead still paints its own cap when Chromium starts a new PDF
+       page, because this wrapper margin only applies at the table's start. */
+    margin-top: -0.5px;
+    overflow: visible;
+  }
+
+  .summary-panel,
+  .summary-table {
+    break-inside: avoid;
+  }
+
+  .summary-panel h2 {
+    break-after: avoid;
+  }
+
+  .summary-table-wrap {
+    overflow: visible;
+  }
+
+  .items-table {
+    max-width: 100%;
+    min-width: 0;
+    table-layout: auto;
+    width: 100%;
+  }
+
+  .items-table col {
+    max-width: none;
+    min-width: 0;
+    width: auto;
+  }
+
+  /* Keep the serial-number track usable, let the item consume the remaining
+     width, and make every other enabled column hug its own content. The print
+     fitter uniformly reduces dense tables before any column can leave the
+     printable frame. */
+  .items-table col.col-index {
+    width: 42px;
+  }
+
+  .items-table col.col-item {
+    width: auto;
+  }
+
+  .items-table col:not(.col-index, .col-item) {
+    width: 1%;
+  }
+
+  .items-table td.col-index,
+  .items-table th.col-index {
+    min-width: 42px;
+    width: 42px;
+    white-space: nowrap;
+  }
+
+  .items-table thead {
+    display: table-header-group;
+  }
+
+  /* Chromium can omit the collapsed top border when repeating a table header
+     after a PDF page break. Paint a single print-only cap on the repeated
+     header cells so every continued table starts with a clean top edge. */
+  .items-table thead th {
+    background-image: linear-gradient(
+      var(--sr-border-color),
+      var(--sr-border-color)
+    );
+    background-position: top left;
+    background-repeat: no-repeat;
+    background-size: 100% 0.5px;
+  }
+
+  .items-table tfoot {
+    display: table-footer-group;
+  }
+
+  .summary-table thead {
+    display: table-header-group;
+  }
+
+  .summary-table tfoot {
+    display: table-footer-group;
+  }
+
+  .summary-table tr {
+    break-inside: avoid-page;
+  }
+
+  .item-description {
+    overflow: visible;
+  }
+
+  .item-description table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+  }
+
+  .item-description table thead {
+    display: table-header-group;
+  }
+
+  .item-description table tr {
+    break-inside: avoid-page;
+  }
+
+  .items-table td.align-right,
+  .items-table td.col-index,
+  .items-table td.col-hsn-sac,
+  .items-table td.col-qty,
+  .items-table td.col-unit,
+  .items-table td.col-rate,
+  .items-table td.col-discount,
+  .items-table td.col-amount,
+  .items-table td.col-total,
+  .items-table td.col-gst-rate,
+  .items-table td.col-taxrate,
+  .items-table td.col-cess-rate,
+  .items-table td.col-tax,
+  .items-table td.col-igst,
+  .items-table td.col-cgst,
+  .items-table td.col-sgst,
+  .items-table td.col-utgst,
+  .items-table td.col-cess,
+  .items-table td.col-cess-amount,
+  .items-table th.align-right {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  .items-table th.col-item,
+  .items-table td.col-item,
+  .items-table td.col-item p,
+  .items-table td.col-item span,
+  .items-table td.col-item div {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .sr-trading-document.is-measuring-print-fit .items-table {
+    width: 100%;
+    font-size: 13px !important;
+    table-layout: auto !important;
+  }
+
+  .sr-trading-document.is-measuring-print-fit .items-table thead th {
+    overflow-wrap: normal !important;
+    white-space: nowrap !important;
+  }
+
+  .sr-trading-document.is-measuring-print-fit
+    .items-table
+    :is(
+      .align-right,
+      .col-index,
+      .col-hsn-sac,
+      .col-qty,
+      .col-unit,
+      .col-gst-rate,
+      .col-taxrate,
+      .col-cess-rate,
+      .col-rate,
+      .col-discount,
+      .col-amount,
+      .col-total,
+      .col-tax,
+      .col-igst,
+      .col-cgst,
+      .col-sgst,
+      .col-utgst,
+      .col-cess,
+      .col-cess-amount
+    ) {
+    overflow-wrap: normal !important;
+    white-space: nowrap !important;
+  }
+
+  .sr-trading-document.is-compact-print-table .items-table,
+  .sr-trading-document.is-compact-print-table .totals-section {
+    font-size: var(--sr-print-table-font-size, 11px);
+  }
+
+  .sr-trading-document.is-compact-print-table .items-table *,
+  .sr-trading-document.is-compact-print-table .totals-section * {
+    font-size: inherit;
+  }
+
+  .sr-trading-document.is-compact-print-table .items-table thead th {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  .sr-trading-document.is-compact-print-table .totals-row > * {
+    padding-right: 3px;
+    padding-left: 3px;
+  }
+
+  .items-table td,
+  .items-table th {
+    padding: 6px;
+  }
+
+  /* Match Solvin's natural print sizing so preview-only heights do not create
+     empty PDF space or push otherwise fitting sections onto a new page. */
+  .quotation-to,
+  .catalogue-block,
+  .item-row,
+  .totals-section,
+  .lower-grid {
+    min-height: 0;
+  }
+
+  .lower-grid {
+    border-bottom: 1px solid var(--sr-border-color);
+  }
+
+  /* The lower section owns its closing cap. Let a following summary overlap
+     that cap in normal flow, while retaining its own single top rule when
+     Chromium moves it to the next PDF page. */
+  .lower-grid + .summary-tables {
+    margin-top: -0.5px;
+  }
+
+  /* Use Solvin's compact in-flow signature geometry in paged output. This
+     avoids a fixed 220px block pushing a business signature/footer onto an
+     otherwise unnecessary page while keeping the complete block together. */
+  .signature-section {
+    min-height: 125px;
+    padding: 12px 16px 10px;
+  }
+
+  .signature-box h2 {
+    margin-bottom: 6px;
+  }
+
+  .signature-image {
+    height: 56px;
+    margin-bottom: 6px;
+    width: 86px;
+  }
+
+  .signature-line {
+    margin-bottom: 5px;
+  }
+
+  .bank-panel,
+  .terms-panel {
+    min-width: 0;
+  }
+
+  .bank-table-wrap {
+    overflow: visible;
+  }
+
+  .bank-table {
+    break-inside: avoid;
+  }
+
+  .bank-table th,
+  .bank-table td {
+    min-width: 0;
+  }
+
+  .quotation-meta,
+  .compliance-section,
+  .quotation-to,
+  .quotation-details,
+  .amount-in-words,
+  .catalogue-block,
+  .invoice-letterhead,
+  .invoice-letterhead-footer,
+  .lower-grid:not(:has(.notes-block)),
+  .terms-panel:not(:has(.notes-block)),
+  .bank-panel,
+  .upi-block,
+  .signature-section,
+  .refrens-branding-widget {
+    break-inside: avoid;
+  }
+
+  .items-table tr,
+  .bank-table {
+    break-inside: avoid;
+  }
+
+  .items-table tbody tr {
+    break-inside: avoid-page;
+  }
+
+  .items-total-row {
+    break-inside: avoid-page;
+  }
+
+  .items-table .item-row:has(+ .item-description-row) {
+    break-after: avoid-page;
+  }
+
+  .items-table .item-description-row {
+    break-before: avoid-page;
+  }
+
+  .totals-section {
+    /* The top border remains visible when Chromium moves this complete block
+       to a new PDF page. The hairline overlap keeps the normal in-flow boundary
+       to one clean line instead of stacking it over the table's bottom line. */
+    border-top: 1px solid var(--sr-border-color);
+    break-after: avoid-page;
+    break-inside: avoid;
+    margin-top: -0.5px;
+  }
+
+  /* Lydia prints to one continuous/pageless canvas, so fragment caps are not
+     needed there. Let each adjoining boundary have exactly one owner instead
+     of overlapping the normal section border with a page-break fallback. */
+  body.is-lydia-pageless-print .items-table-wrap,
+  body.is-lydia-pageless-print .lower-grid + .summary-tables,
+  body.is-lydia-pageless-print .totals-section {
+    margin-top: 0;
+  }
+
+  body.is-lydia-pageless-print .items-table thead th {
+    background-image: none;
+  }
+
+  body.is-lydia-pageless-print .totals-section,
+  body.is-lydia-pageless-print .lower-grid {
+    border-top-width: 0;
+    border-bottom-width: 0;
+  }
+
+  .amount-in-words {
+    break-before: avoid-page;
+  }
+
+  .lower-grid h2 {
+    break-after: avoid;
+  }
+
+  /* Keep the final letterhead footer attached to the preceding final-page
+     content, while allowing the earlier content to paginate naturally. */
+  .invoice-letterhead-footer {
+    break-before: avoid-page;
+  }
+
+  .lower-grid:has(.notes-block),
+  .lower-grid:has(.terms-list li:nth-child(8)),
+  .terms-panel:has(.notes-block),
+  .terms-panel:has(.terms-list li:nth-child(8)),
+  .notes-block,
+  .notes-block .markdown-viewer-widget,
+  .notes-block .toastui-editor-contents {
+    break-inside: auto;
+  }
+
+  .bank-panel:has(.bank-table tr:nth-child(12)),
+  .bank-panel:has(.bank-table td:nth-child(4)),
+  .bank-panel:has(.upi-block) {
+    break-inside: auto;
+  }
+
+  .bank-panel:has(.bank-table tr:nth-child(12)) .bank-table,
+  .bank-panel:has(.bank-table td:nth-child(4)) .bank-table {
+    break-inside: auto;
+  }
+
+  .notes-block p,
+  .notes-block li {
+    orphans: 2;
+    widows: 2;
+  }
+
+  .sr-trading-document img {
+    max-width: 100%;
+  }
+
+  .sr-trading-document p,
+  .sr-trading-document li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Chromium can visually darken adjoining one-pixel rules in a scaled PDF.
+     Apply one uniform hairline width after every component rule so outer,
+     section, table, and page-break borders remain equally light. */
+  .sr-trading-document,
+  .sr-trading-document * {
+    border-width: 0.5px;
+  }
+
+  .items-table th,
+  .items-total-row,
+  .grand-total,
+  .amount-in-words strong,
+  .summary-table th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+}
