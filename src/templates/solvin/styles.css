@@ -104,17 +104,24 @@ body[class~="isDibella"] .solvin-invoice
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
+  width: 100%;
+  min-height: 48px;
+  height: auto;
+  padding: 8px 12px;
   border-bottom: 1px solid #21272e;
   text-align: center;
 }
 
 .solvin-title h1 {
+  width: 100%;
+  max-width: 100%;
   color: var(--primary-color, #001f5c);
   font-family: var(--title-font, Arial, Helvetica, sans-serif);
   font-size: 28px;
   font-weight: 700;
   line-height: 32px;
+  overflow-wrap: break-word;
+  word-break: normal;
   text-transform: uppercase;
 }
 

@@ -275,6 +275,21 @@ describe("Solvin compiled template", () => {
     expect(css).not.toContain("--ceres-font-family");
   });
 
+  it("allows lengthy document titles to wrap without overlapping content", () => {
+    const css = readFileSync(
+      join(process.cwd(), "src/templates/solvin/styles.css"),
+      "utf8"
+    );
+    const titleRule = css.match(/\.solvin-title\s*\{([^}]*)\}/)?.[1] ?? "";
+    const headingRule = css.match(/\.solvin-title h1\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(titleRule).toContain("min-height: 48px;");
+    expect(titleRule).toContain("height: auto;");
+    expect(titleRule).toContain("padding: 8px 12px;");
+    expect(headingRule).toContain("overflow-wrap: break-word;");
+    expect(headingRule).toContain("word-break: normal;");
+  });
+
   it("marks configured letterhead images as Dibella-managed PDF assets", () => {
     const input = payload(false);
     Object.assign(input.invoice, {
