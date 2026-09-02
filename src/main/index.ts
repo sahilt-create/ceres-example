@@ -198,6 +198,8 @@ const renderDocument = async () => {
   }
 };
 
-renderDocument();
+if (shouldRender) {
+  renderDocument();
+}
 
 export {};

@@ -83,7 +83,12 @@ export function initDevBridge(): boolean {
           window.location.replace(
             window.location.pathname + "?" + newParams.toString()
           );
+          return;
         }
+
+        // Templates without bundled samples still need the development panel
+        // so a custom API URL can be supplied locally.
+        injectModal(templateParam, null);
       });
     return true;
   }
@@ -145,6 +150,18 @@ async function injectModal(
     }
     .modal-action select:hover { border-color: #cbd5e1; }
     .modal-action select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+    #customApiInput {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #475569;
+      background: white;
+      outline: none;
+    }
+    #customApiInput:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
     
     .modal-action button { 
       padding: 10px 16px; 
@@ -324,13 +341,13 @@ async function injectModal(
     "customApiInput"
   ) as HTMLInputElement;
 
-  apiUrlSelect.addEventListener("change", () => {
-    if (apiUrlSelect.value === "custom") {
-      customApiInput.style.display = "block";
-    } else {
-      customApiInput.style.display = "none";
-    }
-  });
+  const syncCustomApiInput = () => {
+    customApiInput.style.display =
+      apiUrlSelect.value === "custom" ? "block" : "none";
+  };
+
+  apiUrlSelect.addEventListener("change", syncCustomApiInput);
+  syncCustomApiInput();
 
   document.getElementById("loadTemplateBtn")?.addEventListener("click", () => {
     const tplName = templateSelect.value;
