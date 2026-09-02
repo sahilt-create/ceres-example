@@ -10,6 +10,7 @@ import {
   formatCountryName,
   formatQuantityWithUnit,
   formatSolvinCurrency,
+  formatSrTradingCurrencyMarkup,
   formatSrTradingCurrency,
   getItemColumnValue,
   getItemSerialNumbers,
@@ -347,6 +348,10 @@ describe("SR Trading 2.0 template", () => {
       join(process.cwd(), "src/templates/sr-trading-2-0/styles.css"),
       "utf8"
     );
+    const indexSource = readFileSync(
+      join(process.cwd(), "src/templates/sr-trading-2-0/index.ts"),
+      "utf8"
+    );
 
     expect(css).toContain("background: var(--primary-background, #fff);");
     expect(css).toContain("color: var(--secondary-color, #000);");
@@ -360,6 +365,9 @@ describe("SR Trading 2.0 template", () => {
     expect(css).toContain(
       "font-family: var(--title-font, Inter, Arial, Helvetica, sans-serif);"
     );
+    expect(css).toContain(".sr-currency-symbol");
+    expect(indexSource).toContain("ceres-sr-trading-currency-font");
+    expect(indexSource).toContain("family=Roboto");
   });
 
   it("keeps UPI and Lydia compliance QR targets separate", () => {
@@ -1905,6 +1913,18 @@ describe("SR Trading 2.0 template", () => {
       })
     ).toBe("(RCoins 1,250.00)");
     expect(formatSolvinCurrency(1250, sarModel.invoice)).toBe("⃁ 1,250.00");
+    expect(
+      formatSrTradingCurrencyMarkup(1250, {
+        ...sarModel.invoice,
+        currency: "INR",
+        locale: "en-IN",
+      })
+    ).toBe(
+      '<span class="sr-money"><span class="sr-currency-symbol">₹</span>1,250.00</span>'
+    );
+    expect(formatSrTradingCurrencyMarkup(1250, sarModel.invoice)).toBe(
+      '<span class="sr-money"><span class="sr-currency-symbol">⃁</span> 1,250.00</span>'
+    );
   });
 
   it("shows a multi-account-only payload and keeps account columns aligned", () => {
@@ -2343,10 +2363,14 @@ describe("SR Trading 2.0 template", () => {
       join(process.cwd(), "src/templates/sr-trading-2-0/styles.css"),
       "utf8"
     );
-    expect(css).toContain("body.isDibella");
-    expect(css).toContain(
-      ".no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer)"
+    expect(css).toContain('body[class~="isDibella"]');
+    expect(css).toContain("> .no-dibella.invoice-letterhead-footer");
+    const printCss = css.slice(css.lastIndexOf("@media print"));
+    expect(printCss).toContain(
+      "> .document-frame > .invoice-letterhead:not(.is-empty)"
     );
+    expect(printCss).toContain("display: block !important;");
+    expect(printCss).toContain("visibility: visible !important;");
   });
 
   it("restores and renders source-driven additional details and total rows", () => {

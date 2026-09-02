@@ -6,7 +6,7 @@ import {
 import {
   formatCountryName,
   formatQuantityWithUnit,
-  formatSrTradingCurrency,
+  formatSrTradingCurrencyMarkup,
   getItemColumnValue,
   getItemSku,
   getItemSerialNumbers,
@@ -27,6 +27,22 @@ import "../../widgets/markdown-viewer";
 import "../../widgets/refrens-branding";
 import "../../widgets/phone-number";
 import "../../widgets/watermark";
+
+// Lydia can apply a custom body font that has no currency glyphs. Load the
+// same known currency-capable face used by the proven Solvin PDF path, but
+// scope its use to SR Trading's isolated currency spans.
+if (typeof document !== "undefined") {
+  const currencyFontId = "ceres-sr-trading-currency-font";
+  if (!document.getElementById(currencyFontId)) {
+    const currencyFont = document.createElement("link");
+    currencyFont.id = currencyFontId;
+    currencyFont.rel = "stylesheet";
+    currencyFont.href =
+      "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap";
+    currencyFont.setAttribute("data-ceres-font", "Roboto");
+    document.head.appendChild(currencyFont);
+  }
+}
 
 type UnknownRecord = Record<string, any>;
 const asRecord = (value: any): UnknownRecord =>
@@ -114,9 +130,17 @@ if (hb) {
   );
   hb.registerHelper("partyAddressLines", getPartyAddressLines);
   hb.registerHelper("formatCountryName", formatCountryName);
-  hb.registerHelper("formatSrCurrency", formatSrTradingCurrency);
-  hb.registerHelper("formatDeductionCurrency", (value: any, invoice: any) =>
-    formatSrTradingCurrency(-Math.abs(numberValue(value)), invoice)
+  hb.registerHelper(
+    "formatSrCurrency",
+    (value: any, invoice: any) =>
+      new hb.SafeString(formatSrTradingCurrencyMarkup(value, invoice))
+  );
+  hb.registerHelper(
+    "formatDeductionCurrency",
+    (value: any, invoice: any) =>
+      new hb.SafeString(
+        formatSrTradingCurrencyMarkup(-Math.abs(numberValue(value)), invoice)
+      )
   );
   hb.registerHelper("partyFieldVisible", isSrPartyFieldVisible);
   hb.registerHelper("partyEntryVisible", (value: any) => {
