@@ -1197,9 +1197,11 @@ describe("SR Trading 2.0 template", () => {
     expect(model.display.assets.letterHeadFooter).toBe("");
 
     const html = template(model);
-    expect(html).toContain('class="no-dibella invoice-letterhead is-empty"');
     expect(html).toContain(
-      'class="no-dibella invoice-letterhead-footer is-empty"'
+      'class="no-dibella invoice-letterhead sr-repeat-pdf-header is-empty"'
+    );
+    expect(html).toContain(
+      'class="no-dibella invoice-letterhead-footer sr-repeat-pdf-footer is-empty"'
     );
     expect(html).not.toContain("owner-header.png");
     expect(html).not.toContain("owner-footer.png");
@@ -2347,17 +2349,27 @@ describe("SR Trading 2.0 template", () => {
     expect(html).toContain("Products and specifications from the payload.");
   });
 
-  it("keeps payload letterhead artwork in preview and lets Dibella own PDF placement", () => {
+  it("maps checked header/footer options to Dibella first/last-page placement", () => {
     const input = payload();
     Object.assign(input.invoice, {
       letterHead: "https://cdn.example.com/sr-header.png",
       letterHeadFooter: "https://cdn.example.com/sr-footer.png",
+      template: {
+        pdfOptions: {
+          letterHeadOnFirstPage: true,
+          footerOnLastPage: true,
+        },
+      },
     });
 
     const html = template(mapSrTradingTemplateData(input as any));
 
     expect(html).toContain('class="no-dibella invoice-letterhead"');
     expect(html).toContain('class="no-dibella invoice-letterhead-footer"');
+    expect(html).toContain('data-sr-pdf-placement="first-page"');
+    expect(html).toContain('data-sr-pdf-placement="last-page"');
+    expect(html).not.toContain("sr-repeat-pdf-header");
+    expect(html).not.toContain("sr-repeat-pdf-footer");
 
     const css = readFileSync(
       join(process.cwd(), "src/templates/sr-trading-2-0/styles.css"),
@@ -2371,6 +2383,39 @@ describe("SR Trading 2.0 template", () => {
     );
     expect(printCss).toContain("display: block !important;");
     expect(printCss).toContain("visibility: visible !important;");
+  });
+
+  it("repeats payload header/footer on every PDF page when options are unchecked", () => {
+    const input = payload();
+    Object.assign(input.invoice, {
+      letterHead: "https://cdn.example.com/sr-header.png",
+      letterHeadFooter: "https://cdn.example.com/sr-footer.png",
+      template: {
+        pdfOptions: {
+          letterHeadOnFirstPage: false,
+          footerOnLastPage: false,
+        },
+      },
+    });
+
+    const html = template(mapSrTradingTemplateData(input as any));
+
+    expect(html).toContain(
+      'class="no-dibella invoice-letterhead sr-repeat-pdf-header"'
+    );
+    expect(html).toContain(
+      'class="no-dibella invoice-letterhead-footer sr-repeat-pdf-footer"'
+    );
+    expect(html.match(/data-sr-pdf-placement="every-page"/g)).toHaveLength(2);
+
+    const css = readFileSync(
+      join(process.cwd(), "src/templates/sr-trading-2-0/styles.css"),
+      "utf8"
+    );
+    const printCss = css.slice(css.lastIndexOf("@media print"));
+    expect(printCss).toContain("display: table-header-group !important;");
+    expect(printCss).toContain("display: table-footer-group !important;");
+    expect(printCss).toContain("display: table-row-group;");
   });
 
   it("restores and renders source-driven additional details and total rows", () => {
