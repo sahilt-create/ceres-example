@@ -1,14 +1,12 @@
 <div class="sr-trading-document">
   <div class="document-frame">
-    <div class="no-dibella invoice-letterhead{{#unless mapped.visibility.letterHeadOnFirstPage}} sr-repeat-pdf-header{{/unless}}{{#unless display.assets.letterHead}} is-empty{{/unless}}" data-sr-pdf-placement="{{#if mapped.visibility.letterHeadOnFirstPage}}first-page{{else}}every-page{{/if}}">
+    <div class="no-dibella invoice-letterhead{{#unless display.assets.letterHead}} is-empty{{/unless}}">
       {{#if display.assets.letterHead}}
         <img src="{{display.assets.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
       {{else}}
         <img alt="Letterhead" data-ceres-height="letterhead" />
       {{/if}}
     </div>
-
-    <div class="sr-document-content">
 
     <header class="document-title"><h1>{{display.document.title}}</h1></header>
 
@@ -211,9 +209,7 @@
     </section>
     {{/if}}
 
-    </div>
-
-    <div class="no-dibella invoice-letterhead-footer{{#unless mapped.visibility.footerOnLastPage}} sr-repeat-pdf-footer{{/unless}}{{#unless display.assets.letterHeadFooter}} is-empty{{/unless}}" data-sr-pdf-placement="{{#if mapped.visibility.footerOnLastPage}}last-page{{else}}every-page{{/if}}">
+    <div class="no-dibella invoice-letterhead-footer{{#unless display.assets.letterHeadFooter}} is-empty{{/unless}}">
       {{#if display.assets.letterHeadFooter}}<img src="{{display.assets.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{else}}<img alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{/if}}
     </div>
   </div>
