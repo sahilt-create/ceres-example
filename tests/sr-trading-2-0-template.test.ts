@@ -561,6 +561,12 @@ describe("SR Trading 2.0 template", () => {
     expect(printCss).toMatch(
       /\.invoice-letterhead,[\s\S]*?\.invoice-letterhead-footer\s*\{[\s\S]*?border-right:\s*1px solid var\(--sr-border-color\);[\s\S]*?border-left:\s*1px solid var\(--sr-border-color\);/
     );
+    expect(printCss).toMatch(
+      /\.invoice-letterhead\s*\{[\s\S]*?border-top:\s*1px solid var\(--sr-border-color\);/
+    );
+    expect(printCss).toMatch(
+      /\.invoice-letterhead-footer\s*\{[\s\S]*?border-bottom:\s*1px solid var\(--sr-border-color\);/
+    );
     const lowerGridRules = [
       ...printCss.matchAll(/\.lower-grid\s*\{([^}]*)\}/g),
     ];
