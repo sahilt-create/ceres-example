@@ -909,8 +909,17 @@
   .summary-tables,
   .signature-section,
   .invoice-letterhead-footer {
+    box-sizing: border-box;
     border-right: 1px solid var(--sr-border-color);
     border-left: 1px solid var(--sr-border-color);
+  }
+
+  .invoice-letterhead {
+    border-top: 1px solid var(--sr-border-color);
+  }
+
+  .invoice-letterhead-footer {
+    border-bottom: 1px solid var(--sr-border-color);
   }
 
   /* A4's printable width can satisfy the screen's <=760px breakpoint. Reset
