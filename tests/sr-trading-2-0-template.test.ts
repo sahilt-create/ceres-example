@@ -2347,7 +2347,7 @@ describe("SR Trading 2.0 template", () => {
     expect(html).toContain("Products and specifications from the payload.");
   });
 
-  it("keeps one preview artwork copy and lets Dibella own PDF placement", () => {
+  it("exposes one bordered artwork copy without overriding Dibella placement", () => {
     [true, false].forEach((firstAndLastOnly) => {
       const input = payload();
       Object.assign(input.invoice, {
@@ -2374,9 +2374,17 @@ describe("SR Trading 2.0 template", () => {
       join(process.cwd(), "src/templates/sr-trading-2-0/styles.css"),
       "utf8"
     );
-    expect(css).toContain('body[class~="isDibella"]');
-    expect(css).toContain("> .no-dibella.invoice-letterhead,");
-    expect(css).toContain("> .no-dibella.invoice-letterhead-footer {");
+    expect(css).not.toContain('body[class~="isDibella"]');
+    expect(css).not.toMatch(
+      /no-dibella\.invoice-letterhead[\s\S]*?display:\s*none\s*!important/
+    );
+    expect(css).not.toMatch(
+      /invoice-letterhead:not\(\.is-empty\)[\s\S]*?position:\s*static\s*!important/
+    );
+    const printCss = css.slice(css.lastIndexOf("@media print"));
+    expect(printCss).toMatch(
+      /\.invoice-letterhead,[\s\S]*?\.invoice-letterhead-footer\s*\{[\s\S]*?border-right:\s*1px solid var\(--sr-border-color\);[\s\S]*?border-left:\s*1px solid var\(--sr-border-color\);/
+    );
     expect(css).not.toContain("display: table-header-group !important;");
     expect(css).not.toContain("display: table-footer-group !important;");
     expect(css).not.toContain("display: table-row-group;");
