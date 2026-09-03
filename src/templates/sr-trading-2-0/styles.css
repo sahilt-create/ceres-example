@@ -48,26 +48,10 @@
   width: 100%;
 }
 
-.sr-trading-document > .document-frame > .invoice-letterhead,
-.sr-trading-document > .document-frame > .invoice-letterhead-footer {
+.invoice-letterhead,
+.invoice-letterhead-footer {
   display: block;
   width: 100%;
-}
-
-/* Keep populated artwork in normal flow despite generic business-shell image
-   positioning, so browser/Pageless PDF reserves its rendered height. */
-.sr-trading-document > .document-frame > .invoice-letterhead:not(.is-empty),
-.sr-trading-document
-  > .document-frame
-  > .invoice-letterhead-footer:not(.is-empty) {
-  position: static !important;
-  inset: auto !important;
-  z-index: auto !important;
-  clear: both;
-  float: none !important;
-  height: auto !important;
-  margin: 0 !important;
-  transform: none !important;
 }
 
 .invoice-letterhead {
@@ -88,29 +72,11 @@
   width: 0;
 }
 
-.sr-trading-document > .document-frame > .invoice-letterhead img,
-.sr-trading-document > .document-frame > .invoice-letterhead-footer img {
+.invoice-letterhead img,
+.invoice-letterhead-footer img {
   display: block;
-  position: static !important;
   height: auto;
-  max-height: none;
-  transform: none !important;
   width: 100%;
-}
-
-/* Dibella owns PDF header/footer placement, including first/last-page and
-   repeat-on-every-page options. Keep exactly one in-flow copy for preview and
-   hide it from Dibella so the PDF engine never receives duplicate artwork. */
-body[class~="isDibella"]
-  .sr-trading-document
-  > .document-frame
-  > .no-dibella.invoice-letterhead,
-body[class~="isDibella"]
-  .sr-trading-document
-  > .document-frame
-  > .no-dibella.invoice-letterhead-footer {
-  display: none !important;
-  visibility: hidden !important;
 }
 
 .document-title {
@@ -893,33 +859,6 @@ body[class~="isDibella"]
     background: #fff !important;
     overflow: visible !important;
     print-color-adjust: exact;
-  }
-
-  .sr-trading-document > .document-frame > .invoice-letterhead:not(.is-empty),
-  .sr-trading-document
-    > .document-frame
-    > .invoice-letterhead-footer:not(.is-empty),
-  .sr-trading-document
-    > .document-frame
-    > .invoice-letterhead:not(.is-empty)
-    img,
-  .sr-trading-document
-    > .document-frame
-    > .invoice-letterhead-footer:not(.is-empty)
-    img {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    max-width: 100%;
-    break-inside: avoid-page;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .sr-trading-document
-    > .document-frame
-    > .invoice-letterhead-footer:not(.is-empty) {
-    break-before: avoid-page;
   }
 
   /* The host page's default body/output spacing sits outside the template and
