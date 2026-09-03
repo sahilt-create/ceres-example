@@ -1,6 +1,6 @@
 <div class="sr-trading-document">
   <div class="document-frame">
-    <div class="no-dibella invoice-letterhead{{#unless display.assets.letterHead}} is-empty{{/unless}}">
+    <div class="{{#unless mapped.visibility.letterHeadOnFirstPage}}no-dibella {{/unless}}invoice-letterhead{{#unless display.assets.letterHead}} is-empty{{/unless}}">
       {{#if display.assets.letterHead}}
         <img src="{{display.assets.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
       {{else}}
@@ -209,7 +209,7 @@
     </section>
     {{/if}}
 
-    <div class="no-dibella invoice-letterhead-footer{{#unless display.assets.letterHeadFooter}} is-empty{{/unless}}">
+    <div class="{{#unless mapped.visibility.footerOnLastPage}}no-dibella {{/unless}}invoice-letterhead-footer{{#unless display.assets.letterHeadFooter}} is-empty{{/unless}}">
       {{#if display.assets.letterHeadFooter}}<img src="{{display.assets.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{else}}<img alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{/if}}
     </div>
   </div>

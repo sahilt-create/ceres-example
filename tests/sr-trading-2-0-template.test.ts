@@ -2363,8 +2363,17 @@ describe("SR Trading 2.0 template", () => {
 
       const html = template(mapSrTradingTemplateData(input as any));
 
-      expect(html).toContain('class="no-dibella invoice-letterhead"');
-      expect(html).toContain('class="no-dibella invoice-letterhead-footer"');
+      if (firstAndLastOnly) {
+        expect(html).toContain('class="invoice-letterhead"');
+        expect(html).toContain('class="invoice-letterhead-footer"');
+        expect(html).not.toContain('class="no-dibella invoice-letterhead"');
+        expect(html).not.toContain(
+          'class="no-dibella invoice-letterhead-footer"'
+        );
+      } else {
+        expect(html).toContain('class="no-dibella invoice-letterhead"');
+        expect(html).toContain('class="no-dibella invoice-letterhead-footer"');
+      }
       expect(html).not.toContain("sr-repeat-pdf-header");
       expect(html).not.toContain("sr-repeat-pdf-footer");
       expect(html).not.toContain("data-sr-pdf-placement");
