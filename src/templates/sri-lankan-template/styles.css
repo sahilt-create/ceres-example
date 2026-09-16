@@ -1,0 +1,420 @@
+:root {
+  --sri-ink: var(--ceres-primary-color, #171717);
+  --sri-rule: var(--ceres-secondary-color, #555);
+  --sri-paper: var(--ceres-primary-background, #fff);
+  --sri-panel: var(--ceres-secondary-background, #fff);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 100%;
+  margin: 0;
+  background: var(--sri-paper);
+  color: var(--sri-ink);
+  font-family: var(--ceres-font-family, "Times New Roman", Times, serif);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sri-lankan-invoice {
+  width: min(100%, 794px);
+  min-height: 1123px;
+  margin: 0 auto;
+  padding: 16px 13px 26px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.invoice-letterhead,
+.invoice-letterhead-footer {
+  width: 100%;
+}
+
+.invoice-letterhead img,
+.invoice-letterhead-footer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.invoice-letterhead.is-empty,
+.invoice-letterhead-footer.is-empty {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- renderer-owned mode class */
+body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+  display: none !important;
+}
+
+.invoice-title-wrap {
+  position: relative;
+  min-height: 58px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.invoice-title-wrap h1 {
+  margin: 0;
+  border: 1px solid var(--sri-rule);
+  padding: 6px 13px 5px;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.title-widgets {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.two-column-row,
+.party-grid,
+.shipping-grid,
+.payment-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.two-column-row > div,
+.additional-info,
+.footer-field,
+.detail-panel,
+.content-panel,
+.document-details {
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 5px 9px;
+}
+
+.two-column-row > div,
+.footer-field {
+  min-height: 28px;
+}
+
+.party-grid {
+  margin-top: 3px;
+}
+
+.party-box {
+  min-height: 142px;
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 5px 9px;
+}
+
+.party-box p,
+.detail-panel p {
+  margin: 0 0 5px;
+}
+
+.address-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px;
+  margin-bottom: 7px;
+}
+
+.party-detail {
+  overflow-wrap: break-word;
+}
+
+.supply-meta,
+.additional-info,
+.document-details,
+.shipping-grid,
+.detail-panel,
+.content-panel,
+.payment-details-grid,
+[data-ceres-payment-table],
+[data-ceres-tax-summary],
+[data-ceres-hsn-summary] {
+  margin-top: 6px;
+}
+
+.additional-info {
+  min-height: 39px;
+}
+
+.information-entry {
+  display: block;
+  margin-top: 3px;
+}
+
+.label {
+  font-weight: 400;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 14px;
+}
+
+.detail-row {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.shipping-grid.is-single {
+  grid-template-columns: 1fr;
+}
+
+.detail-panel h2,
+.content-panel h2,
+.content-panel h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.content-panel ol {
+  margin: 4px 0 0 20px;
+  padding: 0;
+}
+
+.compliance-strip:empty,
+.qr-box.is-empty {
+  display: none;
+}
+
+.irn-value {
+  margin: 6px 0;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qr-box img,
+.upi-qr {
+  display: block;
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+}
+
+.items-table-wrap {
+  width: 100%;
+  margin-top: 9px;
+  overflow-x: auto;
+}
+
+.line-items {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.line-items th,
+.line-items td {
+  border: 1px solid var(--sri-rule);
+  padding: 4px 5px;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.line-items thead th {
+  min-height: 45px;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.line-items .col-index {
+  width: 6%;
+}
+
+.line-items .col-item {
+  width: 31%;
+}
+
+.line-items .col-qty,
+.line-items .col-unit,
+.line-items .col-gst-rate {
+  width: 10%;
+}
+
+.line-items .col-rate,
+.line-items .col-amount,
+.line-items .col-total {
+  width: 14%;
+}
+
+.line-items .number-cell {
+  text-align: right;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.line-items .text-cell {
+  text-align: left;
+}
+
+.item-code,
+.item-description {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.item-description .markdown-viewer-widget,
+.notes-panel .markdown-viewer-widget {
+  min-height: 0;
+}
+
+.ceres-image-gallery {
+  margin-top: 4px;
+}
+
+.placeholder-row td {
+  height: 28px;
+}
+
+.total-row th {
+  height: 28px;
+  padding: 4px 5px;
+  font-weight: 400;
+}
+
+.total-row th > span:first-child {
+  display: inline-block;
+  width: calc(100% - 155px);
+  text-align: left;
+}
+
+.total-row th > strong:last-child {
+  display: inline-block;
+  width: 150px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.grand-total-row th {
+  border-top-width: 2px;
+}
+
+.footer-field {
+  margin-top: 6px;
+}
+
+.payment-field {
+  margin-top: 7px;
+}
+
+.ceres-table-section {
+  margin-top: 6px;
+  overflow-x: auto;
+}
+
+.ceres-table-heading {
+  margin: 0 0 5px;
+  font-size: 14px;
+}
+
+.ceres-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.ceres-table th,
+.ceres-table td {
+  border: 1px solid var(--sri-rule);
+  padding: 4px;
+}
+
+.nowrap {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.signature-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  break-inside: avoid;
+}
+
+.signature-box {
+  width: 230px;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+}
+
+.signature-image {
+  max-width: 150px;
+  max-height: 55px;
+  object-fit: contain;
+}
+
+@media (width <= 560px) {
+  .sri-lankan-invoice {
+    min-width: 520px;
+  }
+}
+
+@media print {
+  @page {
+    size: a4;
+    margin: 0;
+  }
+
+  body {
+    overflow: visible !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  .sri-lankan-invoice {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    padding: 16px 13px 26px;
+  }
+
+  .items-table-wrap,
+  .ceres-table-section {
+    overflow: visible;
+  }
+
+  .line-items thead {
+    display: table-header-group;
+  }
+
+  .party-grid,
+  .shipping-grid,
+  .detail-panel,
+  .content-panel,
+  .footer-field,
+  .payment-details-grid,
+  .signature-section {
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,131 @@
+<main class="sri-lankan-invoice">
+  <div class="no-dibella invoice-letterhead{{#unless invoice.letterHead}} is-empty{{/unless}}">
+    {{#if invoice.letterHead}}<img src="{{invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />{{else}}<img alt="Letterhead" data-ceres-height="letterhead" />{{/if}}
+  </div>
+
+  <header class="invoice-title-wrap">
+    <h1>{{#if invoice.invoiceTitle}}{{invoice.invoiceTitle}}{{else}}TAX INVOICE{{/if}}</h1>
+    <div class="title-widgets">{{> InvoiceStatus invoice}}{{#if sri.showDemoBadge}}{{> DemoBadge}}{{/if}}</div>
+  </header>
+
+  <section class="invoice-meta two-column-row">
+    <div><span class="label">Date of Invoice:</span> {{formateShortDateWithOffset invoice.invoiceDate invoice.ownerOffset}}</div>
+    <div><span class="label">Tax Invoice No.:</span> {{invoice.invoiceNumber}}</div>
+  </section>
+
+  <section class="party-grid">
+    <article class="party-box">
+      <p><span class="label">Supplier's Name:</span> {{sri.supplier.name}}</p>
+      <div class="address-row"><span class="label">Address:</span><span>{{#each sri.supplier.addressLines}}{{this}}{{#unless @last}}<br />{{/unless}}{{/each}}</span></div>
+      {{#each sri.supplier.detailRows}}<p class="party-detail"><span class="label">{{label}}:</span> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
+    </article>
+    <article class="party-box">
+      <p><span class="label">Purchaser's Name:</span> {{sri.purchaser.name}}</p>
+      <div class="address-row"><span class="label">Address:</span><span>{{#each sri.purchaser.addressLines}}{{this}}{{#unless @last}}<br />{{/unless}}{{/each}}</span></div>
+      {{#each sri.purchaser.detailRows}}<p class="party-detail"><span class="label">{{label}}:</span> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}
+    </article>
+  </section>
+
+  <section class="supply-meta two-column-row">
+    <div><span class="label">Date of Supply:</span> {{formateShortDateWithOffset sri.dateOfSupply invoice.ownerOffset}}</div>
+    <div data-ceres-place-of-supply><span class="label">Place of Supply:</span> {{formatCountryName invoice.placeOfSupply}}</div>
+  </section>
+
+  {{#if sri.documentRows}}<section class="document-details detail-grid">
+    {{#each sri.documentRows}}<div class="detail-row"{{#if supplyField}} data-ceres-{{supplyField}}{{/if}}><span class="label">{{label}}:</span><span>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</span></div>{{/each}}
+  </section>{{/if}}
+
+  <section class="additional-info">
+    <span class="label">Additional Information if any:</span> {{sri.additionalInformation}}
+    {{#each sri.informationRows}}<span class="information-entry"><strong>{{label}}:</strong> {{value}}</span>{{/each}}
+  </section>
+
+  {{#if mapped.visibility.showShippingParties}}<section class="shipping-grid{{#if mapped.visibility.singleShippingParty}} is-single{{/if}}">
+    {{#if mapped.visibility.shippedFrom}}<article class="detail-panel"><h2>{{display.labels.shippedFrom}}</h2><strong>{{invoice.shippedFrom.name}}</strong>{{#each (partyAddressLines invoice.shippedFrom)}}<p>{{this}}</p>{{/each}}{{#each display.partyDetails.shippedFrom}}<p><span class="label">{{label}}:</span> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}</article>{{/if}}
+    {{#if mapped.visibility.shippedTo}}<article class="detail-panel"><h2>{{display.labels.shippedTo}}</h2><strong>{{invoice.shippedTo.name}}</strong>{{#each (partyAddressLines invoice.shippedTo)}}<p>{{this}}</p>{{/each}}{{#each display.partyDetails.shippedTo}}<p><span class="label">{{label}}:</span> {{#if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</p>{{/each}}</article>{{/if}}
+  </section>{{/if}}
+
+  {{#if sri.transportRows}}<section class="detail-panel transport-panel"><h2>Transport Details</h2><div class="detail-grid">
+    {{#each sri.transportRows}}<div class="detail-row"><span class="label">{{label}}:</span> {{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else}}{{value}}{{/if}}</div>{{/each}}
+  </div></section>{{/if}}
+
+  <section class="compliance-strip">
+    {{#if sri.compliance.irn}}<p class="irn-value"><strong>IRN:</strong> <span data-ceres-field="irn">{{sri.compliance.irn}}</span></p>{{/if}}
+    <div class="qr-grid">
+      <div class="qr-box{{#unless sri.compliance.qrCode}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img{{#if sri.compliance.qrCode}} src="{{sri.compliance.qrCode}}"{{/if}} alt="E-Invoice QR Code" data-ceres-field="qrCode" /></div>
+      <div class="qr-box{{#unless sri.compliance.zatcaQrCode}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img{{#if sri.compliance.zatcaQrCode}} src="{{sri.compliance.zatcaQrCode}}"{{/if}} alt="ZATCA QR Code" data-ceres-field="zatcaQrCode" /></div>
+      <div class="qr-box{{#unless sri.compliance.lhdnQrCode}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img{{#if sri.compliance.lhdnQrCode}} src="{{sri.compliance.lhdnQrCode}}"{{/if}} alt="LHDN QR Code" data-ceres-field="lhdnQrCode" /></div>
+      <div class="qr-box{{#unless sri.compliance.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img{{#if sri.compliance.documentQr}} src="{{sri.compliance.documentQr}}"{{/if}} alt="Document QR Code" data-ceres-field="documentQr" /></div>
+    </div>
+  </section>
+
+  <div class="items-table-wrap" data-column-count="{{mapped.visibility.visibleColumnCount}}">
+    <table class="line-items">
+      <colgroup>{{#each mapped.columns}}{{#unless isHidden}}<col class="{{className}}" />{{/unless}}{{/each}}</colgroup>
+      <thead><tr>{{#each mapped.columns}}{{#unless isHidden}}<th class="{{className}} {{columnAlignmentClass this}}">{{label}}</th>{{/unless}}{{/each}}</tr></thead>
+      <tbody>
+        {{#each invoice.items as |item|}}
+          <tr class="item-row">
+            {{#each ../mapped.columns as |column|}}{{#unless column.isHidden}}<td class="{{column.className}} {{columnAlignmentClass column}}">
+              {{#if (isRowNumberColumn column)}}{{addOne @../index}}
+              {{else if (isDescriptionColumn column)}}
+                <strong>{{item.name}}</strong>
+                {{#if item.sku}}<span class="item-code">SKU: {{item.sku}}</span>{{/if}}
+                {{#if item.hsn}}<span class="item-code">HSN/SAC: {{item.hsn}}</span>{{/if}}
+                {{#if item.classification}}<span class="item-code">Classification: {{item.classification}}</span>{{/if}}
+                {{#if ../../mapped.visibility.showUnitInName}}{{#if (itemUnit item ../../invoice)}}<span class="item-code">Unit: {{itemUnit item ../../invoice}}</span>{{/if}}{{/if}}
+                {{#if item.description}}<div data-ceres-description-inline{{#if ../../mapped.visibility.isDescriptionFullWidth}} style="display: none;"{{/if}}>{{#unless ../../mapped.visibility.isDescriptionFullWidth}}<div class="item-description" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData item.description)}}</div>{{/unless}}</div>{{/if}}
+                {{> CeresImageGallery (prepareImageGallery item.images variant="thumbnail" alt=item.name)}}
+                {{> CeresImageGallery (prepareImageGallery item.originalImages variant="original" alt=item.name)}}
+              {{else if (isQuantityColumn column)}}{{quantityWithUnit item ../../invoice ../../mapped.visibility.showUnitInQuantity}}
+              {{else if (isUnitColumn column)}}{{itemUnit item ../../invoice}}
+              {{else if (isCurrencyColumn column)}}{{formatSriCurrency (itemColumnValue item column) ../../invoice}}
+              {{else if (isDateColumn column)}}{{formateShortDateWithOffset (itemColumnValue item column) ../../invoice.ownerOffset}}
+              {{else if (isPercentageColumn column)}}{{itemColumnValue item column}}%
+              {{else if (isBooleanColumn column)}}{{formatBoolean (itemColumnValue item column)}}
+              {{else}}{{itemColumnValue item column}}{{/if}}
+            </td>{{/unless}}{{/each}}
+          </tr>
+          {{#if item.description}}<tr data-ceres-description-row{{#unless ../mapped.visibility.isDescriptionFullWidth}} style="display: none;"{{/unless}}><td colspan="{{../mapped.visibility.visibleColumnCount}}"><div data-ceres-description-full-width>{{#if ../mapped.visibility.isDescriptionFullWidth}}<div class="item-description" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData item.description)}}</div>{{/if}}</div></td></tr>{{/if}}
+        {{/each}}
+        {{#each sri.blankRows}}<tr class="placeholder-row"><td colspan="{{../mapped.visibility.visibleColumnCount}}">&nbsp;</td></tr>{{/each}}
+        <tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>Total Value of Supply:</span><strong>{{formatSriCurrency sri.valueOfSupply invoice}}</strong></th></tr>
+        {{#if display.discountAmount}}<tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>{{display.labels.discount}}:</span><strong>({{formatSriCurrency display.discountAmount invoice}})</strong></th></tr>{{/if}}
+        <tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>VAT Amount (Total Value of Supply @ {{sri.vatRate}}):</span><strong>{{formatSriCurrency sri.vatAmount invoice}}</strong></th></tr>
+        {{#each display.cessRows}}<tr class="total-row"><th colspan="{{../mapped.visibility.visibleColumnCount}}"><span>{{label}}:</span><strong>{{formatSriCurrency amount ../invoice}}</strong></th></tr>{{/each}}
+        {{#each display.additionalChargeRows}}<tr class="total-row"><th colspan="{{../mapped.visibility.visibleColumnCount}}"><span>{{label}}:</span><strong>{{formatSriCurrency amount ../invoice}}</strong></th></tr>{{/each}}
+        {{#each display.extraTotalRows}}<tr class="total-row"><th colspan="{{../mapped.visibility.visibleColumnCount}}"><span>{{label}}:</span><strong>{{#if isMonetary}}{{formatSriCurrency value ../invoice}}{{else}}{{value}}{{/if}}</strong></th></tr>{{/each}}
+        <tr class="total-row grand-total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>Total Amount/consideration including VAT:</span><strong>{{formatSriCurrency sri.total invoice}}</strong></th></tr>
+        {{#if invoice.balance.tds}}<tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>{{display.labels.tdsAmountWithheld}}:</span><strong>({{formatSriCurrency invoice.balance.tds invoice}})</strong></th></tr>{{/if}}
+        {{#if invoice.balance.settledAmount}}<tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>{{display.labels.amountReceived}}:</span><strong>{{formatSriCurrency invoice.balance.settledAmount invoice}}</strong></th></tr>{{/if}}
+        {{#if invoice.balance.paid}}<tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>{{display.labels.amountPaid}}:</span><strong>({{formatSriCurrency invoice.balance.paid invoice}})</strong></th></tr>{{/if}}
+        {{#if mapped.visibility.showDueAmount}}<tr class="total-row"><th colspan="{{mapped.visibility.visibleColumnCount}}"><span>{{display.labels.dueAmount}}:</span><strong>{{formatSriCurrency totals.dueAmount invoice}}</strong></th></tr>{{/if}}
+      </tbody>
+    </table>
+  </div>
+
+  <section class="footer-field"><span class="label">Total Amount in words:</span> {{sri.totalInWords}}</section>
+  <section class="footer-field payment-field"><span class="label">Mode of Payment:</span> {{sri.modeOfPayment}}</section>
+
+  {{#if mapped.visibility.showNotes}}<section class="content-panel notes-panel"><h2>{{display.labels.notes}}</h2>{{> MarkdownViewer (prepareMarkdownViewerData display.notes)}}</section>{{/if}}
+  {{#if mapped.visibility.showTerms}}<section class="content-panel terms-panel"><h2>{{display.labels.terms}}</h2>{{#each invoice.terms}}{{#if label}}<h3>{{label}}</h3>{{/if}}<ol>{{#each terms}}<li>{{this}}</li>{{/each}}</ol>{{/each}}</section>{{/if}}
+
+  {{#if sri.showGstWidgets}}
+    <section data-ceres-tax-summary{{#unless sri.showTaxSummary}} style="display: none;"{{/unless}}>{{> TaxSummaryTable (computeTaxSummary invoice.items isIgst=mapped.visibility.showIgst isUtgst=mapped.visibility.isUtgst)}}</section>
+    <section data-ceres-hsn-summary{{#unless sri.showHsnSummary}} style="display: none;"{{/unless}}>{{> HsnSummaryTable (computeHsnSummary invoice.items isIgst=mapped.visibility.showIgst isUtgst=mapped.visibility.isUtgst)}}</section>
+  {{/if}}
+
+  {{#if sri.showPayments}}<section data-ceres-payment-table>{{> PaymentTable (computePaymentColumns sri.payments businessCurrency=invoice.businessCurrency currency=invoice.currency) ownerOffset=invoice.ownerOffset heading="Payments"}}</section>{{/if}}
+
+  {{#if mapped.visibility.showBankUpiSection}}<section class="payment-details-grid">
+    {{#if mapped.visibility.showBankAccount}}<article class="detail-panel"><h2>{{display.labels.bankDetails}}</h2><p><span class="label">{{display.labels.accountName}}:</span> {{#if invoice.bankAccount.name}}{{invoice.bankAccount.name}}{{else}}{{invoice.bankAccount.accountHolderName}}{{/if}}</p><p><span class="label">{{display.labels.accountNumber}}:</span> <span class="nowrap">{{#if invoice.bankAccount.accountNo}}{{invoice.bankAccount.accountNo}}{{else}}{{invoice.bankAccount.accountNumber}}{{/if}}</span></p>{{#if invoice.bankAccount.ifsc}}<p><span class="label">{{display.labels.ifsc}}:</span> <span class="nowrap">{{invoice.bankAccount.ifsc}}</span></p>{{/if}}{{#if invoice.bankAccount.swift}}<p><span class="label">{{display.labels.swift}}:</span> <span class="nowrap">{{invoice.bankAccount.swift}}</span></p>{{/if}}{{#if invoice.bankAccount.bank}}<p><span class="label">{{display.labels.bank}}:</span> {{invoice.bankAccount.bank}}</p>{{/if}}{{#each invoice.bankAccount.customFields}}<p><span class="label">{{label}}:</span> {{value}}</p>{{/each}}</article>{{/if}}
+    {{#if mapped.visibility.showUpi}}<article class="detail-panel upi-panel"><h2>UPI</h2><p class="nowrap">{{sri.upiId}}</p>{{#if sri.upiQrImage}}{{> CeresImage src=sri.upiQrImage alt="UPI payment QR" class="upi-qr"}}{{/if}}</article>{{/if}}
+  </section>{{/if}}
+
+  <section class="signature-section"><div class="signature-box"><strong>For {{invoice.billedBy.name}}</strong>{{> CeresImage src=invoice.signature alt="Authorized signature" class="signature-image"}}<span>Authorized Signatory</span></div></section>
+
+  <div class="no-dibella invoice-letterhead-footer{{#unless invoice.letterHeadFooter}} is-empty{{/unless}}">
+    {{#if invoice.letterHeadFooter}}<img src="{{invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{else}}<img alt="Letterhead footer" data-ceres-height="letterhead-footer" />{{/if}}
+  </div>
+  {{> RefrensBranding invoice}}
+</main>
