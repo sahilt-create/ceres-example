@@ -1,0 +1,76 @@
+{
+  "invoice": {
+    "_id": "qa-sri-lankan",
+    "billType": "INVOICE",
+    "invoiceType": "INVOICE",
+    "status": "UNPAID",
+    "invoiceNumber": "SL-2026-0916",
+    "invoiceDate": "2026-09-16T00:00:00.000Z",
+    "invoiceDateUserInput": "2026-09-16T00:00:00.000Z",
+    "ownerOffset": "+05:30",
+    "currency": "LKR",
+    "customCurrencySymbol": "Rs. ",
+    "placeOfSupply": "Colombo",
+    "billedBy": {
+      "name": "Ceylon Trading Company (Pvt) Ltd",
+      "tinNumber": "102345678-7000",
+      "street": "42 Galle Road",
+      "city": "Colombo 03",
+      "country": "Sri Lanka",
+      "phone": "+94 11 234 5678"
+    },
+    "billedTo": {
+      "name": "Island Retailers PLC",
+      "tinNumber": "209876543-7000",
+      "street": "18 Temple Street",
+      "city": "Kandy",
+      "country": "Sri Lanka",
+      "phone": "+94 81 222 3344"
+    },
+    "items": [
+      {
+        "_id": "item-1",
+        "sku": "REF-001",
+        "name": "Professional consulting services",
+        "quantity": 2,
+        "rate": 50000,
+        "amount": 100000,
+        "gstRate": 18,
+        "taxAmount": 18000,
+        "subTotal": 118000
+      }
+    ],
+    "subTotal": 100000,
+    "finalTotal": {
+      "subTotal": 100000,
+      "taxAmount": 18000,
+      "total": 118000
+    },
+    "notes": "Services supplied under the agreed engagement.",
+    "paymentOptions": {
+      "accountTransfer": true,
+      "upi": true
+    },
+    "bankAccount": {
+      "accountHolderName": "Ceylon Trading Company (Pvt) Ltd",
+      "accountNumber": "00123456789",
+      "ifscCode": "HDFC0000123",
+      "swiftCode": "HDFCINBB",
+      "accountType": "Current",
+      "bankName": "HDFC Bank",
+      "customFields": [
+        { "label": "Branch", "value": "Colombo" }
+      ]
+    },
+    "upi": {
+      "upiId": "ceylontrading@upi"
+    },
+    "customFields": [
+      { "label": "Date of Supply", "value": "2026-09-16T00:00:00.000Z" },
+      { "label": "Mode of Payment", "value": "Bank Transfer" }
+    ],
+    "customLabels": {
+      "totalInWordsValue": "One Hundred Eighteen Thousand Sri Lankan Rupees Only"
+    }
+  }
+}
