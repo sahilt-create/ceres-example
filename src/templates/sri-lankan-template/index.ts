@@ -10,7 +10,6 @@ import {
 } from "../helpers";
 import "./styles.css";
 
-import "../../widgets/invoice-status";
 import "../../widgets/demo-badge";
 import "../../widgets/date-time";
 import "../../widgets/markdown-viewer";
@@ -122,6 +121,19 @@ if (hb) {
     )
       ? "number-cell"
       : "text-cell"
+  );
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "error",
+    (event) => {
+      const { target } = event;
+      if (!(target instanceof HTMLImageElement)) return;
+      const qrBox = target.closest(".sri-lankan-invoice .qr-box");
+      if (qrBox instanceof HTMLElement) qrBox.style.display = "none";
+    },
+    true
   );
 }
 

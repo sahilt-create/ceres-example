@@ -1,8 +1,10 @@
 :root {
   --sri-ink: var(--ceres-primary-color, #171717);
   --sri-rule: var(--ceres-secondary-color, #555);
+  --sri-muted: var(--ceres-muted-color, #777);
   --sri-paper: var(--ceres-primary-background, #fff);
   --sri-panel: var(--ceres-secondary-background, #fff);
+  --sri-letterhead-gap: 16px;
 }
 
 * {
@@ -14,7 +16,7 @@ body {
   margin: 0;
   background: var(--sri-paper);
   color: var(--sri-ink);
-  font-family: var(--ceres-font-family, "Times New Roman", Times, serif);
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -23,9 +25,15 @@ body {
   width: min(100%, 794px);
   min-height: 1123px;
   margin: 0 auto;
-  padding: 16px 13px 26px;
+  padding: var(--sri-letterhead-gap) 13px 26px;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
   font-size: 13px;
   line-height: 1.3;
+}
+
+.sri-lankan-invoice,
+.sri-lankan-invoice * {
+  font-size: 13px !important;
 }
 
 .invoice-letterhead,
@@ -38,6 +46,14 @@ body {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.invoice-letterhead-footer:not(.is-empty) {
+  margin-top: var(--sri-letterhead-gap);
+}
+
+.invoice-letterhead:not(.is-empty) {
+  margin-bottom: var(--sri-letterhead-gap);
 }
 
 .invoice-letterhead.is-empty,
@@ -65,10 +81,23 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   margin: 0;
   border: 1px solid var(--sri-rule);
   padding: 6px 13px 5px;
-  font-size: 17px;
+  font-size: 24px !important;
   line-height: 1;
   font-weight: 700;
+  font-family: var(
+    --title-font,
+    var(--subtitle-font, Arial, Helvetica, sans-serif)
+  );
   text-transform: uppercase;
+}
+
+.sri-lankan-invoice h1,
+.sri-lankan-invoice h2,
+.sri-lankan-invoice h3,
+.sri-lankan-invoice .line-items thead th,
+.sri-lankan-invoice .ceres-table-heading,
+.sri-lankan-invoice .ceres-table thead th {
+  font-family: var(--title-font, Arial, Helvetica, sans-serif);
 }
 
 .title-widgets {
@@ -90,11 +119,11 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .two-column-row > div,
+.supply-meta > div,
 .additional-info,
 .footer-field,
 .detail-panel,
-.content-panel,
-.document-details {
+.content-panel {
   border: 1px solid var(--sri-rule);
   background: var(--sri-panel);
   padding: 5px 9px;
@@ -114,6 +143,14 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   border: 1px solid var(--sri-rule);
   background: var(--sri-panel);
   padding: 5px 9px;
+}
+
+.party-box,
+.shipping-party-box,
+.party-box .label,
+.shipping-party-box .label {
+  color: var(--sri-ink);
+  font-weight: 400;
 }
 
 .party-box p,
@@ -166,7 +203,26 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 
 .detail-row {
   min-width: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px;
   overflow-wrap: break-word;
+}
+
+.document-details .detail-row {
+  min-height: 28px;
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 5px 9px;
+}
+
+.document-details .detail-row:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Avoid an empty second cell when only one supply field remains in the row. */
+.supply-meta > div:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .shipping-grid.is-single {
@@ -177,7 +233,8 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 .content-panel h2,
 .content-panel h3 {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .content-panel ol {
@@ -192,7 +249,7 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 
 .irn-value {
   margin: 6px 0;
-  font-size: 10px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
@@ -203,11 +260,20 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .qr-box img,
-.upi-qr {
+.compliance-qr {
   display: block;
   width: 82px;
   height: 82px;
   object-fit: contain;
+}
+
+.upi-qr {
+  display: block;
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  clip-path: inset(0 0 0 12px);
+  transform: translateX(-12px);
 }
 
 .items-table-wrap {
@@ -231,35 +297,143 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .line-items thead th {
-  min-height: 45px;
+  height: auto;
   text-align: center;
+  vertical-align: top;
   font-weight: 700;
+  font-size: 13px;
   line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-index {
+  width: 9%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-item {
+  width: 28%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-qty,
+.items-table-wrap[data-column-count="7"] .line-items .col-gst-rate {
+  width: 9%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-rate {
+  width: 13%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-amount {
+  width: 17%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-total {
+  width: 15%;
 }
 
 .line-items .col-index {
-  width: 6%;
-}
-
-.line-items .col-item {
-  width: 31%;
-}
-
-.line-items .col-qty,
-.line-items .col-unit,
-.line-items .col-gst-rate {
   width: 10%;
 }
 
-.line-items .col-rate,
-.line-items .col-amount,
-.line-items .col-total {
-  width: 14%;
+.line-items .col-item {
+  width: 42%;
+}
+
+.line-items .col-qty {
+  width: 12%;
+}
+
+.line-items .col-rate {
+  width: 15%;
+}
+
+.line-items .col-amount {
+  width: 21%;
+}
+
+/* Tables with many enabled/custom columns use a bounded grid. The description
+   keeps the largest track, short fields stay compact, and the remaining tax,
+   money, and custom columns share the available width evenly. */
+.items-table-wrap.is-dense .line-items {
+  table-layout: fixed;
+}
+
+.items-table-wrap.is-dense .line-items col {
+  width: 10.2%;
+}
+
+.items-table-wrap.is-dense .line-items col.col-index {
+  width: 9%;
+}
+
+.items-table-wrap.is-dense .line-items col.col-item {
+  width: 24%;
+}
+
+.items-table-wrap.is-dense .line-items col.col-qty,
+.items-table-wrap.is-dense .line-items col.col-unit,
+.items-table-wrap.is-dense .line-items col.col-gst-rate {
+  width: 8%;
+}
+
+.items-table-wrap.is-dense .line-items th,
+.items-table-wrap.is-dense .line-items td {
+  width: auto;
+  padding-right: 3px;
+  padding-left: 3px;
+}
+
+/* When a wide table needs compact typography, keep every part of the table at
+   the same readable size. This includes headers, item details, full-width
+   descriptions, and totals; never shrink table text below 11px. */
+.items-table-wrap.is-dense .line-items,
+.items-table-wrap.is-dense .line-items * {
+  font-size: 11px !important;
+}
+
+.items-table-wrap.is-dense .line-items thead th {
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .line-items .number-cell {
   text-align: right;
   white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
+}
+
+.line-items thead th.number-cell {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.line-items thead th:not(.col-item, :last-child) {
+  text-align: center;
+}
+
+.line-items thead th.col-item {
+  text-align: left;
+}
+
+.line-items thead th:last-child {
+  text-align: right;
+}
+
+.line-items thead th.col-index {
+  white-space: nowrap !important;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.items-table-wrap.is-dense .line-items tbody td.number-cell,
+.items-table-wrap.is-dense .line-items tbody td.col-index,
+.items-table-wrap.is-dense .line-items .total-value {
+  white-space: nowrap !important;
   overflow-wrap: normal;
   word-break: normal;
 }
@@ -268,37 +442,65 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   text-align: left;
 }
 
+/* Keep the description readable while preserving each column's horizontal
+   alignment. All line-item content begins at the top of its row. */
+.line-items .item-row > td:not(.col-item) {
+  text-align: center;
+  vertical-align: top;
+}
+
+.line-items .item-row > td.col-item {
+  text-align: left;
+  vertical-align: top;
+}
+
+.line-items .item-row > td:last-child {
+  text-align: right;
+}
+
 .item-code,
 .item-description {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
 }
 
 .item-description .markdown-viewer-widget,
 .notes-panel .markdown-viewer-widget {
   min-height: 0;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
 }
 
-.ceres-image-gallery {
-  margin-top: 4px;
+.item-description-row > td {
+  padding: 6px;
+  text-align: left;
 }
 
-.placeholder-row td {
-  height: 28px;
+.item-description-row .item-description {
+  margin-top: 0;
+}
+
+.total-row th,
+.total-row td {
+  height: 36px;
+  padding: 4px;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.items-table-wrap.is-dense .line-items .total-row th,
+.items-table-wrap.is-dense .line-items .total-row td {
+  padding: 4px;
 }
 
 .total-row th {
-  height: 28px;
-  padding: 4px 5px;
-  font-weight: 400;
+  text-align: left;
 }
 
 .total-row th > span:first-child {
   display: inline-block;
   width: calc(100% - 155px);
-  text-align: left;
 }
 
 .total-row th > strong:last-child {
@@ -306,40 +508,76 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   width: 150px;
   text-align: right;
   white-space: nowrap;
-}
-
-.grand-total-row th {
-  border-top-width: 2px;
+  font-weight: 700;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
 }
 
 .footer-field {
   margin-top: 6px;
 }
 
+.total-in-words-value {
+  text-transform: uppercase;
+}
+
 .payment-field {
   margin-top: 7px;
 }
 
-.ceres-table-section {
-  margin-top: 6px;
+.sri-lankan-invoice .ceres-table-section {
+  margin: 9px 0 0;
   overflow-x: auto;
 }
 
-.ceres-table-heading {
+.sri-lankan-invoice .ceres-table-heading {
   margin: 0 0 5px;
-  font-size: 14px;
+  color: var(--sri-ink);
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: normal;
 }
 
-.ceres-table {
+.sri-lankan-invoice [data-ceres-payment-table] .ceres-table-heading {
+  font-weight: 400;
+}
+
+.sri-lankan-invoice .ceres-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 13px;
 }
 
-.ceres-table th,
-.ceres-table td {
+.sri-lankan-invoice .ceres-table-section .ceres-table th,
+.sri-lankan-invoice .ceres-table-section .ceres-table td {
   border: 1px solid var(--sri-rule);
-  padding: 4px;
+  padding: 4px 5px;
+  background: transparent;
+  color: var(--sri-ink);
+  line-height: 1.2;
+  vertical-align: top;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table thead th {
+  background: transparent;
+  color: var(--sri-ink);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table tbody tr:nth-child(even) {
+  background: transparent;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table tfoot td {
+  border-top: 1px solid var(--sri-rule);
+  font-weight: 400;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table-words {
+  color: var(--sri-ink);
+  font-size: 13px;
 }
 
 .nowrap {
@@ -375,16 +613,38 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   .sri-lankan-invoice {
     min-width: 520px;
   }
+
+  .supply-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .supply-meta > div {
+    grid-column: 1;
+  }
 }
 
 @media print {
-  @page {
-    size: a4;
-    margin: 0;
+  html,
+  body,
+  [id="documentOutput"] {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+    print-color-adjust: exact;
   }
 
+  html,
   body {
-    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  [id="ceresManifestBadge"],
+  [id="ceresExampleModal"] {
+    display: none !important;
   }
 
   * {
@@ -395,12 +655,29 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
     width: 100%;
     max-width: none;
     min-height: 0;
-    margin: 0;
-    padding: 16px 13px 26px;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  .items-table-wrap,
-  .ceres-table-section {
+  .two-column-row,
+  .party-grid,
+  .shipping-grid,
+  .payment-details-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .sri-lankan-invoice,
+  .sri-lankan-invoice p,
+  .sri-lankan-invoice li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .items-table-wrap {
+    margin-top: -0.5px;
     overflow: visible;
   }
 
@@ -408,13 +685,148 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
     display: table-header-group;
   }
 
+  .line-items tfoot,
+  .ceres-table tfoot {
+    display: table-footer-group;
+  }
+
+  /* Chromium can drop a collapsed top border when a table header repeats on a
+     new PDF page. This cap ensures every continuation begins with one rule. */
+  .line-items thead th {
+    background-image: linear-gradient(var(--sri-rule), var(--sri-rule));
+    background-position: top left;
+    background-repeat: no-repeat;
+    background-size: 100% 0.5px;
+  }
+
+  .line-items tbody tr,
+  .line-items .total-row,
+  .ceres-table tr {
+    break-inside: avoid-page;
+  }
+
+  /* A row taller than a page remains breakable as a standards-compliant
+     fallback; normal item rows stay together. */
+  .line-items .item-row {
+    break-inside: avoid-page;
+  }
+
+  .item-description,
+  .item-description .markdown-viewer-widget,
+  .item-description .toastui-editor-contents {
+    overflow: visible;
+  }
+
+  .item-description table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .item-description table thead,
+  .ceres-table thead {
+    display: table-header-group;
+  }
+
+  .item-description table tr {
+    break-inside: avoid-page;
+  }
+
+  .line-items td.number-cell,
+  .line-items td.col-index,
+  .line-items td.col-qty,
+  .line-items td.col-rate,
+  .line-items td.col-amount,
+  .line-items .total-value,
+  .nowrap {
+    overflow-wrap: normal;
+    word-break: normal;
+    white-space: nowrap;
+  }
+
+  .line-items th.col-item,
+  .line-items td.col-item,
+  .line-items td.col-item p,
+  .line-items td.col-item span,
+  .line-items td.col-item div,
+  .party-detail,
+  .detail-row {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .ceres-table-section,
+  .summary-table-wrap {
+    overflow: visible;
+  }
+
   .party-grid,
+  .invoice-meta,
+  .supply-meta,
+  .document-details,
+  .additional-info,
   .shipping-grid,
   .detail-panel,
-  .content-panel,
   .footer-field,
   .payment-details-grid,
-  .signature-section {
+  .signature-section,
+  .invoice-letterhead,
+  .invoice-letterhead-footer,
+  .compliance-strip,
+  .sri-lankan-invoice > .ceres-table-section,
+  [data-ceres-tax-summary],
+  [data-ceres-hsn-summary],
+  [data-ceres-payment-table],
+  .refrens-branding-widget {
     break-inside: avoid;
   }
+
+  .invoice-letterhead:not(.is-empty),
+  .invoice-letterhead-footer:not(.is-empty),
+  .invoice-letterhead:not(.is-empty) img,
+  .invoice-letterhead-footer:not(.is-empty) img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-width: 100%;
+    break-inside: avoid-page;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .invoice-letterhead-footer:not(.is-empty) {
+    break-before: avoid-page;
+  }
+
+  .content-panel h2,
+  .content-panel h3,
+  .ceres-table-heading {
+    break-after: avoid;
+  }
+
+  /* Notes, terms, and their Markdown content may grow beyond one sheet. They
+     must fragment naturally instead of moving as an oversized block. */
+  .content-panel,
+  .notes-panel,
+  .terms-panel,
+  .content-panel .markdown-viewer-widget,
+  .content-panel .toastui-editor-contents {
+    break-inside: auto;
+  }
+
+  .content-panel p,
+  .content-panel li,
+  .item-description p,
+  .item-description li {
+    orphans: 2;
+    widows: 2;
+  }
+
+  .sri-lankan-invoice img {
+    max-width: 100%;
+  }
+
 }
