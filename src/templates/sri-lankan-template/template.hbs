@@ -26,11 +26,6 @@
     </article>
   </section>
 
-  <section class="supply-meta two-column-row">
-    <div><span class="label">Date of Supply:</span> {{formateShortDateWithOffset sri.dateOfSupply invoice.ownerOffset}}</div>
-    <div data-ceres-place-of-supply><span class="label">Place of Supply:</span> {{formatCountryName invoice.placeOfSupply}}</div>
-  </section>
-
   {{#if sri.documentRows}}<section class="document-details detail-grid">
     {{#each sri.documentRows}}<div class="detail-row"{{#if supplyField}} data-ceres-{{supplyField}}{{/if}}><span class="label">{{label}}:</span><span>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</span></div>{{/each}}
   </section>{{/if}}
@@ -112,14 +107,6 @@
   {{#if mapped.visibility.showBankUpiSection}}<section class="payment-details-grid">
     {{#if mapped.visibility.showBankAccount}}<article class="detail-panel"><h2>{{display.labels.bankDetails}}</h2><p><span class="label">{{display.labels.accountName}}:</span> {{#if invoice.bankAccount.name}}{{invoice.bankAccount.name}}{{else}}{{invoice.bankAccount.accountHolderName}}{{/if}}</p><p><span class="label">{{display.labels.accountNumber}}:</span> <span class="nowrap">{{#if invoice.bankAccount.accountNo}}{{invoice.bankAccount.accountNo}}{{else}}{{invoice.bankAccount.accountNumber}}{{/if}}</span></p>{{#if invoice.bankAccount.ifsc}}<p><span class="label">{{display.labels.ifsc}}:</span> <span class="nowrap">{{invoice.bankAccount.ifsc}}</span></p>{{/if}}{{#if invoice.bankAccount.swift}}<p><span class="label">{{display.labels.swift}}:</span> <span class="nowrap">{{invoice.bankAccount.swift}}</span></p>{{/if}}{{#if invoice.bankAccount.bank}}<p><span class="label">{{display.labels.bank}}:</span> {{invoice.bankAccount.bank}}</p>{{/if}}{{#each invoice.bankAccount.customFields}}<p><span class="label">{{label}}:</span> {{value}}</p>{{/each}}</article>{{/if}}
     {{#if mapped.visibility.showUpi}}<article class="detail-panel upi-panel"><h2>UPI</h2><p class="nowrap">{{sri.upiId}}</p>{{#if sri.upiQrImage}}{{> CeresImage src=sri.upiQrImage alt="UPI payment QR" class="upi-qr"}}{{/if}}</article>{{/if}}
-  </section>{{/if}}
-
-  {{#if sri.additionalInformation}}<section class="additional-info">
-    <span class="label">Additional Information if any:</span> {{sri.additionalInformation}}
-    {{#each sri.informationRows}}<span class="information-entry"><strong>{{label}}:</strong> {{value}}</span>{{/each}}
-  </section>{{else if sri.informationRows}}<section class="additional-info">
-    <span class="label">Additional Information if any:</span>
-    {{#each sri.informationRows}}<span class="information-entry"><strong>{{label}}:</strong> {{value}}</span>{{/each}}
   </section>{{/if}}
 
   <section class="signature-section"><div class="signature-box"><strong>For {{invoice.billedBy.name}}</strong>{{> CeresImage src=invoice.signature alt="Authorized signature" class="signature-image"}}<span>Authorized Signatory</span></div></section>

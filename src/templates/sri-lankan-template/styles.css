@@ -119,8 +119,6 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .two-column-row > div,
-.supply-meta > div,
-.additional-info,
 .footer-field,
 .detail-panel,
 .content-panel {
@@ -169,8 +167,6 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   overflow-wrap: break-word;
 }
 
-.supply-meta,
-.additional-info,
 .document-details,
 .shipping-grid,
 .detail-panel,
@@ -180,15 +176,6 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 [data-ceres-tax-summary],
 [data-ceres-hsn-summary] {
   margin-top: 6px;
-}
-
-.additional-info {
-  min-height: 39px;
-}
-
-.information-entry {
-  display: block;
-  margin-top: 3px;
 }
 
 .label {
@@ -217,11 +204,6 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .document-details .detail-row:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
-
-/* Avoid an empty second cell when only one supply field remains in the row. */
-.supply-meta > div:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 
@@ -614,13 +596,6 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
     min-width: 520px;
   }
 
-  .supply-meta {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .supply-meta > div {
-    grid-column: 1;
-  }
 }
 
 @media print {
@@ -765,9 +740,7 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 
   .party-grid,
   .invoice-meta,
-  .supply-meta,
   .document-details,
-  .additional-info,
   .shipping-grid,
   .detail-panel,
   .footer-field,

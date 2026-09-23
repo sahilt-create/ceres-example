@@ -276,8 +276,7 @@ export const mapSriLankanTemplateData = (payload: any) => {
         detailRows: mapped.display.partyDetails.billedTo,
       },
       documentRows: mapped.display.documentDetails.filter(
-        (row) =>
-          !["invoiceNumber", "invoiceDate", "placeOfSupply"].includes(row.key)
+        (row) => !["invoiceNumber", "invoiceDate"].includes(row.key)
       ),
       informationRows: displayedInformationRows,
       additionalInformation: firstText(
