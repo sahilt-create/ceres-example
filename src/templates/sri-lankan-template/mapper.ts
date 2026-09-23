@@ -12,6 +12,12 @@ const asRecord = (value: any): UnknownRecord =>
 const firstText = (...values: any[]): string =>
   values.map((value) => String(value ?? "").trim()).find(Boolean) || "";
 
+const normalizedName = (value: any): string =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+
 const numberValue = (value: any): number => {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   const match = String(value ?? "").match(/-?\d[\d,]*(?:\.\d+)?/);
@@ -63,6 +69,168 @@ const findRowValue = (
   rows: Array<{ label: string; value: string }>,
   pattern: RegExp
 ) => rows.find((row) => pattern.test(row.label))?.value || "";
+
+const configuredField = (invoice: UnknownRecord, aliases: string[]) => {
+  const fields = asRecord(invoice.invoiceValueProps);
+  const normalizedAliases = aliases.map(normalizedName);
+  const key = Object.keys(fields).find((candidate) =>
+    normalizedAliases.includes(normalizedName(candidate))
+  );
+  return key ? fields[key] : undefined;
+};
+
+const configuredFieldLabel = (
+  invoice: UnknownRecord,
+  aliases: string[],
+  ...fallbacks: any[]
+): string => {
+  const field = asRecord(configuredField(invoice, aliases));
+  const params = asRecord(field.params);
+  return firstText(
+    field.label,
+    field.displayName,
+    field.title,
+    params.label,
+    params.displayName,
+    params.title,
+    ...fallbacks
+  );
+};
+
+const configuredFieldVisibility = (
+  invoice: UnknownRecord,
+  aliases: string[]
+): boolean | undefined => {
+  const setting = configuredField(invoice, aliases);
+  const direct = optionalBoolean(setting);
+  if (direct !== undefined) return direct;
+
+  const field = asRecord(setting);
+  const params = asRecord(field.params);
+  const shown =
+    optionalBoolean(field.visible) ??
+    optionalBoolean(field.isVisible) ??
+    optionalBoolean(field.show) ??
+    optionalBoolean(field.showInInvoice) ??
+    optionalBoolean(params.visible) ??
+    optionalBoolean(params.isVisible) ??
+    optionalBoolean(params.show) ??
+    optionalBoolean(params.showInInvoice);
+  if (shown !== undefined) return shown;
+
+  const hidden =
+    optionalBoolean(field.hidden) ??
+    optionalBoolean(field.isHidden) ??
+    optionalBoolean(field.hide) ??
+    optionalBoolean(field.hideInInvoice) ??
+    optionalBoolean(params.hidden) ??
+    optionalBoolean(params.isHidden) ??
+    optionalBoolean(params.hide) ??
+    optionalBoolean(params.hideInInvoice);
+  return hidden === undefined ? undefined : !hidden;
+};
+
+const hasValue = (...values: any[]): boolean =>
+  values.some(
+    (value) =>
+      value !== undefined && value !== null && String(value).trim() !== ""
+  );
+
+const meaningfulText = (...values: any[]): string => {
+  const value = firstText(...values);
+  return /^(?:-|n\/?a|null|undefined)$/i.test(value) ? "" : value;
+};
+
+const humanizeDocumentType = (value: any): string =>
+  String(value ?? "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const documentMeta = (invoice: UnknownRecord) => {
+  const labels = asRecord(invoice.customLabels);
+  const type = normalizedName(
+    firstText(invoice.billType, invoice.invoiceType, invoice.invoiceTitle)
+  );
+  const title = firstText(
+    invoice.invoiceTitle,
+    labels.documentTitle,
+    labels.title,
+    humanizeDocumentType(invoice.billType || invoice.invoiceType),
+    "Tax Invoice"
+  );
+
+  let fallbackDateLabel = "Date of Invoice";
+  let fallbackNumberLabel = "Tax Invoice No.";
+  if (type.includes("quotation")) {
+    fallbackDateLabel = "Date of Quotation";
+    fallbackNumberLabel = "Quotation No.";
+  } else if (type.includes("proforma")) {
+    fallbackDateLabel = "Date of Proforma Invoice";
+    fallbackNumberLabel = "Proforma Invoice No.";
+  } else if (type.includes("salesorder")) {
+    fallbackDateLabel = "Sales Order Date";
+    fallbackNumberLabel = "Sales Order No.";
+  } else if (type.includes("deliverychallan")) {
+    fallbackDateLabel = "Delivery Challan Date";
+    fallbackNumberLabel = "Delivery Challan No.";
+  } else if (type.includes("creditnote")) {
+    fallbackDateLabel = "Credit Note Date";
+    fallbackNumberLabel = "Credit Note No.";
+  } else if (type.includes("debitnote")) {
+    fallbackDateLabel = "Debit Note Date";
+    fallbackNumberLabel = "Debit Note No.";
+  } else if (type.includes("purchaseorder")) {
+    fallbackDateLabel = "Purchase Order Date";
+    fallbackNumberLabel = "Purchase Order No.";
+  } else if (type.includes("purchase") || type.includes("expenditure")) {
+    fallbackDateLabel = "Purchase Date";
+    fallbackNumberLabel = "Purchase No.";
+  }
+
+  return {
+    title,
+    dateLabel: firstText(
+      labels.documentDate,
+      type.includes("quotation") ? labels.quotationDate : labels.invoiceDate,
+      fallbackDateLabel
+    ),
+    numberLabel: firstText(
+      labels.documentNumber,
+      type.includes("quotation")
+        ? labels.quotationNumber
+        : labels.invoiceNumber,
+      fallbackNumberLabel
+    ),
+    date: firstText(invoice.invoiceDate, invoice.quotationDate),
+    number: firstText(
+      invoice.invoiceNumber,
+      invoice.quotationNumber,
+      invoice.expenseNumber,
+      invoice.purchaseOrderNumber,
+      invoice.salesOrderNumber,
+      invoice.challanNumber,
+      invoice.creditNoteNumber,
+      invoice.debitNoteNumber
+    ),
+  };
+};
+
+const totalRowKey = (row: UnknownRecord): string =>
+  `${normalizedName(row.label)}|${numberValue(row.amount ?? row.value)}`;
+
+const uniqueTotalRows = (
+  rows: any[],
+  seen = new Set<string>()
+): UnknownRecord[] =>
+  rows.map(asRecord).filter((row) => {
+    const key = totalRowKey(row);
+    if (!normalizedName(row.label) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
 const taxAmount = (invoice: UnknownRecord): number => {
   const finalTotal = asRecord(invoice.finalTotal);
@@ -146,6 +314,10 @@ export const mapSriLankanTemplateData = (payload: any) => {
   const mapped = mapSolvinTemplateData(payload);
   const invoice = {
     ...mapped.invoice,
+    expenseNumber: firstText(
+      mapped.invoice.expenseNumber,
+      rawInvoice.expenseNumber
+    ),
     customFields: rawInvoice.customFields,
     customFooters: rawInvoice.customFooters,
     footers: rawInvoice.footers,
@@ -177,7 +349,7 @@ export const mapSriLankanTemplateData = (payload: any) => {
   const fallbackColumns = [
     {
       key: "index",
-      label: "Reference*",
+      label: "Reference",
       className: "col-index",
       isHidden: false,
       dataType: "number",
@@ -228,8 +400,13 @@ export const mapSriLankanTemplateData = (payload: any) => {
       summarise: true,
     },
   ];
-  const columns =
-    visibleConfiguredColumns.length > 1 ? configuredColumns : fallbackColumns;
+  const columns = (
+    visibleConfiguredColumns.length > 1 ? configuredColumns : fallbackColumns
+  ).map((column) =>
+    column.className === "col-index"
+      ? { ...column, label: "Reference" }
+      : column
+  );
   const visibleColumnCount = columns.filter(
     (column) => !column.isHidden
   ).length;
@@ -238,13 +415,78 @@ export const mapSriLankanTemplateData = (payload: any) => {
     .filter((rate) => rate > 0);
   const uniqueRates = Array.from(new Set(rates));
   const vatRate = uniqueRates.length === 1 ? `${uniqueRates[0]}%` : "VAT Rate";
-  const total = numberValue(finalTotal.total ?? invoice.toPay);
+  const toPay = asRecord(invoice.toPay);
+  const invoiceTotals = asRecord(invoice.totals);
+  const totalSource =
+    finalTotal.total ??
+    invoiceTotals.total ??
+    toPay.full ??
+    toPay.amount ??
+    (typeof invoice.toPay === "object" ? undefined : invoice.toPay);
+  const total = numberValue(totalSource);
   const irn = asRecord(invoice.irn);
   const taxName = firstText(invoice.taxName, invoice.taxType);
+  const customLabels = asRecord(invoice.customLabels);
+  const valueOfSupply = numberValue(
+    finalTotal.subTotal ??
+      invoice.subTotal ??
+      invoiceTotals.subTotal ??
+      mapped.totals.subTotal
+  );
+  const vatAmount = taxAmount(invoice);
+  const subTotalAliases = [
+    "subTotal",
+    "subtotal",
+    "valueOfSupply",
+    "totalValueOfSupply",
+  ];
+  const vatAliases = ["vat", "vatAmount", "tax", "taxAmount"];
+  const totalAliases = [
+    "total",
+    "grandTotal",
+    "totalAmount",
+    "totalAmountIncludingVat",
+  ];
+  const hasSubTotalData =
+    items.length > 0 ||
+    hasValue(finalTotal.subTotal, invoice.subTotal, invoiceTotals.subTotal);
+  const hasVatData = hasValue(
+    finalTotal.vat,
+    finalTotal.vatAmount,
+    finalTotal.tax,
+    finalTotal.taxAmount,
+    finalTotal.igst,
+    finalTotal.cgst,
+    finalTotal.sgst,
+    finalTotal.utgst,
+    invoiceTotals.vat,
+    invoiceTotals.vatAmount,
+    invoiceTotals.tax,
+    invoiceTotals.taxAmount
+  );
+  const hasTotalData = hasValue(totalSource);
   const showPaymentsSetting =
     optionalBoolean(rawPayload.showPaymentsTable) ??
     optionalBoolean(rawInvoice.showPaymentsTable) ??
     optionalBoolean(asRecord(invoice.advanceOptions).showPaymentsTable);
+  const meta = documentMeta(invoice);
+  const additionalInformationRow = informationRows.find((row) =>
+    /additional\s+information/i.test(row.label)
+  );
+  const additionalInformation = meaningfulText(
+    additionalInformationRow?.value,
+    rawInvoice.additionalInformation,
+    rawInvoice.additionalInfo
+  );
+  const totalRowsSeen = new Set<string>();
+  const additionalChargeRows = uniqueTotalRows(
+    mapped.display.additionalChargeRows,
+    totalRowsSeen
+  );
+  const extraTotalRows = uniqueTotalRows(
+    mapped.display.extraTotalRows,
+    totalRowsSeen
+  );
 
   return {
     ...mapped,
@@ -263,8 +505,14 @@ export const mapSriLankanTemplateData = (payload: any) => {
         denseItemsTable: visibleColumnCount >= 9,
       },
     },
+    display: {
+      ...mapped.display,
+      additionalChargeRows,
+      extraTotalRows,
+    },
     invoice,
     sri: {
+      documentMeta: meta,
       supplier: {
         ...asRecord(invoice.billedBy),
         addressLines: getPartyAddressLines(invoice.billedBy),
@@ -276,14 +524,25 @@ export const mapSriLankanTemplateData = (payload: any) => {
         detailRows: mapped.display.partyDetails.billedTo,
       },
       documentRows: mapped.display.documentDetails.filter(
-        (row) => !["invoiceNumber", "invoiceDate"].includes(row.key)
+        (row) =>
+          ![
+            "invoiceNumber",
+            "invoiceDate",
+            "countryOfSupply",
+            "placeOfSupply",
+          ].includes(row.key) &&
+          !/(?:country|place)\s+of\s+supply/i.test(row.label) &&
+          !/additional\s+information/i.test(row.label)
       ),
       informationRows: displayedInformationRows,
-      additionalInformation: firstText(
-        findRowValue(informationRows, /additional\s+information/i),
-        rawInvoice.additionalInformation,
-        rawInvoice.additionalInfo
+      additionalInformation,
+      additionalInformationLabel: firstText(
+        additionalInformationRow?.label,
+        asRecord(invoice.customLabels).additionalInformation,
+        "Additional Information"
       ),
+      showAdditionalInformation:
+        Boolean(additionalInformation) || displayedInformationRows.length > 0,
       dateOfSupply: firstText(
         findRowValue(informationRows, /date\s+of\s+supply/i),
         rawInvoice.supplyDate,
@@ -299,13 +558,44 @@ export const mapSriLankanTemplateData = (payload: any) => {
       ),
       blankRows: Array.from({ length: Math.max(0, 5 - items.length) }),
       vatRate,
-      valueOfSupply: numberValue(
-        finalTotal.subTotal ??
-          invoice.subTotal ??
-          asRecord(invoice.totals).subTotal
-      ),
-      vatAmount: taxAmount(invoice),
+      valueOfSupply,
+      vatAmount,
       total,
+      totalLabels: {
+        valueOfSupply: configuredFieldLabel(
+          invoice,
+          subTotalAliases,
+          customLabels.valueOfSupply,
+          customLabels.totalValueOfSupply,
+          mapped.display.labels.subTotal
+        ),
+        vatAmount: configuredFieldLabel(
+          invoice,
+          vatAliases,
+          customLabels.vatAmount,
+          customLabels.taxAmount,
+          customLabels.vat,
+          taxName ? `${taxName} Amount` : "VAT Amount"
+        ),
+        total: configuredFieldLabel(
+          invoice,
+          totalAliases,
+          customLabels.totalAmountIncludingVat,
+          customLabels.totalAmount,
+          mapped.display.labels.total
+        ),
+      },
+      totalVisibility: {
+        valueOfSupply:
+          hasSubTotalData &&
+          configuredFieldVisibility(invoice, subTotalAliases) !== false,
+        vatAmount:
+          hasVatData &&
+          configuredFieldVisibility(invoice, vatAliases) !== false,
+        total:
+          hasTotalData &&
+          configuredFieldVisibility(invoice, totalAliases) !== false,
+      },
       totalInWords: firstText(
         asRecord(invoice.customLabels).totalInWordsValue,
         invoice.amountInWords,

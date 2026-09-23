@@ -317,16 +317,20 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .items-table-wrap[data-column-count="7"] .line-items .col-index {
-  width: 9%;
+  width: 10%;
 }
 
 .items-table-wrap[data-column-count="7"] .line-items .col-item {
-  width: 28%;
+  width: 35%;
 }
 
 .items-table-wrap[data-column-count="7"] .line-items .col-qty,
 .items-table-wrap[data-column-count="7"] .line-items .col-gst-rate {
-  width: 9%;
+  width: 10%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-unit {
+  width: 8%;
 }
 
 .items-table-wrap[data-column-count="7"] .line-items .col-rate {
@@ -334,7 +338,7 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .items-table-wrap[data-column-count="7"] .line-items .col-amount {
-  width: 17%;
+  width: 14%;
 }
 
 .items-table-wrap[data-column-count="7"] .line-items .col-total {
@@ -346,19 +350,27 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 }
 
 .line-items .col-item {
-  width: 42%;
+  width: 35%;
 }
 
 .line-items .col-qty {
-  width: 12%;
+  width: 10%;
+}
+
+.line-items .col-unit {
+  width: 8%;
+}
+
+.line-items .col-gst-rate {
+  width: 10%;
 }
 
 .line-items .col-rate {
-  width: 15%;
+  width: 13%;
 }
 
 .line-items .col-amount {
-  width: 21%;
+  width: 14%;
 }
 
 /* Tables with many enabled/custom columns use a bounded grid. The description
@@ -438,7 +450,7 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   word-break: normal;
 }
 
-.line-items thead th:is(.col-unit, .col-gst-rate) {
+.line-items thead th:is(.col-qty, .col-unit, .col-gst-rate) {
   white-space: nowrap;
   overflow-wrap: normal;
   word-break: normal;
@@ -660,10 +672,10 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
 
   .sri-lankan-invoice {
     width: 100%;
-    max-width: none;
+    max-width: 794px;
     min-height: 0;
-    margin: 0 !important;
-    padding: 0 !important;
+    margin: 0 auto !important;
+    padding: var(--sri-letterhead-gap) 13px 26px !important;
     overflow: visible;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -684,7 +696,7 @@ body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
   }
 
   .items-table-wrap {
-    margin-top: -0.5px;
+    margin-top: 9px;
     overflow: visible;
   }
 
