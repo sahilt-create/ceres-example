@@ -417,15 +417,34 @@
         },
         "invoiceValueProps": {
           "additionalProperties": {
-            "properties": {
-              "visible": {
+            "anyOf": [
+              {
+                "properties": {
+                  "showInInvoice": {
+                    "type": [
+                      "boolean",
+                      "string"
+                    ]
+                  },
+                  "visible": {
+                    "type": [
+                      "boolean",
+                      "string"
+                    ]
+                  }
+                },
+                "type": "object"
+              },
+              {
                 "type": "boolean"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
               }
-            },
-            "required": [
-              "visible"
-            ],
-            "type": "object"
+            ]
           },
           "type": "object"
         },
@@ -436,7 +455,11 @@
           "type": "boolean"
         },
         "isDescriptionFullWidth": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "isEarlyPayApplicable": {
           "type": "boolean"
@@ -461,6 +484,20 @@
         },
         "showBankAccount": {
           "type": "boolean"
+        },
+        "showDescriptionInFullWidth": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showDueAmount": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showExpenseNumber": {
           "type": "boolean"
@@ -541,6 +578,9 @@
         "fxReturnType": {
           "type": "string"
         },
+        "isCessColumn": {
+          "type": "boolean"
+        },
         "isHidden": {
           "type": "boolean"
         },
@@ -548,6 +588,13 @@
           "type": "string"
         },
         "label": {
+          "type": "string"
+        },
+        "semanticType": {
+          "enum": [
+            "percentage",
+            "currency"
+          ],
           "type": "string"
         },
         "summarise": {
@@ -766,8 +813,25 @@
         "copy": {
           "type": "string"
         },
+        "countryOfSupply": {
+          "type": "string"
+        },
         "creditDiscount": {
           "type": "number"
+        },
+        "creditNoteDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "creditNoteNumber": {
+          "type": "string"
         },
         "creditNoteStatus": {
           "type": "string"
@@ -829,6 +893,20 @@
           },
           "type": "object"
         },
+        "debitNoteDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "debitNoteNumber": {
+          "type": "string"
+        },
         "defaultBatchColumns": {
           "items": {
             "properties": {
@@ -855,6 +933,20 @@
         },
         "discount": {
           "type": "number"
+        },
+        "documentDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "documentNumber": {
+          "type": "string"
         },
         "documentQr": {
           "type": "string"
@@ -893,29 +985,59 @@
         "ewayConfig": {
           "$ref": "#/definitions/EwayConfig"
         },
+        "expenseDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
         "expenseNumber": {
           "type": "string"
         },
         "extraTotalFields": {
-          "items": {
-            "properties": {
-              "key": {
-                "type": "string"
+          "anyOf": [
+            {
+              "items": {
+                "properties": {
+                  "_id": {
+                    "type": "string"
+                  },
+                  "defaultValue": {},
+                  "key": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "properties": {
+                      "showInInvoice": {
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "showInInvoice": {
+                    "type": "boolean"
+                  },
+                  "value": {}
+                },
+                "type": "object"
               },
-              "label": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
+              "type": "array"
             },
-            "required": [
-              "label",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "array"
+            {
+              "type": "object"
+            }
+          ]
         },
         "finalTotal": {
           "$ref": "#/definitions/InvoiceTotals"
@@ -945,11 +1067,32 @@
         "hasPgPayments": {
           "type": "boolean"
         },
+        "hideCountryOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "hideEarlyPay": {
           "type": "boolean"
         },
         "hideHashInDocumentNumber": {
           "type": "boolean"
+        },
+        "hideNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "hidePlaceOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "hideTaxes": {
           "type": "boolean"
@@ -1007,15 +1150,34 @@
         },
         "invoiceValueProps": {
           "additionalProperties": {
-            "properties": {
-              "visible": {
+            "anyOf": [
+              {
+                "properties": {
+                  "showInInvoice": {
+                    "type": [
+                      "boolean",
+                      "string"
+                    ]
+                  },
+                  "visible": {
+                    "type": [
+                      "boolean",
+                      "string"
+                    ]
+                  }
+                },
+                "type": "object"
+              },
+              {
                 "type": "boolean"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
               }
-            },
-            "required": [
-              "visible"
-            ],
-            "type": "object"
+            ]
           },
           "type": "object"
         },
@@ -1029,7 +1191,11 @@
           "type": "boolean"
         },
         "isDescriptionFullWidth": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "isEarlyPayApplicable": {
           "type": "boolean"
@@ -1107,6 +1273,16 @@
         "notes": {
           "type": "string"
         },
+        "notesShowInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "orderNumber": {
+          "type": "string"
+        },
         "owner": {
           "$ref": "#/definitions/BusinessData"
         },
@@ -1140,6 +1316,17 @@
         "pos": {
           "type": "string"
         },
+        "purchaseOrderDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
         "purchaseOrderNumber": {
           "type": "string"
         },
@@ -1168,6 +1355,20 @@
         },
         "roundOffRate": {
           "type": "boolean"
+        },
+        "salesOrderDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "salesOrderNumber": {
+          "type": "string"
         },
         "sgst": {
           "type": "number"
@@ -1222,14 +1423,56 @@
         "showBranding": {
           "type": "boolean"
         },
+        "showCountryOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showDescriptionInFullWidth": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showDueAmount": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "showExpenseNumber": {
           "type": "boolean"
         },
         "showItemNameFullWidth": {
           "type": "boolean"
         },
+        "showNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showNotesInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "showPaymentsTable": {
           "type": "boolean"
+        },
+        "showPlaceOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showStockSummary": {
           "type": "boolean"
@@ -1408,7 +1651,11 @@
       "additionalProperties": {},
       "properties": {
         "hideCountryOfSupply": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "hideCurrencyCode": {
           "type": "boolean"
@@ -1416,17 +1663,35 @@
         "hideGroupSubTotal": {
           "type": "boolean"
         },
+        "hidePlaceOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "hideTaxes": {
           "type": "boolean"
         },
         "hideTotals": {
           "type": "boolean"
         },
+        "hideUnit": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "hsnView": {
           "type": "string"
         },
         "isDescriptionFullWidth": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "itemNameFullWidth": {
           "type": "boolean"
@@ -1438,36 +1703,134 @@
           "type": "boolean"
         },
         "showBatchColumnsInInvoice": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showCountryOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showCreatorInInvoice": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showDescriptionInFullWidth": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showHSNSummaryInInvoice": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showHsnSummary": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showPaymentsTable": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showPlaceOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showSerialNumbersInDescription": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showSkuInInvoice": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showStockSummary": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showThumbnailAsColumn": {
           "type": "boolean"
+        },
+        "showUnit": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showUnitAsColumn": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showUnitColumn": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showUnitInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showUnitInName": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showUnitInQuantity": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "taxSummaryView": {
           "type": "string"
         },
         "unitColumn": {
+          "type": "string"
+        },
+        "unitDisplay": {
           "type": "string"
         }
       },
@@ -1592,6 +1955,9 @@
         "billedTo": {
           "$ref": "#/definitions/BillerDetails"
         },
+        "businessLocale": {
+          "type": "string"
+        },
         "cesses": {
           "items": {
             "$ref": "#/definitions/CessCharge"
@@ -1624,8 +1990,25 @@
           },
           "type": "object"
         },
+        "countryOfSupply": {
+          "type": "string"
+        },
         "creditDiscount": {
           "type": "number"
+        },
+        "creditNoteDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "creditNoteNumber": {
+          "type": "string"
         },
         "creditNoteStatus": {
           "type": "string"
@@ -1687,8 +2070,36 @@
           },
           "type": "object"
         },
+        "debitNoteDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "debitNoteNumber": {
+          "type": "string"
+        },
         "discount": {
           "type": "number"
+        },
+        "documentDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "documentNumber": {
+          "type": "string"
         },
         "documentQr": {
           "type": "string"
@@ -1721,29 +2132,59 @@
           },
           "type": "object"
         },
+        "expenseDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
         "expenseNumber": {
           "type": "string"
         },
         "extraTotalFields": {
-          "items": {
-            "properties": {
-              "key": {
-                "type": "string"
+          "anyOf": [
+            {
+              "items": {
+                "properties": {
+                  "_id": {
+                    "type": "string"
+                  },
+                  "defaultValue": {},
+                  "key": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "properties": {
+                      "showInInvoice": {
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "showInInvoice": {
+                    "type": "boolean"
+                  },
+                  "value": {}
+                },
+                "type": "object"
               },
-              "label": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
+              "type": "array"
             },
-            "required": [
-              "label",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "array"
+            {
+              "type": "object"
+            }
+          ]
         },
         "finalTotal": {
           "$ref": "#/definitions/InvoiceTotals"
@@ -1772,6 +2213,27 @@
         },
         "hasPgPayments": {
           "type": "boolean"
+        },
+        "hideCountryOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "hideNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "hidePlaceOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "hideTaxes": {
           "type": "boolean"
@@ -1827,8 +2289,18 @@
         "invoiceType": {
           "type": "string"
         },
+        "invoiceValueProps": {
+          "$ref": "#/definitions/CeresTemplatePayload"
+        },
         "irn": {
           "$ref": "#/definitions/IrnDetails"
+        },
+        "isDescriptionFullWidth": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "isExpenditure": {
           "type": "boolean"
@@ -1900,6 +2372,16 @@
         "notes": {
           "type": "string"
         },
+        "notesShowInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "orderNumber": {
+          "type": "string"
+        },
         "owner": {
           "$ref": "#/definitions/BusinessData"
         },
@@ -1924,6 +2406,17 @@
         "pos": {
           "type": "string"
         },
+        "purchaseOrderDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
         "purchaseOrderNumber": {
           "type": "string"
         },
@@ -1946,6 +2439,20 @@
         },
         "roundOffRate": {
           "type": "boolean"
+        },
+        "salesOrderDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ]
+        },
+        "salesOrderNumber": {
+          "type": "string"
         },
         "sgst": {
           "type": "number"
@@ -1996,6 +2503,51 @@
         },
         "showBranding": {
           "type": "boolean"
+        },
+        "showCountryOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showDescriptionInFullWidth": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showDueAmount": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showItemNameFullWidth": {
+          "type": "boolean"
+        },
+        "showNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showNotesInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showPlaceOfSupply": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showTotalsRow": {
           "type": "boolean"
@@ -2428,7 +2980,11 @@
           "type": "number"
         },
         "showSku": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "sku": {
           "type": "string"

@@ -2,12 +2,23 @@ import { initLydiaBridge } from "../src/main/lydiaBridge";
 
 // Helpers
 
-function makeMockElement() {
+function makeMockStyle() {
+  const style: Record<string, any> = {};
+  style.removeProperty = jest.fn((property: string) => {
+    const camelCase = property.replace(/-([a-z])/g, (_match, letter) =>
+      letter.toUpperCase()
+    );
+    delete style[camelCase];
+  });
+  return style;
+}
+
+function makeMockElement(height = 500) {
   return {
-    scrollHeight: 500,
-    offsetHeight: 500,
-    getBoundingClientRect: () => ({ height: 500 }),
-    style: { removeProperty: jest.fn() } as Record<string, unknown>,
+    scrollHeight: height,
+    offsetHeight: height,
+    getBoundingClientRect: () => ({ height }),
+    style: makeMockStyle(),
     classList: {
       add: jest.fn(),
       remove: jest.fn(),
@@ -16,7 +27,6 @@ function makeMockElement() {
     children: { length: 0 },
   };
 }
-
 type WindowListeners = Record<
   string,
   Array<(event: Partial<MessageEvent>) => void>
@@ -32,6 +42,7 @@ function setupBrowserGlobals(
 ) {
   const parentPostMessage = jest.fn();
   const windowListeners: WindowListeners = {};
+  let resizeObserverCallback: (() => void) | null = null;
 
   const mockWindow: Record<string, unknown> = {
     location: { search: "" },
@@ -67,10 +78,10 @@ function setupBrowserGlobals(
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
   };
-  (global as any).ResizeObserver = jest.fn(() => ({
-    observe: jest.fn(),
-    disconnect: jest.fn(),
-  }));
+  (global as any).ResizeObserver = jest.fn((callback: () => void) => {
+    resizeObserverCallback = callback;
+    return { observe: jest.fn(), disconnect: jest.fn() };
+  });
   (global as any).requestAnimationFrame = jest.fn((fn: any) => {
     fn();
     return 1;
@@ -80,7 +91,11 @@ function setupBrowserGlobals(
     disconnect: jest.fn(),
   }));
 
-  return { parentPostMessage, windowListeners };
+  return {
+    parentPostMessage,
+    windowListeners,
+    triggerResize: () => resizeObserverCallback?.(),
+  };
 }
 
 function simulateMessage(
@@ -257,6 +272,86 @@ describe("initLydiaBridge", () => {
     });
   });
 
+  describe("PDF sizing", () => {
+    it("reports rendered output height instead of the viewport height", () => {
+      const { parentPostMessage, windowListeners } = setupBrowserGlobals();
+      const output = makeMockElement(725);
+      (global as any).document.getElementById.mockReturnValue(output);
+      (global as any).window.setTimeout = jest.fn((fn: any) => {
+        fn();
+        return 1;
+      });
+
+      const handle = initLydiaBridge()!;
+      simulateMessage(windowListeners, {
+        source: "lydia",
+        type: "lydia:ack",
+        version: 1,
+      });
+      handle.reportContentHeight("pdf-test");
+
+      expect(parentPostMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          type: "ceres:content-height",
+          height: 725,
+          reason: "pdf-test",
+        }),
+        "*"
+      );
+    });
+
+    it("keeps repeated print preparation height idempotent", () => {
+      const { windowListeners } = setupBrowserGlobals();
+      const output = makeMockElement(725);
+      (global as any).document.getElementById.mockReturnValue(output);
+
+      const handle = initLydiaBridge()!;
+      handle.triggerPrint("pdf-test");
+      expect((global as any).document.body.style.minHeight).toBe("725px");
+      expect((global as any).document.documentElement.style.minHeight).toBe(
+        "725px"
+      );
+
+      (windowListeners.beforeprint ?? []).forEach((handler) => handler({}));
+      expect((global as any).document.body.style.minHeight).toBe("725px");
+      expect((global as any).document.documentElement.style.minHeight).toBe(
+        "725px"
+      );
+    });
+
+    it("reports late content-size changes for pageless PDF", () => {
+      const { parentPostMessage, windowListeners, triggerResize } =
+        setupBrowserGlobals();
+      const output = makeMockElement(700);
+      (global as any).document.getElementById.mockReturnValue(output);
+      (global as any).window.setTimeout = jest.fn((fn: any) => {
+        fn();
+        return 1;
+      });
+
+      initLydiaBridge();
+      simulateMessage(windowListeners, {
+        source: "lydia",
+        type: "lydia:ack",
+        version: 1,
+      });
+      triggerResize();
+
+      output.scrollHeight = 810;
+      output.offsetHeight = 810;
+      output.getBoundingClientRect = () => ({ height: 810 });
+      triggerResize();
+
+      expect(parentPostMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          type: "ceres:content-height",
+          height: 810,
+          reason: "resize",
+        }),
+        "*"
+      );
+    });
+  });
   describe("invoice field handler registry", () => {
     it("dispatches lydia:invoice-update to a registered handler", () => {
       const { windowListeners } = setupBrowserGlobals();

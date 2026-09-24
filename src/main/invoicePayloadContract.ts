@@ -11,7 +11,13 @@ export interface CeresTemplatePayload {
   showExpenseNumber?: boolean;
   isEarlyPayApplicable?: boolean;
   showItemNameFullWidth?: boolean;
-  invoiceValueProps?: Record<string, { visible: boolean }>;
+  invoiceValueProps?: Record<
+    string,
+    | { visible?: boolean | string; showInInvoice?: boolean | string }
+    | boolean
+    | string
+    | number
+  >;
   ownerTimeZone?: string;
   businessTimeZone?: string;
   showBankAccount?: boolean;
@@ -21,8 +27,10 @@ export interface CeresTemplatePayload {
   isBusinessUser?: boolean;
   hideHashInDocumentNumber?: boolean;
   showPaymentsTable?: boolean;
+  showDueAmount?: boolean | string | number;
   isPublicView?: boolean;
-  isDescriptionFullWidth?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
+  showDescriptionInFullWidth?: boolean | string | number;
   irnPosition?: "ABOVE_LINEITEMS" | "BELOW_LINEITEMS" | string;
   showStockSummary?: boolean;
   showVendorBankAccount?: boolean;
@@ -63,6 +71,9 @@ export interface InvoiceAdvanceOptions {
   hideTaxes?: boolean;
   hideTotals?: boolean;
   hideCurrencyCode?: boolean;
+  showHsnSummary?: boolean | string | number;
+  showHSNSummaryInInvoice?: boolean | string | number;
+  showSerialNumbersInDescription?: boolean | string | number;
   reverseCharge?: boolean;
   // Gates the informational reverse-charge tax row on an RCM document. Denormalised onto
   // the document from the business "Enable RCM Summary View" setting.
@@ -77,24 +88,33 @@ export interface InvoiceAdvanceOptions {
     | "DETAILED"
     | "SUMMARY"
     | string;
-  showSkuInInvoice?: boolean;
+  showSkuInInvoice?: boolean | string | number;
   showThumbnailAsColumn?: boolean;
   hideGroupSubTotal?: boolean;
   unitColumn?: string;
+  unitDisplay?: string;
+  showUnit?: boolean | string | number;
+  showUnitInInvoice?: boolean | string | number;
+  hideUnit?: boolean | string | number;
+  showUnitInName?: boolean | string | number;
+  showUnitInQuantity?: boolean | string | number;
+  showUnitAsColumn?: boolean | string | number;
+  showUnitColumn?: boolean | string | number;
   hsnView?: string;
   itemNameFullWidth?: boolean;
-  isDescriptionFullWidth?: boolean;
-  hideCountryOfSupply?: boolean;
-  showHSNSummaryInInvoice?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
+  showDescriptionInFullWidth?: boolean | string | number;
+  showCountryOfSupply?: boolean | string | number;
+  hideCountryOfSupply?: boolean | string | number;
+  showPlaceOfSupply?: boolean | string | number;
+  hidePlaceOfSupply?: boolean | string | number;
   // The Lydia live-update bridge emits this alias instead of showHSNSummaryInInvoice;
   // declared so bridge deltas stay within the contract until the host sends the
   // canonical key.
-  showHsnSummary?: boolean;
-  showStockSummary?: boolean;
-  showCreatorInInvoice?: boolean;
-  showSerialNumbersInDescription?: boolean;
-  showBatchColumnsInInvoice?: boolean;
-  showPaymentsTable?: boolean;
+  showStockSummary?: boolean | string | number;
+  showCreatorInInvoice?: boolean | string | number;
+  showBatchColumnsInInvoice?: boolean | string | number;
+  showPaymentsTable?: boolean | string | number;
   [key: string]: unknown;
 }
 
@@ -107,6 +127,7 @@ export interface InvoicePaymentOptions {
 
 export interface InvoiceData {
   _id: string;
+  invoiceValueProps?: CeresTemplatePayload["invoiceValueProps"];
   billType: string;
   isExpenditure?: boolean;
   status: "DRAFT" | "UNPAID" | "PAID" | "PARTIAL" | "CANCELED" | string;
@@ -114,15 +135,34 @@ export interface InvoiceData {
   isOverdue?: boolean;
   invoiceNumber: string;
   expenseNumber?: string;
+  expenseDate?: string | Date;
+  creditNoteNumber?: string;
+  creditNoteDate?: string | Date;
+  debitNoteNumber?: string;
+  debitNoteDate?: string | Date;
+  salesOrderNumber?: string;
+  salesOrderDate?: string | Date;
+  orderNumber?: string;
   purchaseOrderNumber?: string;
+  purchaseOrderDate?: string | Date;
+  documentNumber?: string;
+  documentDate?: string | Date;
   quotationNumber?: string;
   dueDate?: string | Date;
   invoiceDate?: string | Date;
   invoiceTitle?: string;
   invoiceSubTitle?: string;
   currency: string;
+  businessLocale?: string;
   subUnitLength?: number;
   customCurrencySymbol?: string;
+  showItemNameFullWidth?: boolean;
+  isDescriptionFullWidth?: boolean | string | number;
+  showDescriptionInFullWidth?: boolean | string | number;
+  showCountryOfSupply?: boolean | string | number;
+  hideCountryOfSupply?: boolean | string | number;
+  showPlaceOfSupply?: boolean | string | number;
+  hidePlaceOfSupply?: boolean | string | number;
   billedBy?: BillerDetails;
   billedTo?: BillerDetails;
   shippedFrom?: BillerDetails;
@@ -131,6 +171,19 @@ export interface InvoiceData {
   taxSummary?: TaxSummary | TaxSummary[];
   hsnSummary?: HsnSummary | HsnSummary[];
   additionalCharges?: AdditionalCharge[];
+  extraTotalFields?:
+    | Array<{
+        _id?: string;
+        key?: string;
+        label?: string;
+        name?: string;
+        value?: any;
+        defaultValue?: any;
+        showInInvoice?: boolean;
+        params?: { showInInvoice?: boolean; [key: string]: any };
+        [key: string]: any;
+      }>
+    | Record<string, any>;
   cesses?: CessCharge[];
   latePaymentFee?: {
     enabled?: boolean;
@@ -160,6 +213,7 @@ export interface InvoiceData {
   // "EXPWOP" = export without payment of tax. Suppresses a tax row whose figure is also
   // zero, which is the only case where refrens.com drops a tax row on a tax document.
   supplyType?: string;
+  showDueAmount?: boolean | string | number;
   taxType?: string;
   taxName?: string;
   // Inter-state sale and union-territory flags. These are the real document fields —
@@ -178,6 +232,10 @@ export interface InvoiceData {
   sgst?: number;
   irn?: IrnDetails;
   notes?: string;
+  hideNotes?: boolean | string | number;
+  showNotes?: boolean | string | number;
+  showNotesInInvoice?: boolean | string | number;
+  notesShowInInvoice?: boolean | string | number;
   terms?: Array<{ label: string; terms: string[] }>;
   attachments?: string[];
   footers?: Array<{ _id: string; label: string; value: string }>;
@@ -187,13 +245,6 @@ export interface InvoiceData {
     label: string;
     value: string;
     defaultValue?: string;
-    [key: string]: any;
-  }>;
-  // Extra key/value rows rendered in the totals section.
-  extraTotalFields?: Array<{
-    label: string;
-    value: string;
-    key?: string;
     [key: string]: any;
   }>;
   customLabels?: Record<string, string>;
@@ -215,6 +266,7 @@ export interface InvoiceData {
   creditNoteStatus?: string;
   linkedInvoices?: LinkedInvoice[];
   documentReason?: string;
+  countryOfSupply?: string;
   placeOfSupply?: string;
   pos?: string;
   invoiceType?: string;
@@ -437,7 +489,7 @@ export interface LineItem {
   isGroupItemTotalRow?: boolean;
   isAdditionalCharge?: boolean;
   sku?: string;
-  showSku?: boolean;
+  showSku?: boolean | string | number;
   unit?: string;
   classification?: string;
   inventoryTxn?: string;
@@ -606,6 +658,8 @@ export interface ColumnDef {
   label: string;
   dataType?: string;
   fxReturnType?: string;
+  semanticType?: "percentage" | "currency";
+  isCessColumn?: boolean;
   summarise?: boolean;
   isHidden?: boolean;
 }
@@ -677,6 +731,16 @@ export const normalizeInvoicePayload = (
   return {
     ...invoice,
     ...hostFields,
+    showItemNameFullWidth:
+      payload.showItemNameFullWidth ?? invoice.showItemNameFullWidth,
+    invoiceValueProps: payload.invoiceValueProps ?? invoice.invoiceValueProps,
+    businessLocale: payload.businessLocale ?? invoice.businessLocale,
+    showDueAmount: payload.showDueAmount ?? invoice.showDueAmount,
+    isDescriptionFullWidth:
+      payload.showDescriptionInFullWidth ??
+      payload.isDescriptionFullWidth ??
+      invoice.showDescriptionInFullWidth ??
+      invoice.isDescriptionFullWidth,
     template: invoice.template ?? normalizeTemplateConfig(template),
   };
 };

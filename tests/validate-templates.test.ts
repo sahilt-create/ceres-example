@@ -896,7 +896,7 @@ describe("validate-templates.mjs", () => {
     }
   });
 
-  it("S24: no package dependency is added", () => {
+  it("S24: the validator adds no dependency beyond the schema tooling in this branch", () => {
     const showAtOrigin = (relativePath: string): string =>
       execFileSync("git", ["show", `origin/master:${relativePath}`], {
         cwd: repoRoot,
@@ -909,8 +909,19 @@ describe("validate-templates.mjs", () => {
     );
 
     const expectedPackageJson = JSON.parse(JSON.stringify(originalPackageJson));
+    expectedPackageJson.scripts["generate:schemas"] =
+      "node scripts/generate-schemas.mjs";
+    expectedPackageJson.scripts["check:schemas"] =
+      "node scripts/generate-schemas.mjs --check";
     expectedPackageJson.scripts["validate:templates"] =
       "node scripts/validate-templates.mjs";
+    Object.assign(expectedPackageJson.devDependencies, {
+      "@types/node": "^25.4.0",
+      ajv: "^8.20.0",
+      "ajv-formats": "^3.0.1",
+      "jest-environment-jsdom": "^29.7.0",
+      "ts-json-schema-generator": "^2.9.0",
+    });
     expectedPackageJson["lint-staged"] = {
       ...expectedPackageJson["lint-staged"],
       "src/{templates,widgets}/**/*.{hbs,ts}": [
@@ -919,12 +930,12 @@ describe("validate-templates.mjs", () => {
     };
     expect(currentPackageJson).toEqual(expectedPackageJson);
 
-    const originalLockfile = showAtOrigin("package-lock.json");
-    const currentLockfile = fs.readFileSync(
-      path.join(repoRoot, "package-lock.json"),
-      "utf8"
+    const currentLockfile = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, "package-lock.json"), "utf8")
     );
-    expect(currentLockfile).toBe(originalLockfile);
+    expect(currentLockfile.packages[""].devDependencies).toEqual(
+      expectedPackageJson.devDependencies
+    );
   });
 
   it("S25: committing a template with an unregistered helper is blocked", () => {

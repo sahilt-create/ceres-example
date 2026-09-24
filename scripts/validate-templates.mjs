@@ -672,14 +672,30 @@ const walkFile = (absPath, registry, demote, scope, schemaEngine) => {
 const selectTemplates = (templates, paths) => {
   if (paths.length === 0) return { selected: templates, unmatched: [] };
 
-  const resolved = paths.map((p) => path.resolve(p));
+  // macOS exposes the same temporary directory through both `/var/...` and
+  // `/private/var/...`. Node canonicalizes `import.meta.url`, while lint-staged
+  // and Jest may pass the other spelling. Compare real paths so an existing
+  // template/widget is not incorrectly reported as unmatched.
+  const canonicalPath = (candidate) => {
+    const absolute = path.resolve(candidate);
+    try {
+      return fs.realpathSync.native(absolute);
+    } catch {
+      return absolute;
+    }
+  };
+  const resolved = paths.map(canonicalPath);
   const selected = new Set();
   const unmatched = [];
 
   resolved.forEach((p) => {
     const matches = templates.filter(
       (t) =>
-        t.templatePath === p || t.entry === p || t.registrations.modules.has(p)
+        canonicalPath(t.templatePath) === p ||
+        (t.entry !== null && canonicalPath(t.entry) === p) ||
+        Array.from(t.registrations.modules).some(
+          (modulePath) => canonicalPath(modulePath) === p
+        )
     );
     if (matches.length === 0) unmatched.push(p);
     else matches.forEach((t) => selected.add(t));

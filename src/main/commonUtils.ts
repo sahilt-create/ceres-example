@@ -33,15 +33,29 @@ export const resolveTemplateManifestUrl = (
   }
 
   const decoded = decodeBase64(encodedValue);
-  if (!decoded) {
-    return null;
-  }
-
-  if (decoded.startsWith("http://") || decoded.startsWith("https://")) {
+  if (
+    decoded &&
+    (decoded.startsWith("http://") || decoded.startsWith("https://"))
+  ) {
     return decoded;
   }
 
-  return `./templates/${decoded}/manifest.json`;
+  if (decoded && decoded.toLowerCase().endsWith(".json")) {
+    return decoded;
+  }
+
+  // Template slugs such as "solvin" can also consist entirely of valid
+  // Base64 characters. Treat a safe, explicit slug as a slug instead of
+  // accepting atob() garbage as a directory name.
+  if (/^[a-z0-9][a-z0-9_-]*$/i.test(encodedValue)) {
+    return `./templates/${encodedValue}/manifest.json`;
+  }
+
+  if (decoded && /^[a-z0-9][a-z0-9_-]*$/i.test(decoded)) {
+    return `./templates/${decoded}/manifest.json`;
+  }
+
+  return null;
 };
 
 export const loadTemplateManifest = async () => {
@@ -55,7 +69,9 @@ export const loadTemplateManifest = async () => {
     );
   }
 
-  const response = await fetch(manifestUrl);
+  // Versioned template folders can be pruned during a deployment. Never use a
+  // stale cached root manifest that points at an already-pruned folder.
+  const response = await fetch(manifestUrl, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(
       `Failed to fetch template manifest from ${manifestUrl}: ${response.status}`
@@ -746,12 +762,93 @@ const applyShowHsnSummaryUpdate = (value: unknown): void => {
   }
 };
 
+const toOptionalBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return undefined;
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "n", "off", ""].includes(normalized)) {
+    return false;
+  }
+  return undefined;
+};
+
+const applyDescriptionFullWidthUpdate = (value: unknown): void => {
+  const fullWidth = toOptionalBoolean(value);
+  if (fullWidth === undefined) return;
+
+  const inlineTargets = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-ceres-description-inline]")
+  );
+  const fullWidthTargets = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "[data-ceres-description-full-width]"
+    )
+  );
+  const fullWidthRows = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-ceres-description-row]")
+  );
+  const contents = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-ceres-description-content]")
+  );
+
+  contents.forEach((content, index) => {
+    const target = fullWidth ? fullWidthTargets[index] : inlineTargets[index];
+    target?.appendChild(content);
+  });
+
+  inlineTargets.forEach((target) => {
+    target.style.display = fullWidth ? "none" : "";
+  });
+  fullWidthRows.forEach((row) => {
+    row.style.display = fullWidth ? "" : "none";
+    row.classList.toggle("item-description-row", fullWidth);
+  });
+};
+
+const resolveShowHideVisibility = (
+  showValue: unknown,
+  hideValue: unknown
+): boolean | undefined => {
+  const shown = toOptionalBoolean(showValue);
+  if (shown !== undefined) return shown;
+
+  const hidden = toOptionalBoolean(hideValue);
+  return hidden === undefined ? undefined : !hidden;
+};
+
+const applyFieldVisibilityUpdate = (
+  selector: string,
+  visible: boolean | undefined
+): void => {
+  if (visible === undefined) return;
+  document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+    element.style.display = visible ? "" : "none";
+  });
+};
+
 export const applyAdvanceOptionsUpdate = (value: unknown): void => {
   if (!isPlainObject(value)) return;
   const opts = value as Record<string, unknown>;
   applyShowPaymentsTableUpdate(opts.showPaymentsTable);
   applyTaxSummaryViewUpdate(opts.taxSummaryView);
   applyShowHsnSummaryUpdate(opts.showHsnSummary);
+  applyDescriptionFullWidthUpdate(
+    opts.showDescriptionInFullWidth ?? opts.isDescriptionFullWidth
+  );
+  applyFieldVisibilityUpdate(
+    "[data-ceres-country-of-supply]",
+    resolveShowHideVisibility(
+      opts.showCountryOfSupply,
+      opts.hideCountryOfSupply
+    )
+  );
+  applyFieldVisibilityUpdate(
+    "[data-ceres-place-of-supply]",
+    resolveShowHideVisibility(opts.showPlaceOfSupply, opts.hidePlaceOfSupply)
+  );
 };
 
 export const extractTemplateStyleOptions = (

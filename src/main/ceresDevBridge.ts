@@ -1,4 +1,4 @@
-import { getQueryParam } from "./commonUtils";
+import { decodeBase64, getQueryParam } from "./commonUtils";
 
 const DEFAULT_TEMPLATE = "default-template";
 
@@ -301,15 +301,12 @@ export default function initDevBridge(): boolean {
     !templateParam.startsWith("http") &&
     !templateParam.includes("=")
   ) {
-    let isDecodingValid = false;
-    try {
-      const decoded = atob(templateParam);
-      if (decoded.includes("/") || decoded.includes(".json")) {
-        isDecodingValid = true;
-      }
-    } catch (e) {
-      // Not base64 — treat the value as a bare local template name.
-    }
+    const decoded = decodeBase64(templateParam);
+    const isDecodingValid = Boolean(
+      decoded &&
+        (/^https?:\/\//i.test(decoded) ||
+          decoded.toLowerCase().includes(".json"))
+    );
 
     if (!isDecodingValid) {
       const tplName = templateParam;
@@ -323,7 +320,7 @@ export default function initDevBridge(): boolean {
       // version-scoped URL pins the document to a directory that the next
       // GitHub Pages deploy no longer publishes, which is REF-24961.
       // The fetch is a pre-flight existence check only; its body is not used.
-      fetch(`./templates/${tplName}/manifest.json`)
+      fetch(`./templates/${tplName}/manifest.json`, { cache: "no-store" })
         .then((r) => {
           if (!r.ok)
             throw new Error(`Could not load local manifest for ${tplName}`);
