@@ -215,6 +215,7 @@ export interface InvoiceData {
   creditNoteStatus?: string;
   linkedInvoices?: LinkedInvoice[];
   documentReason?: string;
+  countryOfSupply?: string;
   placeOfSupply?: string;
   pos?: string;
   invoiceType?: string;
@@ -254,6 +255,14 @@ export interface InvoiceData {
   hasPgPayments?: boolean;
   totalConversions?: Record<string, any>;
   lastPaymentDate?: string | Date;
+  // Visibility flags for notes and due-amount rows. Multiple aliases exist because
+  // different hosts and Lydia bridge versions send different key names. Solvin's
+  // mapper resolves all of them to a single boolean.
+  showDueAmount?: boolean | string | number;
+  notesShowInInvoice?: boolean | string | number;
+  showNotesInInvoice?: boolean | string | number;
+  showNotes?: boolean | string | number;
+  hideNotes?: boolean | string | number;
 }
 
 // Amount buckets are numbers in the API payload, but some hosts (and the Lydia
@@ -606,6 +615,8 @@ export interface ColumnDef {
   label: string;
   dataType?: string;
   fxReturnType?: string;
+  semanticType?: "percentage" | "currency";
+  isCessColumn?: boolean;
   summarise?: boolean;
   isHidden?: boolean;
 }

@@ -541,6 +541,9 @@
         "fxReturnType": {
           "type": "string"
         },
+        "isCessColumn": {
+          "type": "boolean"
+        },
         "isHidden": {
           "type": "boolean"
         },
@@ -548,6 +551,13 @@
           "type": "string"
         },
         "label": {
+          "type": "string"
+        },
+        "semanticType": {
+          "enum": [
+            "percentage",
+            "currency"
+          ],
           "type": "string"
         },
         "summarise": {
@@ -766,6 +776,9 @@
         "copy": {
           "type": "string"
         },
+        "countryOfSupply": {
+          "type": "string"
+        },
         "creditDiscount": {
           "type": "number"
         },
@@ -951,6 +964,13 @@
         "hideHashInDocumentNumber": {
           "type": "boolean"
         },
+        "hideNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "hideTaxes": {
           "type": "boolean"
         },
@@ -1107,6 +1127,13 @@
         "notes": {
           "type": "string"
         },
+        "notesShowInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "owner": {
           "$ref": "#/definitions/BusinessData"
         },
@@ -1222,11 +1249,32 @@
         "showBranding": {
           "type": "boolean"
         },
+        "showDueAmount": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "showExpenseNumber": {
           "type": "boolean"
         },
         "showItemNameFullWidth": {
           "type": "boolean"
+        },
+        "showNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showNotesInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showPaymentsTable": {
           "type": "boolean"
@@ -1624,6 +1672,9 @@
           },
           "type": "object"
         },
+        "countryOfSupply": {
+          "type": "string"
+        },
         "creditDiscount": {
           "type": "number"
         },
@@ -1773,6 +1824,13 @@
         "hasPgPayments": {
           "type": "boolean"
         },
+        "hideNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "hideTaxes": {
           "type": "boolean"
         },
@@ -1900,6 +1958,13 @@
         "notes": {
           "type": "string"
         },
+        "notesShowInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
         "owner": {
           "$ref": "#/definitions/BusinessData"
         },
@@ -1996,6 +2061,27 @@
         },
         "showBranding": {
           "type": "boolean"
+        },
+        "showDueAmount": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showNotes": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
+        },
+        "showNotesInInvoice": {
+          "type": [
+            "boolean",
+            "string",
+            "number"
+          ]
         },
         "showTotalsRow": {
           "type": "boolean"
