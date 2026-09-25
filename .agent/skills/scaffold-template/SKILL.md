@@ -148,7 +148,10 @@ The API response has these fields you can use in your template:
 
 1. Build: `npm run build:template --template=my-cool-invoice`
 2. Test: Open `dist/index.html?template=my-cool-invoice&apiUrl=YOUR_BASE64_URL`
-3. If snapshot testing is set up: `npm run test:snapshots:update`
+3. Verify the visuals — required, not conditional: open the built page from step 2 and check the
+   rendered document against the design, on screen and in the print preview, before handing the
+   template over. Automated baseline diffing is not wired up in this repo yet; see
+   `.agent/skills/snapshot-testing/SKILL.md` for the intended setup and its current status.
 
 ## Reference
 
