@@ -1,4 +1,5 @@
 import { normalizeInvoicePayload } from "./invoicePayloadContract";
+import { resolveTaxVisibility } from "../widgets/shared/taxVisibility";
 import type {
   FlattenedInvoicePayload,
   InvoicePayloadInput,
@@ -13,7 +14,7 @@ export interface InvoiceTemplateColumn {
   isHidden: boolean;
   dataType: string;
   fxReturnType: string;
-  isCessColumn: boolean;
+  isCessColumn?: boolean;
   summarise: boolean;
   semanticType?: "percentage" | "currency";
 }
@@ -44,18 +45,16 @@ export interface InvoiceTemplateVisibility {
   showUnitInName: boolean;
   showUnitInQuantity: boolean;
   showUnitAsColumn: boolean;
-  showTotals: boolean;
-  showTotalsRow: boolean;
-  showDueAmount: boolean;
-  hideCurrencyCode: boolean;
   upiShrink: boolean;
   letterHeadOnFirstPage: boolean;
   footerOnLastPage: boolean;
   itemNameFullWidth: boolean;
   isDescriptionFullWidth: boolean;
+  showTotals: boolean;
+  showTotalsRow: boolean;
+  showDueAmount: boolean;
+  hideCurrencyCode: boolean;
   showStatusTagInPrint: boolean;
-  showCountryOfSupply: boolean;
-  showPlaceOfSupply: boolean;
   visibleColumnCount: number;
 }
 
@@ -81,8 +80,6 @@ export interface InvoiceTemplateDerivedState {
   showInlineClassification: boolean;
   showSkuInName: boolean;
   showUnitInName: boolean;
-  showUnitInQuantity: boolean;
-  showUnitAsColumn: boolean;
 }
 
 export interface NormalizedInvoiceTemplateState {
@@ -94,11 +91,6 @@ export interface NormalizedInvoiceTemplateState {
 }
 
 const COLUMN_CLASS_MAP: Record<string, string> = {
-  sr: "col-index",
-  srno: "col-index",
-  sno: "col-index",
-  rownumber: "col-index",
-  index: "col-index",
   item: "col-item",
   name: "col-item",
   quantity: "col-qty",
@@ -112,8 +104,8 @@ const COLUMN_CLASS_MAP: Record<string, string> = {
   total: "col-total",
   hsn: "col-hsn-sac",
   cess: "col-cess",
-  cessrate: "col-cess-rate",
-  cessamount: "col-cess-amount",
+  cessrate: "col-cess",
+  cessamount: "col-cess",
 };
 
 const INDIA_GST_STATE_NAMES: Record<string, string> = {
@@ -157,6 +149,7 @@ const INDIA_GST_STATE_NAMES: Record<string, string> = {
   "99": "Centre Jurisdiction",
 };
 
+
 const asRecord = (value: unknown): UnknownRecord => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
@@ -173,14 +166,14 @@ const asArray = (value: unknown): unknown[] => {
   return value;
 };
 
-const pickFirstValue = (...values: unknown[]): unknown => {
-  return values.find(
-    (value) =>
-      value !== null &&
-      value !== undefined &&
-      (typeof value !== "string" || value.trim().length > 0)
-  );
-};
+const pickFirstValue = (...values: unknown[]): unknown =>
+  values.find((value) => {
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    return !(typeof value === "string" && value.trim().length === 0);
+  });
 
 const toStringValue = (value: unknown, fallback = ""): string => {
   if (typeof value === "string") {
@@ -209,51 +202,6 @@ const toNumberValue = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
-const toBooleanValue = (value: unknown, fallback = false): boolean => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
-    if (["false", "0", "no", "n", "off", ""].includes(normalized)) return false;
-  }
-  return fallback;
-};
-
-const toOptionalBoolean = (value: unknown): boolean | undefined => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
-    if (["false", "0", "no", "n", "off", ""].includes(normalized)) {
-      return false;
-    }
-  }
-  return undefined;
-};
-
-const getConfiguredFieldVisibility = (
-  invoice: FlattenedInvoicePayload,
-  key: string
-): boolean | undefined => {
-  const invoiceValueProps = asRecord(invoice.invoiceValueProps);
-  const matchingKey = Object.keys(invoiceValueProps).find(
-    (candidate) => candidate.toLowerCase() === key.toLowerCase()
-  );
-  if (!matchingKey) return undefined;
-
-  const setting = invoiceValueProps[matchingKey];
-  const directValue = toOptionalBoolean(setting);
-  if (directValue !== undefined) return directValue;
-
-  const settingRecord = asRecord(setting);
-  return (
-    toOptionalBoolean(settingRecord.visible) ??
-    toOptionalBoolean(settingRecord.showInInvoice)
-  );
-};
-
 const toNonEmptyString = (value: unknown): string | null => {
   const normalized = toStringValue(value);
   return normalized.length > 0 ? normalized : null;
@@ -262,26 +210,6 @@ const toNonEmptyString = (value: unknown): string | null => {
 const hasValue = (value: unknown): boolean => {
   const str = toStringValue(value);
   return str.length > 0 && str !== "null" && str !== "undefined";
-};
-
-const resolvePopulatedFieldVisibility = (
-  invoice: FlattenedInvoicePayload,
-  advanceOptions: UnknownRecord,
-  field: "countryOfSupply" | "placeOfSupply"
-): boolean => {
-  if (!hasValue(invoice[field])) return false;
-
-  const suffix =
-    field === "countryOfSupply" ? "CountryOfSupply" : "PlaceOfSupply";
-  const configured = getConfiguredFieldVisibility(invoice, field);
-  const shown = toOptionalBoolean(
-    advanceOptions[`show${suffix}`] ?? invoice[`show${suffix}`]
-  );
-  const hidden = toOptionalBoolean(
-    advanceOptions[`hide${suffix}`] ?? invoice[`hide${suffix}`]
-  );
-
-  return configured ?? shown ?? (hidden === undefined ? true : !hidden);
 };
 
 const normalizeGstCode = (value: unknown): string => {
@@ -418,7 +346,7 @@ const getSummaryCessAmount = (
     return directAmount;
   }
 
-  return getNestedSummaryEntries(record[listKey], listKey).reduce<number>(
+  return getNestedSummaryEntries(record, listKey).reduce<number>(
     (sum, entry) => {
       const row = asRecord(entry);
       return (
@@ -474,14 +402,12 @@ const getTemplateLayoutContext = (invoice: FlattenedInvoicePayload) => {
   const invoiceType = toStringValue(invoice.invoiceType);
   const taxType = toStringValue(invoice.taxType);
   const isTaxInvoice = invoiceType === "INVOICE";
-  const igstTax = toBooleanValue(pickFirstValue(invoice.igst, invoice.isIgst));
-  const discountEnabled = toBooleanValue(
+  const discountEnabled = Boolean(
     toNumberValue(
       pickFirstValue(finalTotal.discount, finalTotal.totalDiscount),
       0
     )
   );
-  const hideTaxes = toBooleanValue(advanceOptions.hideTaxes);
   const hsnView = toStringValue(advanceOptions.hsnView, "DEFAULT");
   const ownerCountry =
     toStringValue(asRecord(invoice.owner).country) ||
@@ -519,7 +445,7 @@ const getTemplateLayoutContext = (invoice: FlattenedInvoicePayload) => {
   const showInlineClassification =
     ownerCountry === "MY" &&
     (hsnView === "MERGE" || (hsnView === "DEFAULT" && !allowRenderHSN));
-  const showSkuInName = toBooleanValue(advanceOptions.showSkuInInvoice);
+  const showSkuInName = Boolean(advanceOptions.showSkuInInvoice);
   const rawUnitMode = toStringValue(
     pickFirstValue(
       advanceOptions.unitColumn,
@@ -531,24 +457,43 @@ const getTemplateLayoutContext = (invoice: FlattenedInvoicePayload) => {
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, "_");
   const normalizedUnitMode = rawUnitMode.replace(/_/g, "");
-  const showUnitSetting = toOptionalBoolean(
+  const showUnitSetting =
     pickFirstValue(
       advanceOptions.showUnitInInvoice,
       advanceOptions.showUnit
-    )
-  );
-  const hideUnitSetting = toOptionalBoolean(advanceOptions.hideUnit);
+    ) === undefined
+      ? undefined
+      : Boolean(
+          pickFirstValue(
+            advanceOptions.showUnitInInvoice,
+            advanceOptions.showUnit
+          )
+        );
+  const hideUnitSetting =
+    advanceOptions.hideUnit === undefined
+      ? undefined
+      : Boolean(advanceOptions.hideUnit);
   const unitHidden = hideUnitSetting === true || showUnitSetting === false;
-  const explicitName = toOptionalBoolean(advanceOptions.showUnitInName);
-  const explicitQuantity = toOptionalBoolean(
-    advanceOptions.showUnitInQuantity
-  );
-  const explicitColumn = toOptionalBoolean(
+  const explicitName =
+    advanceOptions.showUnitInName === undefined
+      ? undefined
+      : Boolean(advanceOptions.showUnitInName);
+  const explicitQuantity =
+    advanceOptions.showUnitInQuantity === undefined
+      ? undefined
+      : Boolean(advanceOptions.showUnitInQuantity);
+  const explicitColumn =
     pickFirstValue(
       advanceOptions.showUnitAsColumn,
       advanceOptions.showUnitColumn
-    )
-  );
+    ) === undefined
+      ? undefined
+      : Boolean(
+          pickFirstValue(
+            advanceOptions.showUnitAsColumn,
+            advanceOptions.showUnitColumn
+          )
+        );
   const showUnitInName =
     !unitHidden &&
     (explicitName === true ||
@@ -575,16 +520,26 @@ const getTemplateLayoutContext = (invoice: FlattenedInvoicePayload) => {
         normalizedUnitMode
       ));
 
+  // Structural only — no `hideTaxes` and no export suppression. The item-table columns are
+  // a property of the document's shape, so they must not move when a user toggles a
+  // display setting; the totals rows apply both suppressions on top of this.
+  const taxVisibility = resolveTaxVisibility({
+    invoiceType,
+    taxType,
+    // `igst` is the document's inter-state boolean; `isIgst` never existed on a real
+    // document and stays only as a fallback for a host on the older ceres contract.
+    isInterState: pickFirstValue(invoice.igst, invoice.isIgst),
+  });
+
   return {
     invoiceTemplate,
     pdfOptions,
     advanceOptions,
     isTaxInvoice,
-    igstTax,
     discountEnabled,
-    hideTaxes,
     taxType,
     showHsnColumn,
+    taxVisibility,
     showClassificationColumn,
     showInlineHsn,
     showInlineClassification,
@@ -603,63 +558,45 @@ const normalizeInvoiceColumns = (
     .map((entry) => asRecord(entry))
     .map((column) => {
       const key = toStringValue(column.key);
-      const normalizedKey = key.toLowerCase();
       const dataType = toStringValue(column.dataType);
       const fxReturnType = toStringValue(column.fxReturnType);
-      const semanticTypeValue = toStringValue(
-        column.semanticType
-      ).toLowerCase();
-      const semanticType = ["percentage", "currency"].includes(
-        semanticTypeValue
-      )
-        ? (semanticTypeValue as "percentage" | "currency")
-        : undefined;
 
       let visible = true;
-      if (normalizedKey === "msic") {
+      if (key === "msic") {
         visible = false;
-      } else if (normalizedKey === "hsn") {
+      } else if (key === "hsn") {
         visible = context.showHsnColumn;
-      } else if (normalizedKey === "classification") {
+      } else if (key === "classification") {
         visible = context.showClassificationColumn;
-      } else if (["gstrate", "gst", "taxrate"].includes(normalizedKey)) {
-        visible = context.isTaxInvoice && !context.hideTaxes;
-      } else if (normalizedKey === "discount") {
+      } else if (key === "gstRate") {
+        visible = context.isTaxInvoice;
+      } else if (key === "discount") {
         visible = context.discountEnabled;
-      } else if (normalizedKey === "unit") {
-        visible = context.showUnitAsColumn;
-      } else if (normalizedKey === "sgst" || normalizedKey === "cgst") {
-        visible =
-          context.isTaxInvoice &&
-          !context.hideTaxes &&
-          !context.igstTax &&
-          context.taxType === "INDIA";
-      } else if (normalizedKey === "igst") {
-        visible =
-          context.isTaxInvoice &&
-          !context.hideTaxes &&
-          (context.igstTax || context.taxType === "GLOBAL");
-      } else if (normalizedKey === "total") {
+      } else if (key === "sgst" || key === "cgst") {
+        visible = context.taxVisibility.showCgstSgst;
+      } else if (key === "igst") {
+        visible = context.taxVisibility.showIgst;
+      } else if (key === "total") {
         visible = context.isTaxInvoice;
       }
 
-      const configuredVisibility = getConfiguredFieldVisibility(invoice, key);
-      if (configuredVisibility === false) visible = false;
-
       return {
         key,
+        // `utgst` is the document field (talos/src/invoices.js:1454); `isUtgst` is the
+        // deprecated ceres-only name no producer sends. Kept in step with
+        // `mapped.visibility.isUtgst` below and with the widget's own label resolver
+        // (src/widgets/shared/taxRowLabels.ts), so a template printing these headers cannot
+        // disagree with one printing the totals block.
         label:
-          normalizedKey === "sgst" &&
-          toBooleanValue(pickFirstValue(invoice.utgst, invoice.isUtgst))
+          key === "sgst" &&
+          Boolean(pickFirstValue(invoice.utgst, invoice.isUtgst))
             ? "UTGST"
             : toStringValue(column.label),
         className: getColumnClass(key),
-        isHidden: toBooleanValue(column.isHidden) || !visible,
+        isHidden: Boolean(column.isHidden) || !visible,
         dataType,
         fxReturnType,
-        isCessColumn: toBooleanValue(column.isCessColumn),
-        summarise: toBooleanValue(column.summarise),
-        semanticType,
+        summarise: Boolean(column.summarise),
       };
     });
 };
@@ -667,18 +604,15 @@ const normalizeInvoiceColumns = (
 export const normalizeInvoiceTemplateState = (
   payload: InvoicePayloadInput
 ): NormalizedInvoiceTemplateState => {
-  const sourceInvoice = normalizeInvoicePayload(payload);
-  const invoice = {
-    ...sourceInvoice,
-    countryOfSupply: normalizeCountryOfSupply(sourceInvoice),
-    placeOfSupply: normalizePlaceOfSupply(sourceInvoice),
-  };
+  const invoice = normalizeInvoicePayload(payload);
   const context = getTemplateLayoutContext(invoice);
   const columns = normalizeInvoiceColumns(invoice, context);
   const irn = asRecord(invoice.irn);
   const upi = asRecord(invoice.upi);
   const irnCancelDate = toNonEmptyString(irn.CancelDate);
-  const irnQr = toNonEmptyString(irn.qrCode);
+  // Root qrCode is the same IRN QR delivered by the Lydia host overlay, so the
+  // CancelDate guard below applies to it equally.
+  const irnQr = toNonEmptyString(pickFirstValue(invoice.qrCode, irn.qrCode));
   const topQr =
     (irnQr && !irnCancelDate ? irnQr : null) ??
     toNonEmptyString(invoice.zatcaQrCode) ??
@@ -694,7 +628,7 @@ export const normalizeInvoiceTemplateState = (
 
   const billType = toStringValue(invoice.billType);
   const status = toStringValue(invoice.status);
-  const isExpenditure = toBooleanValue(invoice.isExpenditure);
+  const isExpenditure = Boolean(invoice.isExpenditure);
   const invoiceAccepted = toStringValue(invoice.invoiceAccepted);
   const paymentOptions = asRecord(invoice.paymentOptions);
   const bankAccount = asRecord(invoice.bankAccount);
@@ -707,36 +641,43 @@ export const normalizeInvoiceTemplateState = (
   const transport = hasTransportData(invoice.transportDetails);
   const showBankAccount =
     (!isExpenditure || invoiceAccepted === "ACCEPTED") &&
-    toBooleanValue(paymentOptions.accountTransfer) &&
+    Boolean(paymentOptions.accountTransfer) &&
     hasValue(bankAccountNo);
   const showUpi =
     (!isExpenditure || invoiceAccepted === "ACCEPTED") &&
-    toBooleanValue(paymentOptions.upi) &&
+    Boolean(paymentOptions.upi) &&
     hasValue(upiId);
-  const hideTaxes = toBooleanValue(context.advanceOptions.hideTaxes);
-  const showTaxTable =
-    ["TABLE", "BOTH"].includes(
-      toStringValue(context.advanceOptions.taxSummaryView)
-    ) && !hideTaxes;
+  const showTaxTable = ["TABLE", "BOTH"].includes(
+    toStringValue(context.advanceOptions.taxSummaryView)
+  );
+  // The business toggle gates the section; the data check only avoids rendering an
+  // empty table. The alias is checked first because it is what the Lydia live-update
+  // bridge emits, so when both keys are present it carries the newer user action —
+  // an explicit false from either key still hides the section.
+  const hsnSummaryEnabled = Boolean(
+    pickFirstValue(
+      context.advanceOptions.showHsnSummary,
+      context.advanceOptions.showHSNSummaryInInvoice
+    )
+  );
   const showHsnSummary =
-    !hideTaxes &&
+    hsnSummaryEnabled &&
     getNestedSummaryEntries(invoice.hsnSummary, "hsnList").length > 0;
   const showSummaryCess =
     asArray(invoice.cesses).some((entry) =>
-      toBooleanValue(asRecord(entry).isApplied)
+      Boolean(asRecord(entry).isApplied)
     ) &&
     (getInvoiceCessTotal(invoice) > 0 ||
       getSummaryCessAmount(invoice.taxSummary, "taxList") > 0 ||
       getSummaryCessAmount(invoice.hsnSummary, "hsnList") > 0);
-  const showIgst =
-    !hideTaxes &&
-    (toBooleanValue(pickFirstValue(invoice.igst, invoice.isIgst)) ||
-      toStringValue(invoice.taxName) !== "GST");
-  const showCgstSgst =
-    !hideTaxes && !showIgst && toStringValue(invoice.taxName) === "GST";
-  const showTotals = !toBooleanValue(context.advanceOptions.hideTotals);
-  const showTotalsRow =
-    showTotals && toBooleanValue(invoice.showTotalsRow, true);
+  // Same predicate the item-table columns use, so a template gating cells on
+  // mapped.visibility and headers on mapped.columns can never disagree.
+  const { showIgst, showCgstSgst } = context.taxVisibility;
+
+   const hideTaxes = Boolean(context.advanceOptions.hideTaxes);
+   const showTotals = !Boolean(context.advanceOptions.hideTotals);
+   const showTotalsRow =
+     showTotals && Boolean(invoice.showTotalsRow ?? true);
 
   return {
     invoice,
@@ -771,13 +712,13 @@ export const normalizeInvoiceTemplateState = (
         showIgst,
         showCgstSgst,
         showTaxes: !hideTaxes,
-        isUtgst: toBooleanValue(pickFirstValue(invoice.utgst, invoice.isUtgst)),
+        isUtgst: Boolean(pickFirstValue(invoice.utgst, invoice.isUtgst)),
         showTaxTable,
         showHsnSummary,
         showSummaryCess,
         showSku: context.showSkuInName,
         showHsn: context.showHsnColumn,
-        showThumbnailAsColumn: toBooleanValue(
+        showThumbnailAsColumn: Boolean(
           context.advanceOptions.showThumbnailAsColumn
         ),
         showInlineHsn: context.showInlineHsn,
@@ -786,43 +727,32 @@ export const normalizeInvoiceTemplateState = (
         showUnitInName: context.showUnitInName,
         showUnitInQuantity: context.showUnitInQuantity,
         showUnitAsColumn: context.showUnitAsColumn,
-        showTotals,
-        showTotalsRow,
-        showDueAmount: toBooleanValue(invoice.showDueAmount),
-        hideCurrencyCode: toBooleanValue(
-          context.advanceOptions.hideCurrencyCode
-        ),
-        upiShrink: toBooleanValue(asRecord(invoice.template).upiShrink),
-        letterHeadOnFirstPage: toBooleanValue(
+        upiShrink: Boolean(asRecord(invoice.template).upiShrink),
+        letterHeadOnFirstPage: Boolean(
           context.pdfOptions.letterHeadOnFirstPage
         ),
-        footerOnLastPage: toBooleanValue(context.pdfOptions.footerOnLastPage),
-        itemNameFullWidth: toBooleanValue(
+        footerOnLastPage: Boolean(context.pdfOptions.footerOnLastPage),
+        itemNameFullWidth: Boolean(
           pickFirstValue(
             context.advanceOptions.itemNameFullWidth,
             invoice.showItemNameFullWidth
           )
         ),
-        isDescriptionFullWidth: toBooleanValue(
+        isDescriptionFullWidth: Boolean(
           pickFirstValue(
-            context.advanceOptions.showDescriptionInFullWidth,
             context.advanceOptions.isDescriptionFullWidth,
-            invoice.showDescriptionInFullWidth,
             invoice.isDescriptionFullWidth
           )
         ),
+        showTotals,
+        showTotalsRow,
+        showDueAmount: Boolean(invoice.showDueAmount),
+        hideCurrencyCode: Boolean(
+          context.advanceOptions.hideCurrencyCode
+        ),
         showStatusTagInPrint: billType === "INVOICE" && status === "PAID",
-        showCountryOfSupply: resolvePopulatedFieldVisibility(
-          invoice,
-          context.advanceOptions,
-          "countryOfSupply"
-        ),
-        showPlaceOfSupply: resolvePopulatedFieldVisibility(
-          invoice,
-          context.advanceOptions,
-          "placeOfSupply"
-        ),
-        visibleColumnCount: columns.filter((column) => !column.isHidden).length,
+        visibleColumnCount:
+          columns.filter((column) => !column.isHidden).length + 1,
       },
     },
     derived: {
@@ -832,8 +762,6 @@ export const normalizeInvoiceTemplateState = (
       showInlineClassification: context.showInlineClassification,
       showSkuInName: context.showSkuInName,
       showUnitInName: context.showUnitInName,
-      showUnitInQuantity: context.showUnitInQuantity,
-      showUnitAsColumn: context.showUnitAsColumn,
     },
   };
 };

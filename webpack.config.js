@@ -908,6 +908,10 @@ module.exports = {
     splitChunks: false,
     runtimeChunk: false,
     minimize: true,
+    // webpack ≥5.111 minifies HTML assets by default, which rewrites the inline
+    // scripts in index.html after CspMetaPlugin has hashed them — the CSP then
+    // blocks the bootstrap and the page hangs on "Trying to load document...".
+    minimizeOptions: { html: false },
     minimizer: ["...", new CssMinimizerPlugin()],
   },
   devtool: false,
