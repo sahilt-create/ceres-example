@@ -1650,6 +1650,9 @@
         "showCgstSgst": {
           "type": "boolean"
         },
+        "showCountryOfSupply": {
+          "type": "boolean"
+        },
         "showDueAmount": {
           "type": "boolean"
         },
@@ -1669,6 +1672,9 @@
           "type": "boolean"
         },
         "showLogistics": {
+          "type": "boolean"
+        },
+        "showPlaceOfSupply": {
           "type": "boolean"
         },
         "showSku": {
@@ -1759,6 +1765,8 @@
         "showDueAmount",
         "hideCurrencyCode",
         "showStatusTagInPrint",
+        "showCountryOfSupply",
+        "showPlaceOfSupply",
         "visibleColumnCount"
       ],
       "type": "object"
