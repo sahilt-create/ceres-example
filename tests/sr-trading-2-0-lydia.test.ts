@@ -1,7 +1,7 @@
 import {
   applySrTradingCatalogueLogoUpdate,
   registerSrTradingLydiaUpdates,
-} from "../src/templates/sr-trading-2-0.lydia";
+} from "../src/templates/sr-trading-2-0/sr-trading-2-0.lydia";
 
 describe("SR Trading Lydia asset updates", () => {
   afterEach(() => {

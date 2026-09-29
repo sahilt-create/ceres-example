@@ -55,6 +55,8 @@ export interface InvoiceTemplateVisibility {
   showDueAmount: boolean;
   hideCurrencyCode: boolean;
   showStatusTagInPrint: boolean;
+  showCountryOfSupply: boolean;
+  showPlaceOfSupply: boolean;
   visibleColumnCount: number;
 }
 
@@ -202,6 +204,40 @@ const toNumberValue = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
+const toOptionalBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "off", ""].includes(normalized)) {
+      return false;
+    }
+  }
+  return undefined;
+};
+
+const getConfiguredFieldVisibility = (
+  invoice: FlattenedInvoicePayload,
+  key: string
+): boolean | undefined => {
+  const invoiceValueProps = asRecord(invoice.invoiceValueProps);
+  const matchingKey = Object.keys(invoiceValueProps).find(
+    (candidate) => candidate.toLowerCase() === key.toLowerCase()
+  );
+  if (!matchingKey) return undefined;
+
+  const setting = invoiceValueProps[matchingKey];
+  const directValue = toOptionalBoolean(setting);
+  if (directValue !== undefined) return directValue;
+
+  const settingRecord = asRecord(setting);
+  return (
+    toOptionalBoolean(settingRecord.visible) ??
+    toOptionalBoolean(settingRecord.showInInvoice)
+  );
+};
+
 const toNonEmptyString = (value: unknown): string | null => {
   const normalized = toStringValue(value);
   return normalized.length > 0 ? normalized : null;
@@ -210,6 +246,27 @@ const toNonEmptyString = (value: unknown): string | null => {
 const hasValue = (value: unknown): boolean => {
   const str = toStringValue(value);
   return str.length > 0 && str !== "null" && str !== "undefined";
+};
+
+const resolvePopulatedFieldVisibility = (
+  invoice: FlattenedInvoicePayload,
+  advanceOptions: UnknownRecord,
+  field: "countryOfSupply" | "placeOfSupply"
+): boolean => {
+  if (!hasValue(invoice[field])) return false;
+
+  const suffix =
+    field === "countryOfSupply" ? "CountryOfSupply" : "PlaceOfSupply";
+  const invoiceRecord = asRecord(invoice);
+  const configured = getConfiguredFieldVisibility(invoice, field);
+  const shown = toOptionalBoolean(
+    advanceOptions[`show${suffix}`] ?? invoiceRecord[`show${suffix}`]
+  );
+  const hidden = toOptionalBoolean(
+    advanceOptions[`hide${suffix}`] ?? invoiceRecord[`hide${suffix}`]
+  );
+
+  return configured ?? shown ?? (hidden === undefined ? true : !hidden);
 };
 
 const normalizeGstCode = (value: unknown): string => {
@@ -751,6 +808,16 @@ export const normalizeInvoiceTemplateState = (
           context.advanceOptions.hideCurrencyCode
         ),
         showStatusTagInPrint: billType === "INVOICE" && status === "PAID",
+        showCountryOfSupply: resolvePopulatedFieldVisibility(
+          invoice,
+          context.advanceOptions,
+          "countryOfSupply"
+        ),
+        showPlaceOfSupply: resolvePopulatedFieldVisibility(
+          invoice,
+          context.advanceOptions,
+          "placeOfSupply"
+        ),
         visibleColumnCount:
           columns.filter((column) => !column.isHidden).length + 1,
       },
