@@ -4,7 +4,7 @@ import {
   hasSrTradingPrintCellOverflow,
   hasSrTradingPrintTableOverflow,
   isSrTradingLydiaPagelessMode,
-} from "../src/templates/sr-trading-2-0.printFit";
+} from "../src/templates/sr-trading-2-0/sr-trading-2-0.printFit";
 
 const measuredWidth = (clientWidth: number, scrollWidth: number) => ({
   clientWidth,

@@ -371,6 +371,17 @@ export default function initDevBridge(): boolean {
           window.location.replace(
             `${window.location.pathname}?${newParams.toString()}`
           );
+          return;
+        }
+        throw new Error(
+          `No samples in templates/${tplName}/samples.json — add one or pass ?apiUrl=<base64-encoded-url>`
+        );
+      })
+      .catch((e) => {
+        const output = document.getElementById("documentOutput");
+        if (output) {
+          output.innerHTML = `<div class="error-message">Error: ${e.message}</div>`;
+          output.classList.remove("loading-message");
         }
       });
     return true;

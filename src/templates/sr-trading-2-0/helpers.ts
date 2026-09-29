@@ -1,10 +1,10 @@
-import formatCurrency from "../widgets/shared/formatCurrency";
+import formatCurrency from "../../widgets/shared/formatCurrency";
 import {
   normalizeInvoiceTemplateState,
   normalizePlaceOfSupply,
   type InvoiceTemplateColumn,
-} from "../main/invoiceTemplateNormalization";
-import { computeHsnSummary } from "../widgets/hsn-summary/utils";
+} from "../../main/invoiceTemplateNormalization";
+import { computeHsnSummary } from "../../widgets/hsn-summary/utils";
 
 type UnknownRecord = Record<string, any>;
 

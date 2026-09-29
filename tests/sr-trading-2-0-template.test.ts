@@ -5,7 +5,7 @@ import template from "../src/templates/sr-trading-2-0/template.hbs";
 import {
   isSrPartyFieldVisible,
   mapSrTradingTemplateData,
-} from "../src/templates/sr-trading-2-0.mapper";
+} from "../src/templates/sr-trading-2-0/sr-trading-2-0.mapper";
 import {
   formatCountryName,
   formatQuantityWithUnit,
@@ -21,7 +21,7 @@ import {
   solvinTaxAmountInWords,
   summarizeItemQuantity,
   toTitleCaseWords,
-} from "../src/templates/helpers";
+} from "../src/templates/sr-trading-2-0/helpers";
 
 type UnknownRecord = Record<string, any>;
 

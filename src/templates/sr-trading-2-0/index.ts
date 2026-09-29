@@ -2,7 +2,7 @@ import template from "./template.hbs";
 import {
   isSrPartyFieldVisible,
   mapSrTradingTemplateData,
-} from "../sr-trading-2-0.mapper";
+} from "./sr-trading-2-0.mapper";
 import {
   formatCountryName,
   formatQuantityWithUnit,
@@ -16,10 +16,10 @@ import {
   solvinTaxAmountInWords,
   summarizeItemQuantity,
   toTitleCaseWords,
-} from "../helpers";
+} from "./helpers";
 import amountInWords from "../../widgets/shared/amountInWords";
-import { registerSrTradingPrintFit } from "../sr-trading-2-0.printFit";
-import { registerSrTradingLydiaUpdates } from "../sr-trading-2-0.lydia";
+import { registerSrTradingPrintFit } from "./sr-trading-2-0.printFit";
+import { registerSrTradingLydiaUpdates } from "./sr-trading-2-0.lydia";
 import "./styles.css";
 
 import "../../widgets/date-time";

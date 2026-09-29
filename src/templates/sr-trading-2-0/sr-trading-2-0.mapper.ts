@@ -1,7 +1,7 @@
 import { mapSolvinTemplateData } from "./helpers";
-import { normalizeInvoiceTemplateState } from "../main/invoiceTemplateNormalization";
-import { computeHsnSummary } from "../widgets/hsn-summary/utils";
-import { computeTaxSummary } from "../widgets/tax-summary/utils";
+import { normalizeInvoiceTemplateState } from "../../main/invoiceTemplateNormalization";
+import { computeHsnSummary } from "../../widgets/hsn-summary/utils";
+import { computeTaxSummary } from "../../widgets/tax-summary/utils";
 import generateUpiQrDataUrl from "./sr-trading-2-0.upiQr";
 
 type UnknownRecord = Record<string, any>;
