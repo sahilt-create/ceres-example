@@ -1,0 +1,7 @@
+<article class="detail-card compact-card compliance-section" data-ceres-compliance>
+        <h2>{{vaishnavi.compliance.title}}</h2>
+        <div class="compliance-body">
+          <div class="key-value-list compliance-details">{{#each vaishnavi.compliance.irnRows}}<p class="key-value compliance-row"><span>{{label}}</span><strong class="compliance-value"{{#if isIrn}} data-ceres-field="irn"{{/if}}>{{#if isUtcDate}}{{formatDateInTimeZone value "UTC" "SECONDARY_SHORT_DATE_FORMAT"}}{{else if isOffsetDate}}{{formateShortDateWithOffset value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</strong></p>{{/each}}</div>
+          <div class="compliance-qr{{#unless vaishnavi.compliance.eInvoiceQr}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img referrerpolicy="no-referrer" class="compliance-qr-image" data-ceres-field="qrCode"{{#if vaishnavi.compliance.eInvoiceQr}} src="{{vaishnavi.compliance.eInvoiceQr}}"{{/if}} alt="E-Invoice QR code" /></div>
+        </div>
+      </article>
