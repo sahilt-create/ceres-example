@@ -1,0 +1,1004 @@
+/*
+ * Modern Manufacturing Template.
+ *
+ * Every rule is scoped to .mm-doc — the renderer page (html, body, #documentOutput) and the
+ * PDF engine's page box belong to the host, so there is no @page rule here. Colours read the
+ * host's template variables with the design's values as fallbacks; fonts come only from the
+ * business's chosen fonts (--title-font / --subtitle-font), otherwise the page font.
+ *
+ * Type scale: base is 13px on screen and in print, nothing below 10px. Spacing is in 4px steps.
+ * Numbers, codes and money never wrap; only text columns absorb the table's slack.
+ */
+
+.mm-doc {
+  --mm-accent: var(--primary-color, #f26a1b);
+  --mm-ink: #111827;
+  --mm-muted: #6b7280;
+  --mm-line: #e5e7eb;
+  --mm-zebra: #f9fafb;
+  --mm-tint: #fff4ed;
+  --mm-on-accent: #fff;
+  --mm-radius: 6px;
+  --mm-font-size-xs: 10px;
+  --mm-font-size-s: 11px;
+  --mm-font-size-base: 13px;
+  --mm-font-size-m: 15px;
+  --mm-font-size-lg: 18px;
+  --mm-font-size-xl: 22px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  /*
+   * The host body is a flex row, so #documentOutput shrinks to its content. A width that
+   * depends on the viewport, not the content, keeps a wide table from widening the page:
+   * the table scrolls inside its own frame instead.
+   */
+  width: min(100vw, 1000px);
+  margin: 0 auto;
+  padding: 32px;
+  background: #fff;
+  color: var(--mm-ink);
+  font-family: var(--subtitle-font, inherit);
+  font-size: var(--mm-font-size-base);
+  line-height: 1.5;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.mm-doc,
+.mm-doc *,
+.mm-doc *::before,
+.mm-doc *::after {
+  box-sizing: border-box;
+}
+
+/* Flex children default to min-width:auto, which lets a wide table stretch the page. */
+.mm-doc > * {
+  min-width: 0;
+}
+
+.mm-doc p,
+.mm-doc h1,
+.mm-doc h2,
+.mm-doc h3,
+.mm-doc dl,
+.mm-doc dd,
+.mm-doc ol,
+.mm-doc ul {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------ letterhead */
+
+.mm-doc .invoice-letterhead,
+.mm-doc .invoice-letterhead-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.mm-doc .invoice-letterhead img,
+.mm-doc .invoice-letterhead-footer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mm-doc .invoice-letterhead.is-empty,
+.mm-doc .invoice-letterhead-footer.is-empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------ shared bits */
+
+.mm-card {
+  border: 1px solid var(--mm-line);
+  border-radius: var(--mm-radius);
+  overflow: hidden;
+}
+
+.mm-label {
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mm-muted {
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-section-title {
+  margin-bottom: 8px;
+  color: var(--mm-accent);
+  font-family: var(--title-font, inherit);
+  font-size: var(--mm-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mm-inline-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+}
+
+.mm-inline-item {
+  white-space: nowrap;
+}
+
+.mm-inline-label {
+  color: var(--mm-muted);
+}
+
+/* ------------------------------------------------------------ header */
+
+.mm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.mm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mm-logo {
+  flex: none;
+}
+
+.mm-logo .mm-logo-image {
+  display: block;
+  max-width: 160px;
+  max-height: 64px;
+  object-fit: contain;
+}
+
+.mm-monogram {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--mm-radius);
+  background: var(--mm-ink);
+  color: #fff;
+  font-family: var(--title-font, inherit);
+  font-size: var(--mm-font-size-lg);
+  font-weight: 700;
+}
+
+.mm-brand-name {
+  font-family: var(--title-font, inherit);
+  font-size: var(--mm-font-size-xl);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.mm-seller {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 55%;
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-s);
+  text-align: right;
+}
+
+.mm-seller .is-strong {
+  color: var(--mm-ink);
+  font-size: var(--mm-font-size-base);
+  font-weight: 600;
+}
+
+.mm-seller .mm-inline-list {
+  justify-content: flex-end;
+}
+
+/* ------------------------------------------------------------ title bar */
+
+.mm-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 4px;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+}
+
+.mm-title {
+  font-family: var(--title-font, inherit);
+  font-size: var(--mm-font-size-m);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.mm-subtitle {
+  margin-left: 8px;
+  font-size: var(--mm-font-size-s);
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.mm-copy {
+  flex: none;
+  font-size: var(--mm-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ meta grid */
+
+.mm-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mm-meta-cell {
+  padding: 8px 12px;
+  border-top: 1px solid var(--mm-line);
+  border-left: 1px solid var(--mm-line);
+}
+
+.mm-meta-cell:nth-child(-n + 4) {
+  border-top: 0;
+}
+
+.mm-meta-cell:nth-child(4n + 1) {
+  border-left: 0;
+}
+
+.mm-meta-value {
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+/* ------------------------------------------------------------ compliance */
+
+/* Shown only once there is an IRN or a QR to show — including one posted in live. */
+.mm-compliance {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.mm-compliance:has(.mm-irn-value:not(:empty)),
+.mm-compliance:has(.mm-compliance-row),
+.mm-compliance:has(.mm-qr:not(.is-empty)) {
+  display: flex;
+}
+
+.mm-compliance-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mm-irn-row,
+.mm-compliance-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.mm-irn-row:has(.mm-irn-value:empty) {
+  display: none;
+}
+
+.mm-irn-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--mm-font-size-s);
+  word-break: break-all;
+}
+
+.mm-compliance-value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mm-qr-list {
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
+.mm-qr img {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+
+.mm-qr.is-empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------ parties */
+
+.mm-parties {
+  display: flex;
+}
+
+.mm-party {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 16px;
+}
+
+.mm-party + .mm-party {
+  border-left: 1px solid var(--mm-line);
+}
+
+.mm-party-name {
+  font-size: var(--mm-font-size-base);
+  font-weight: 600;
+}
+
+.mm-party .mm-inline-list {
+  font-size: var(--mm-font-size-s);
+}
+
+/* ------------------------------------------------------------ item table */
+
+.mm-items-wrap {
+  border: 1px solid var(--mm-line);
+  border-radius: var(--mm-radius);
+  overflow-x: auto;
+}
+
+.mm-items {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-items th,
+.mm-items td {
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.mm-items thead th {
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+  font-size: var(--mm-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.mm-items tbody td {
+  border-bottom: 1px solid var(--mm-line);
+}
+
+.mm-items .mm-item-group:nth-of-type(even) td {
+  background: var(--mm-zebra);
+}
+
+/* Fixed columns (serial, codes, figures) shrink to their content and never wrap. */
+.mm-items td.is-fixed,
+.mm-items .mm-col-serial {
+  width: 1%;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.mm-items .mm-col-serial {
+  text-align: center;
+}
+
+.mm-items .is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-items td.is-num {
+  color: var(--mm-ink);
+}
+
+.mm-items td.mm-col-amount,
+.mm-items td.mm-col-total {
+  font-weight: 600;
+}
+
+/* Text columns take the remaining width and wrap at word boundaries only. */
+.mm-items .is-text {
+  width: auto;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.mm-items td.mm-col-name {
+  min-width: 128px;
+}
+
+.mm-item-name {
+  display: block;
+  font-weight: 600;
+}
+
+.mm-item-code {
+  display: block;
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-xs);
+}
+
+.mm-item-desc {
+  margin-top: 4px;
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-xs);
+}
+
+.mm-items td.mm-col-batch,
+.mm-items td.mm-col-unit {
+  color: var(--mm-muted);
+}
+
+.mm-items .mm-col-batch,
+.mm-items .mm-col-unit,
+.mm-items .mm-col-hsn {
+  text-align: center;
+}
+
+.mm-thumbnail {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+}
+
+.mm-items .mm-group-row td {
+  background: var(--mm-tint);
+  font-weight: 700;
+}
+
+.mm-items .mm-group-total-row td {
+  font-weight: 600;
+}
+
+.mm-items .mm-description-row td {
+  padding-top: 0;
+}
+
+.mm-items tfoot td {
+  border-top: 1px solid var(--mm-line);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Wide account column sets: tighter cells first, then one type step — never below 10px. */
+.mm-items.is-compact th,
+.mm-items.is-compact td {
+  padding: 8px 4px;
+}
+
+.mm-items.is-dense {
+  font-size: var(--mm-font-size-xs);
+}
+
+.mm-items.is-dense th,
+.mm-items.is-dense td {
+  padding: 4px;
+}
+
+/* ------------------------------------------------------------ bank + totals */
+
+.mm-settlement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.mm-settlement .mm-bank {
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.mm-settlement .mm-bank + .mm-totals {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.mm-settlement.has-no-bank .mm-totals {
+  grid-column: 2;
+}
+
+.mm-bank .mm-section-title {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mm-line);
+  background: var(--mm-zebra);
+}
+
+.mm-bank-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.mm-kv {
+  border-collapse: collapse;
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-kv th,
+.mm-kv td {
+  padding: 4px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.mm-kv th {
+  padding-right: 24px;
+  color: var(--mm-muted);
+  font-weight: 400;
+}
+
+.mm-kv td {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mm-upi-qr {
+  display: block;
+  flex: none;
+  width: 96px;
+  height: 96px;
+}
+
+.mm-totals {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.mm-totals .ceres-subtotal-table th,
+.mm-totals .ceres-subtotal-table td {
+  padding: 4px 16px;
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-totals .ceres-subtotal-table tr:first-child th,
+.mm-totals .ceres-subtotal-table tr:first-child td {
+  padding-top: 12px;
+}
+
+.mm-totals .ceres-subtotal-label {
+  color: var(--mm-muted);
+}
+
+.mm-totals .ceres-subtotal-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-totals .ceres-subtotal-row-grand > .ceres-subtotal-label,
+.mm-totals .ceres-subtotal-row-grand > .ceres-subtotal-value {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-top: 0;
+  background: var(--mm-accent);
+  color: var(--mm-on-accent);
+  font-size: var(--mm-font-size-m);
+  font-weight: 700;
+}
+
+.mm-totals .ceres-subtotal-row-grand > .ceres-subtotal-value {
+  font-size: var(--mm-font-size-lg);
+}
+
+.mm-totals .ceres-subtotal-row-due > .ceres-subtotal-label,
+.mm-totals .ceres-subtotal-row-due > .ceres-subtotal-value {
+  color: var(--mm-ink);
+}
+
+/* The words line sits under the whole settlement row (see .mm-words), not in the panel. */
+.mm-totals .ceres-subtotal-words {
+  display: none;
+}
+
+.mm-words {
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-words-label {
+  color: var(--mm-accent);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ notes + terms */
+
+.mm-notes {
+  display: flex;
+}
+
+.mm-note-block {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 12px 16px;
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-note-block + .mm-note-block {
+  border-left: 1px solid var(--mm-line);
+}
+
+.mm-terms,
+.mm-attachments {
+  padding-left: 16px;
+}
+
+.mm-attachments a {
+  color: var(--mm-accent);
+}
+
+/* ------------------------------------------------------------ summary tables */
+
+.mm-summary {
+  border: 1px solid var(--mm-line);
+  border-radius: var(--mm-radius);
+  overflow-x: auto;
+}
+
+.mm-summary-table,
+.mm-widget-table .ceres-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mm-font-size-s);
+}
+
+.mm-summary-table th,
+.mm-summary-table td,
+.mm-widget-table .ceres-table th,
+.mm-widget-table .ceres-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mm-line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mm-summary-table thead th,
+.mm-widget-table .ceres-table thead th {
+  background: var(--mm-zebra);
+  color: var(--mm-accent);
+  font-size: var(--mm-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mm-summary-table .is-text,
+.mm-summary-table .is-code,
+.mm-widget-table .ceres-table th:first-child,
+.mm-widget-table .ceres-table td:first-child {
+  text-align: left;
+}
+
+.mm-summary-table tfoot td,
+.mm-widget-table .ceres-table tfoot td {
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.mm-widget-table .ceres-table-heading {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--mm-accent);
+  font-size: var(--mm-font-size-xs);
+  text-transform: uppercase;
+}
+
+.mm-widget-table .ceres-table-words {
+  text-align: left;
+  white-space: normal;
+}
+
+/* The widget emits nothing without rows; don't leave an empty bordered box behind. */
+.mm-widget-table:not(:has(table)) {
+  display: none;
+}
+
+/* ------------------------------------------------------------ signature + footer */
+
+.mm-signature {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mm-signature-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 240px;
+  padding-top: 8px;
+  border-top: 1px solid var(--mm-line);
+  text-align: right;
+}
+
+.mm-signature-for {
+  font-size: var(--mm-font-size-s);
+  font-weight: 700;
+}
+
+.mm-signature-space {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 48px;
+}
+
+.mm-signature-image {
+  display: block;
+  max-width: 200px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+/* Kept in the DOM so the PDF pipeline can measure where the digital signature goes. */
+.mm-signature-placeholder {
+  width: 160pt;
+  height: 90pt;
+  visibility: hidden;
+}
+
+.mm-signature-banner {
+  color: var(--mm-accent);
+  font-size: var(--mm-font-size-xs);
+  font-weight: 600;
+}
+
+.mm-signature-label {
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-xs);
+}
+
+.mm-footer-rows,
+.mm-contact {
+  color: var(--mm-muted);
+  font-size: var(--mm-font-size-xs);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ narrow screens */
+
+/* Screen only: the iframe viewport is the document width. Paged output keeps the A4 layout. */
+@media screen and (width <= 640px) {
+  .mm-doc {
+    padding: 16px;
+  }
+
+  .mm-header,
+  .mm-parties,
+  .mm-notes {
+    flex-direction: column;
+  }
+
+  .mm-seller {
+    align-items: flex-start;
+    max-width: none;
+    text-align: left;
+  }
+
+  .mm-seller .mm-inline-list {
+    justify-content: flex-start;
+  }
+
+  .mm-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mm-meta-cell:nth-child(-n + 4) {
+    border-top: 1px solid var(--mm-line);
+  }
+
+  .mm-meta-cell:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .mm-meta-cell:nth-child(4n + 1) {
+    border-left: 1px solid var(--mm-line);
+  }
+
+  .mm-meta-cell:nth-child(2n + 1) {
+    border-left: 0;
+  }
+
+  .mm-party + .mm-party,
+  .mm-note-block + .mm-note-block {
+    border-top: 1px solid var(--mm-line);
+    border-left: 0;
+  }
+
+  .mm-settlement {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .mm-settlement.has-no-bank .mm-totals {
+    grid-column: auto;
+  }
+
+  .mm-settlement .mm-bank,
+  .mm-settlement .mm-bank + .mm-totals {
+    border: 1px solid var(--mm-line);
+    border-radius: var(--mm-radius);
+  }
+}
+
+/* ------------------------------------------------------------ print */
+
+@media print {
+  .mm-doc {
+    --mm-font-size-xs: 10px;
+    --mm-font-size-s: 11px;
+    --mm-font-size-base: 13px;
+    --mm-font-size-m: 14px;
+    --mm-font-size-lg: 16px;
+    --mm-font-size-xl: 20px;
+
+    width: auto;
+    padding: 0;
+    gap: 8px;
+  }
+
+  /*
+   * Last resort for a column set too wide for the page even at the 10px step: figures may
+   * not wrap and must not be clipped, so the table alone is scaled to fit (set by helpers.ts
+   * only when its width estimate exceeds the page).
+   */
+  .mm-items {
+    zoom: var(--mm-table-fit, 1);
+  }
+
+  .mm-doc,
+  .mm-items,
+  .mm-summary-table,
+  .mm-party,
+  .mm-kv {
+    line-height: 1.35;
+  }
+
+  .mm-title-bar {
+    padding: 8px 12px;
+  }
+
+  .mm-seller,
+  .mm-party {
+    gap: 0;
+  }
+
+  .mm-monogram {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mm-meta-cell {
+    padding: 4px 8px;
+  }
+
+  .mm-bank .mm-section-title,
+  .mm-bank-body {
+    padding: 4px 12px;
+  }
+
+  .mm-kv th,
+  .mm-kv td {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .mm-totals .ceres-subtotal-table tr:first-child th,
+  .mm-totals .ceres-subtotal-table tr:first-child td {
+    padding-top: 8px;
+  }
+
+  /* Print density comes from row height, never from going below the type floor. */
+  .mm-items th,
+  .mm-items td,
+  .mm-items.is-compact th,
+  .mm-items.is-compact td {
+    padding: 4px 8px;
+  }
+
+  .mm-items.is-dense th,
+  .mm-items.is-dense td {
+    padding: 4px;
+  }
+
+  .mm-party,
+  .mm-note-block,
+  .mm-compliance {
+    padding: 4px 12px;
+  }
+
+  .mm-summary-table th,
+  .mm-summary-table td,
+  .mm-widget-table .ceres-table th,
+  .mm-widget-table .ceres-table td {
+    padding: 4px 12px;
+  }
+
+  .mm-totals .ceres-subtotal-row-grand > .ceres-subtotal-label,
+  .mm-totals .ceres-subtotal-row-grand > .ceres-subtotal-value {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .mm-signature-space {
+    min-height: 28px;
+  }
+
+  /* Paged output has no scrollbars: let the table lay out at the page width. */
+  .mm-items-wrap,
+  .mm-summary {
+    overflow: visible;
+  }
+
+  .mm-items thead,
+  .mm-summary-table thead {
+    display: table-header-group;
+  }
+
+  /* The summary row prints once, after the last item — not at the foot of every page. */
+  .mm-items tfoot,
+  .mm-summary-table tfoot {
+    display: table-row-group;
+  }
+
+  .mm-items tr,
+  .mm-item-group,
+  .mm-summary-table tr,
+  .mm-header,
+  .mm-title-bar,
+  .mm-meta,
+  .mm-compliance,
+  .mm-parties,
+  .mm-settlement,
+  .mm-note-block,
+  .mm-summary,
+  .mm-signature {
+    break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .mm-title-bar {
+    break-after: avoid;
+    break-after: avoid;
+  }
+
+  .mm-words,
+  .mm-signature {
+    break-before: avoid;
+    break-before: avoid;
+  }
+}

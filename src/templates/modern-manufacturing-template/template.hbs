@@ -1,0 +1,371 @@
+{{!--
+  Modern Manufacturing Template.
+
+  Root is normalizeInvoiceTemplateState's output. Every block below reads the view model built
+  once by `mmView` (helpers.ts) — labels, visibility and table columns all come from the
+  payload; nothing from the reference design is written into this file.
+--}}
+{{#with (mmView @root) as |view|}}
+<div class="mm-doc">
+  <div class="no-dibella invoice-letterhead mm-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}">
+    {{#if @root.invoice.letterHead}}
+      <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+    {{else}}
+      <img alt="Letterhead" data-ceres-height="letterhead" />
+    {{/if}}
+  </div>
+
+  <header class="mm-header">
+    <div class="mm-brand">
+      {{#if view.brand.logo}}
+        <div class="mm-logo">{{> CeresImage src=view.brand.logo alt=view.brand.name class="mm-logo-image"}}</div>
+      {{else if view.brand.initials}}
+        <div class="mm-monogram" aria-hidden="true">{{view.brand.initials}}</div>
+      {{/if}}
+      {{#if view.brand.name}}<h1 class="mm-brand-name">{{view.brand.name}}</h1>{{/if}}
+    </div>
+    {{#if view.brand.seller}}
+      <div class="mm-seller">
+        {{#each view.brand.seller.addressLines}}
+          <p class="mm-seller-line{{#if @first}} is-strong{{/if}}">{{this}}</p>
+        {{/each}}
+        {{#if view.brand.seller.ids.length}}
+          <p class="mm-inline-list">
+            {{#each view.brand.seller.ids}}<span class="mm-inline-item"><span class="mm-inline-label">{{label}}:</span> {{value}}</span>{{/each}}
+          </p>
+        {{/if}}
+        {{#if view.brand.seller.contacts.length}}
+          <p class="mm-inline-list">
+            {{#each view.brand.seller.contacts}}<span class="mm-inline-item">{{this}}</span>{{/each}}
+          </p>
+        {{/if}}
+        {{#each view.brand.seller.extras}}
+          <p class="mm-seller-line"><span class="mm-inline-label">{{label}}:</span> {{value}}</p>
+        {{/each}}
+      </div>
+    {{/if}}
+  </header>
+
+  {{#if view.title}}
+    <div class="mm-title-bar">
+      <h2 class="mm-title">
+        {{view.title}}
+        {{#if view.subtitle}}<span class="mm-subtitle">{{view.subtitle}}</span>{{/if}}
+      </h2>
+      {{#if view.copy}}<span class="mm-copy">{{view.copy}}</span>{{/if}}
+    </div>
+  {{/if}}
+
+  {{#if view.meta.length}}
+    <section class="mm-card mm-meta">
+      <dl class="mm-meta-grid">
+        {{#each view.meta}}
+          <div class="mm-meta-cell mm-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}>
+            <dt class="mm-label">{{label}}</dt>
+            <dd class="mm-meta-value">{{#if isDate}}{{formateShortDateWithOffset value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{formatDateInTimeZone value "UTC" "SECONDARY_SHORT_DATE_FORMAT"}}{{else}}{{value}}{{/if}}</dd>
+          </div>
+        {{/each}}
+      </dl>
+    </section>
+  {{/if}}
+
+  {{!-- IRN + QR codes. Containers stay in the DOM so the host can post values in live. --}}
+  <section class="mm-card mm-compliance">
+    <div class="mm-compliance-text">
+      {{#if view.compliance.showIrn}}
+        <p class="mm-irn-row"><span class="mm-label">{{view.compliance.irnLabel}}</span><span class="mm-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+      {{/if}}
+      {{#each view.compliance.rows}}
+        <p class="mm-compliance-row"><span class="mm-label">{{label}}</span><span class="mm-compliance-value">{{#if isDate}}{{formateShortDateWithOffset value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{formatDateInTimeZone value "UTC" "SECONDARY_SHORT_DATE_FORMAT"}}{{else}}{{value}}{{/if}}</span></p>
+      {{/each}}
+    </div>
+    <div class="mm-qr-list">
+      <div class="mm-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode">
+        <img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" />
+      </div>
+      <div class="mm-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode">
+        <img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" />
+      </div>
+      <div class="mm-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode">
+        <img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" />
+      </div>
+      <div class="mm-qr{{#unless view.compliance.qr.document}} is-empty{{/unless}}" data-ceres-field-container="documentQr">
+        <img data-ceres-field="documentQr"{{#if view.compliance.qr.document}} src="{{view.compliance.qr.document}}"{{/if}} alt="Document QR Code" />
+      </div>
+    </div>
+  </section>
+
+  {{#if view.parties.length}}
+    <section class="mm-card mm-parties">
+      {{#each view.parties}}
+        <div class="mm-party">
+          {{#if title}}<h3 class="mm-label">{{title}}</h3>{{/if}}
+          <p class="mm-party-name">{{name}}</p>
+          {{#each addressLines}}<p class="mm-muted">{{this}}</p>{{/each}}
+          {{#if contactPerson}}<p class="mm-muted">{{contactPerson}}</p>{{/if}}
+          {{#if ids.length}}
+            <p class="mm-inline-list">
+              {{#each ids}}<span class="mm-inline-item"><span class="mm-inline-label">{{label}}:</span> {{value}}</span>{{/each}}
+            </p>
+          {{/if}}
+          {{#if contacts.length}}
+            <p class="mm-inline-list mm-muted">
+              {{#each contacts}}<span class="mm-inline-item">{{this}}</span>{{/each}}
+            </p>
+          {{/if}}
+          {{#each extras}}
+            <p class="mm-muted"><span class="mm-inline-label">{{label}}:</span> {{value}}</p>
+          {{/each}}
+        </div>
+      {{/each}}
+    </section>
+  {{/if}}
+
+  <section class="mm-items-wrap">
+    <table class="mm-items {{view.table.density}}"{{#if view.table.fit}} style="--mm-table-fit: {{view.table.fit}}"{{/if}}>
+      <thead>
+        <tr>
+          <th class="mm-col-serial is-fixed">{{view.table.serialLabel}}</th>
+          {{#if view.table.showThumbnail}}<th class="mm-col-thumbnail is-fixed"></th>{{/if}}
+          {{#each view.table.columns}}
+            <th class="{{className}}">{{label}}</th>
+          {{/each}}
+        </tr>
+      </thead>
+      {{#each view.table.rows}}
+        <tbody class="mm-item-group">
+          {{#if isGroupHeader}}
+            <tr class="mm-group-row">
+              <td colspan="{{colspan}}">{{name}}</td>
+            </tr>
+          {{else}}
+            <tr class="mm-item-row{{#if isGroupTotal}} mm-group-total-row{{/if}}">
+              <td class="mm-col-serial is-fixed">{{serial}}</td>
+              {{#if view.table.showThumbnail}}
+                <td class="mm-col-thumbnail is-fixed">{{#if thumbnail}}{{> CeresImage src=thumbnail alt=name class="mm-thumbnail" href=thumbnail}}{{/if}}</td>
+              {{/if}}
+              {{#each cells}}
+                {{#if isName}}
+                  <td class="{{className}}">
+                    <span class="mm-item-name">{{../name}}</span>
+                    {{#each ../inlineCodes}}<span class="mm-item-code">{{this}}</span>{{/each}}
+                    {{#if ../description}}
+                      <div data-ceres-description-inline{{#if ../descriptionFullWidth}} style="display:none"{{/if}}>
+                        {{#unless ../descriptionFullWidth}}
+                          <div class="mm-item-desc" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData ../description) }}</div>
+                        {{/unless}}
+                      </div>
+                    {{/if}}
+                    {{#if ../images.length}}{{> CeresImageGallery (prepareImageGallery ../images variant="thumbnail" alt=../name) }}{{/if}}
+                    {{#if ../originalImages.length}}{{> CeresImageGallery (prepareImageGallery ../originalImages variant="original" alt=../name) }}{{/if}}
+                  </td>
+                {{else}}
+                  <td class="{{className}}">{{value}}</td>
+                {{/if}}
+              {{/each}}
+            </tr>
+            {{#if description}}
+              <tr class="mm-description-row" data-ceres-description-row{{#unless descriptionFullWidth}} style="display:none"{{/unless}}>
+                <td colspan="{{colspan}}" data-ceres-description-full-width>
+                  {{#if descriptionFullWidth}}
+                    <div class="mm-item-desc" data-ceres-description-content>{{> MarkdownViewer (prepareMarkdownViewerData description) }}</div>
+                  {{/if}}
+                </td>
+              </tr>
+            {{/if}}
+          {{/if}}
+        </tbody>
+      {{/each}}
+      {{#if view.table.footer.show}}
+        <tfoot>
+          <tr class="mm-total-row">
+            <td class="mm-col-serial is-fixed">{{#if view.table.footer.labelInSerial}}{{view.table.footer.label}}{{/if}}</td>
+            {{#if view.table.showThumbnail}}<td class="mm-col-thumbnail"></td>{{/if}}
+            {{#each view.table.footer.cells}}
+              <td class="{{className}}">{{#if isName}}{{view.table.footer.label}}{{else}}{{value}}{{/if}}</td>
+            {{/each}}
+          </tr>
+        </tfoot>
+      {{/if}}
+    </table>
+  </section>
+
+  <section class="mm-settlement{{#unless view.bank.show}} has-no-bank{{/unless}}">
+    {{#if view.bank.show}}
+      <div class="mm-card mm-bank">
+        {{#if view.bank.title}}<h3 class="mm-section-title">{{view.bank.title}}</h3>{{/if}}
+        <div class="mm-bank-body">
+          {{#if view.bank.rows.length}}
+            <table class="mm-kv">
+              <tbody>
+                {{#each view.bank.rows}}
+                  <tr class="mm-kv-{{key}}"><th>{{label}}</th><td>{{value}}</td></tr>
+                {{/each}}
+                {{#if view.bank.upi}}
+                  <tr class="mm-kv-upi"><th>{{view.bank.upi.label}}</th><td>{{view.bank.upi.id}}</td></tr>
+                {{/if}}
+              </tbody>
+            </table>
+          {{else if view.bank.upi}}
+            <table class="mm-kv">
+              <tbody>
+                <tr class="mm-kv-upi"><th>{{view.bank.upi.label}}</th><td>{{view.bank.upi.id}}</td></tr>
+              </tbody>
+            </table>
+          {{/if}}
+          {{#if view.bank.upi.qr}}
+            <img class="mm-upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}}" />
+          {{/if}}
+        </div>
+      </div>
+    {{/if}}
+
+    <div class="mm-card mm-totals">
+      {{> Subtotal (computeSubtotalRows @root.invoice
+                      columns=@root.mapped.columns
+                      businessCurrency=@root.invoice.businessCurrency
+                      businessLocale=@root.invoice.businessLocale) }}
+    </div>
+  </section>
+
+  {{#if view.words}}
+    <p class="mm-words"><span class="mm-words-label">{{view.words.label}}:</span> {{view.words.value}}</p>
+  {{/if}}
+
+  {{#if view.notes.hasAny}}
+    <section class="mm-card mm-notes">
+      {{#if view.notes.notes}}
+        <div class="mm-note-block">
+          {{#if view.notes.notes.title}}<h3 class="mm-section-title">{{view.notes.notes.title}}</h3>{{/if}}
+          <div class="mm-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.notes.body) }}</div>
+        </div>
+      {{/if}}
+      {{#each view.notes.terms}}
+        <div class="mm-note-block">
+          <h3 class="mm-section-title">{{title}}</h3>
+          <ol class="mm-terms">
+            {{#each items}}<li>{{this}}</li>{{/each}}
+          </ol>
+        </div>
+      {{/each}}
+      {{#if view.notes.attachments}}
+        <div class="mm-note-block">
+          {{#if view.notes.attachments.title}}<h3 class="mm-section-title">{{view.notes.attachments.title}}</h3>{{/if}}
+          <ul class="mm-attachments">
+            {{#each view.notes.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{name}}</a></li>{{/each}}
+          </ul>
+        </div>
+      {{/if}}
+    </section>
+  {{/if}}
+
+  {{#if view.hsn.hasRows}}
+    <section class="mm-summary" data-ceres-hsn-summary{{#if view.hsn.isHidden}} style="display:none"{{/if}}>
+      <table class="mm-summary-table">
+        <thead>
+          <tr>
+            <th class="is-text">{{view.hsn.labels.hsn}}</th>
+            <th class="is-num">{{view.hsn.labels.rate}}</th>
+            <th class="is-num">{{view.hsn.labels.taxable}}</th>
+            {{#if view.hsn.showIgst}}
+              <th class="is-num">{{view.hsn.labels.igst}}</th>
+            {{else}}
+              <th class="is-num">{{view.hsn.labels.cgst}}</th>
+              <th class="is-num">{{view.hsn.labels.sgst}}</th>
+            {{/if}}
+            {{#if view.hsn.hasCess}}<th class="is-num">{{view.hsn.labels.cess}}</th>{{/if}}
+            <th class="is-num">{{view.hsn.labels.total}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each view.hsn.rows}}
+            <tr>
+              <td class="is-code">{{hsn}}</td>
+              <td class="is-num">{{rate}}</td>
+              <td class="is-num">{{taxable}}</td>
+              {{#if view.hsn.showIgst}}
+                <td class="is-num">{{igst}}</td>
+              {{else}}
+                <td class="is-num">{{cgst}}</td>
+                <td class="is-num">{{sgst}}</td>
+              {{/if}}
+              {{#if view.hsn.hasCess}}<td class="is-num">{{cess}}</td>{{/if}}
+              <td class="is-num">{{total}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="is-text" colspan="2">{{view.table.footer.label}}</td>
+            <td class="is-num">{{view.hsn.totals.taxable}}</td>
+            {{#if view.hsn.showIgst}}
+              <td class="is-num">{{view.hsn.totals.igst}}</td>
+            {{else}}
+              <td class="is-num">{{view.hsn.totals.cgst}}</td>
+              <td class="is-num">{{view.hsn.totals.sgst}}</td>
+            {{/if}}
+            {{#if view.hsn.hasCess}}<td class="is-num">{{view.hsn.totals.cess}}</td>{{/if}}
+            <td class="is-num">{{view.hsn.totals.total}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+  {{/if}}
+
+  <section class="mm-summary mm-widget-table" data-ceres-tax-summary{{#if view.taxSummaryHidden}} style="display:none"{{/if}}>
+    {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+  </section>
+
+  <section class="mm-summary mm-widget-table" data-ceres-payment-table{{#if view.payments.hidden}} style="display:none"{{/if}}>
+    {{> PaymentTable (computePaymentColumns @root.invoice.allPayments businessCurrency=@root.invoice.businessCurrency currency=@root.invoice.currency)
+        ownerOffset=@root.invoice.ownerOffset
+        heading=view.payments.heading
+    }}
+  </section>
+
+  <section class="mm-signature">
+    <div class="mm-signature-box">
+      {{#if view.signature.forLabel}}<p class="mm-signature-for">{{view.signature.forLabel}}</p>{{/if}}
+      <div class="mm-signature-space">
+        {{#if view.signature.image}}
+          {{> CeresImage src=view.signature.image alt=view.signature.label class="mm-signature-image"}}
+        {{else if view.signature.awaitingDigital}}
+          <div class="mm-signature-placeholder" aria-hidden="true"></div>
+          <p class="mm-signature-banner">Awaiting Digital Signature</p>
+        {{else if view.signature.signedDigital}}
+          <p class="mm-signature-banner">
+            Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+            {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+          </p>
+        {{/if}}
+      </div>
+      {{#if view.signature.label}}<p class="mm-signature-label">{{view.signature.label}}</p>{{/if}}
+    </div>
+  </section>
+
+  {{#if view.footer.rows.length}}
+    <section class="mm-footer-rows">
+      {{#each view.footer.rows}}
+        <p>{{#if label}}<span class="mm-inline-label">{{label}}:</span> {{/if}}{{value}}</p>
+      {{/each}}
+    </section>
+  {{/if}}
+
+  {{#if view.footer.contact}}
+    <p class="mm-contact">
+      {{view.footer.contact.lead}}
+      {{#if view.footer.contact.email}}{{view.footer.contact.emailLabel}} <strong>{{view.footer.contact.email}}</strong>{{/if}}{{#if view.footer.contact.phone}}{{#if view.footer.contact.email}}, {{/if}}{{view.footer.contact.phoneLabel}} <strong>{{view.footer.contact.phone}}</strong>{{/if}}
+    </p>
+  {{/if}}
+
+  {{> RefrensBranding @root.invoice}}
+
+  <div class="no-dibella invoice-letterhead-footer mm-letterhead-footer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}">
+    {{#if @root.invoice.letterHeadFooter}}
+      <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{else}}
+      <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{/if}}
+  </div>
+</div>
+{{/with}}

@@ -1,0 +1,154 @@
+{
+  "copy": "ORIGINAL FOR RECIPIENT",
+  "invoice": {
+    "_id": "fixture-modern-manufacturing",
+    "billType": "INVOICE",
+    "invoiceType": "INVOICE",
+    "status": "UNPAID",
+    "invoiceTitle": "Tax Invoice cum Delivery Challan",
+    "invoiceNumber": "VFC/26-27/0156",
+    "invoiceDate": "2026-09-20T18:30:00.000Z",
+    "ownerOffset": "+05:30",
+    "purchaseOrderNumber": "PO/450789",
+    "currency": "INR",
+    "subUnitLength": 2,
+    "locale": "en-IN",
+    "taxType": "INDIA",
+    "taxName": "GST",
+    "igst": false,
+    "placeOfSupply": "27",
+    "showTotalsRow": true,
+    "billedBy": {
+      "name": "Vertex Foundry Components",
+      "street": "Plot No. 42, Industrial Area, Shivanagar",
+      "city": "Belagavi",
+      "pincode": "590014",
+      "state": "Karnataka",
+      "country": "IN",
+      "gstin": "29AAVFV1234H1Z5",
+      "panNumber": "AAVFV1234H",
+      "phone": "+91 831 298 7000",
+      "email": "sales@vertexfoundry.com"
+    },
+    "billedTo": {
+      "name": "Alpha Engineering Pvt Ltd",
+      "street": "Plot No. A-215, MIDC Industrial Area, Chakan",
+      "city": "Pune",
+      "pincode": "410501",
+      "state": "Maharashtra",
+      "gstState": "27",
+      "country": "IN",
+      "gstin": "27AAACA1234B1Z5",
+      "panNumber": "AAACA1234B"
+    },
+    "shippedTo": {
+      "name": "Alpha Engineering Pvt Ltd – Plant 2",
+      "street": "Gat No. 789, Village Nighoje, Taluka Khed",
+      "city": "Pune",
+      "pincode": "410501",
+      "state": "Maharashtra",
+      "country": "IN",
+      "phone": "+91 20 2745 1100",
+      "email": "plant2@alphaengineering.example"
+    },
+    "customFields": [
+      {
+        "label": "Order Date",
+        "value": "2026-09-14T18:30:00.000Z",
+        "dataType": "date",
+        "params": { "showInInvoice": true }
+      }
+    ],
+    "transportDetails": {
+      "vehicleNumber": "KA01AB1234",
+      "transporter": { "name": "Speedway Logistics Pvt Ltd" }
+    },
+    "irn": { "EwbNo": "2610 9890 1234" },
+    "columns": [
+      { "key": "name", "label": "Description of Goods", "dataType": "text" },
+      { "key": "hsn", "label": "HSN/SAC", "dataType": "text" },
+      { "key": "quantity", "label": "Qty", "dataType": "number" },
+      { "key": "rate", "label": "Rate", "dataType": "number" },
+      { "key": "discount", "label": "Discount", "dataType": "number" },
+      { "key": "amount", "label": "Taxable", "dataType": "number" },
+      { "key": "gstRate", "label": "GST Rate", "dataType": "number", "isHidden": true },
+      { "key": "cgst", "label": "CGST", "dataType": "number" },
+      { "key": "sgst", "label": "SGST", "dataType": "number" },
+      { "key": "igst", "label": "IGST", "dataType": "number" },
+      { "key": "total", "label": "Amount", "dataType": "number" }
+    ],
+    "items": [
+      { "_id": "i1", "name": "Brake Drum (Machined)", "hsn": "8708", "quantity": 10, "unit": "PCS", "rate": 1250, "amount": 12500, "gstRate": 18, "cgst": 1125, "sgst": 1125, "total": 14750, "batchSummary": [{ "batchName": "B260901", "quantity": 10 }] },
+      { "_id": "i2", "name": "Housing – Gear Box", "hsn": "8483", "quantity": 12, "unit": "PCS", "rate": 980, "amount": 11760, "gstRate": 18, "cgst": 1058.4, "sgst": 1058.4, "total": 13876.8, "batchSummary": [{ "batchName": "B260901", "quantity": 12 }] },
+      { "_id": "i3", "name": "Pump Casing", "hsn": "8413", "quantity": 8, "unit": "PCS", "rate": 2450, "amount": 19600, "gstRate": 18, "cgst": 1764, "sgst": 1764, "total": 23128, "batchSummary": [{ "batchName": "B260902", "quantity": 8 }] },
+      { "_id": "i4", "name": "Valve Body", "hsn": "8481", "quantity": 15, "unit": "PCS", "rate": 680, "amount": 10200, "gstRate": 18, "cgst": 918, "sgst": 918, "total": 12036, "batchSummary": [{ "batchName": "B260903", "quantity": 15 }] },
+      { "_id": "i5", "name": "Flange – DN100", "hsn": "7307", "quantity": 20, "unit": "PCS", "rate": 320, "amount": 6400, "gstRate": 18, "cgst": 576, "sgst": 576, "total": 7552, "batchSummary": [{ "batchName": "B260904", "quantity": 20 }] },
+      { "_id": "i6", "name": "Bearing Housing", "hsn": "8483", "quantity": 10, "unit": "PCS", "rate": 1150, "amount": 11325, "gstRate": 18, "cgst": 1019.25, "sgst": 1019.25, "total": 13363.5, "batchSummary": [{ "batchName": "B260905", "quantity": 10 }] },
+      { "_id": "i7", "name": "Coupling Half", "hsn": "8483", "quantity": 16, "unit": "PCS", "rate": 780, "amount": 12480, "gstRate": 18, "cgst": 1123.2, "sgst": 1123.2, "total": 14726.4, "batchSummary": [{ "batchName": "B260906", "quantity": 16 }] },
+      { "_id": "i8", "name": "Impeller", "hsn": "8413", "quantity": 6, "unit": "PCS", "rate": 3200, "amount": 19200, "gstRate": 18, "cgst": 1728, "sgst": 1728, "total": 22656, "batchSummary": [{ "batchName": "B260907", "quantity": 6 }] }
+    ],
+    "hsnSummary": [
+      { "hsn": "7307", "tax": 18, "taxableValue": 6400, "cgst": 576, "sgst": 576, "igst": 0, "utgst": 0 },
+      { "hsn": "8413", "tax": 18, "taxableValue": 38800, "cgst": 3492, "sgst": 3492, "igst": 0, "utgst": 0 },
+      { "hsn": "8481", "tax": 18, "taxableValue": 10200, "cgst": 918, "sgst": 918, "igst": 0, "utgst": 0 },
+      { "hsn": "8483", "tax": 18, "taxableValue": 35565, "cgst": 3200.85, "sgst": 3200.85, "igst": 0, "utgst": 0 },
+      { "hsn": "8708", "tax": 18, "taxableValue": 12500, "cgst": 1125, "sgst": 1125, "igst": 0, "utgst": 0 }
+    ],
+    "subTotal": 103465,
+    "finalTotal": {
+      "subTotal": 103465,
+      "amount": 103465,
+      "discount": 0,
+      "cgst": 9311.85,
+      "sgst": 9311.85,
+      "igst": 0,
+      "total": 122088.7
+    },
+    "customLabels": {
+      "invoiceNumber": "Invoice No.",
+      "invoiceDate": "Invoice Date",
+      "purchaseOrderNumber": "Order No.",
+      "billedTo": "Bill To (Buyer)",
+      "shippedTo": "Ship To (Consignee)",
+      "subTotal": "Total Taxable Value (Rs.)",
+      "total": "Grand Total (Rs.)",
+      "totalInWords": "Amount in Words",
+      "totalInWordsValue": "INR One Lakh Twenty-Two Thousand Eighty-Eight and Seventy Paise Only",
+      "notes": "Declaration",
+      "signature": "Authorised Signatory"
+    },
+    "notes": "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct. The goods are of Indian origin and comply with applicable quality standards.",
+    "terms": [
+      {
+        "label": "Terms & Conditions",
+        "terms": [
+          "Goods once sold will not be taken back.",
+          "Payment within 30 days from date of invoice.",
+          "Interest @ 18% p.a. on delayed payments.",
+          "Subject to Belagavi (Karnataka) jurisdiction only."
+        ]
+      }
+    ],
+    "bankAccount": {
+      "name": "Vertex Foundry Components",
+      "bank": "State Bank of India",
+      "accountNo": "41234567890",
+      "ifsc": "SBIN0041234",
+      "customLabels": { "accountHolderName": "Beneficiary Name" }
+    },
+    "paymentOptions": { "accountTransfer": true },
+    "advanceOptions": {
+      "hsnView": "SPLIT",
+      "unitColumn": "SEPARATE",
+      "showHsnSummary": true,
+      "taxSummaryView": "DEFAULT"
+    },
+    "owner": {
+      "_id": "fixture-owner",
+      "country": "IN",
+      "currency": "INR",
+      "locale": "en-IN",
+      "configuration": { "experimental": { "hideCurrencyCode": true } }
+    }
+  }
+}
