@@ -1,0 +1,1109 @@
+:root {
+  --sri-ink: var(--ceres-primary-color, #171717);
+  --sri-rule: var(--ceres-secondary-color, #555);
+
+  /* Table grid lines: the theme rule colour softened toward the paper, so
+     dense item/summary grids do not print as heavy black lines. */
+  --sri-table-rule: color-mix(in srgb, var(--sri-rule) 40%, var(--sri-paper));
+  --sri-paper: var(--ceres-primary-background, #fff);
+  --sri-panel: var(--ceres-secondary-background, #fff);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 100%;
+  margin: 0;
+  background: var(--sri-paper);
+  color: var(--sri-ink);
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sri-lankan-invoice {
+  width: min(100%, 794px);
+  margin: 0 auto;
+  padding: 16px 13px 26px;
+  font-size: 0.8125em;
+  line-height: 1.3;
+
+  /* One spacing step between every boxed section, across and down. */
+  --sri-section-gap: 10px;
+}
+
+.sri-lankan-invoice * {
+  font-size: 1em !important;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif) !important;
+}
+
+/* Lydia maps the system Body Font to --subtitle-font and Heading Font to
+   --title-font. Keep document and table headings on the selected heading font
+   while every other element inherits the selected body font above. */
+.sri-lankan-invoice h1,
+.sri-lankan-invoice h2,
+.sri-lankan-invoice h3,
+.sri-lankan-invoice .line-items thead th,
+.sri-lankan-invoice .ceres-table thead th,
+.sri-lankan-invoice .ceres-table-heading {
+  font-family: var(
+    --title-font,
+    var(--subtitle-font, Arial, Helvetica, sans-serif)
+  ) !important;
+}
+
+.sri-money {
+  display: inline;
+  white-space: nowrap;
+}
+
+/* Keep currency glyphs visible when the Lydia-selected font does not contain
+   symbols such as INR's rupee sign. */
+.sri-lankan-invoice .sri-currency-symbol {
+  font-family: Arial, "Arial Unicode MS", "Noto Sans", "DejaVu Sans", sans-serif !important;
+}
+
+.invoice-letterhead,
+.invoice-letterhead-footer {
+  width: 100%;
+}
+
+.invoice-letterhead img,
+.invoice-letterhead-footer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.invoice-letterhead.is-empty,
+.invoice-letterhead-footer.is-empty {
+  display: none;
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- renderer-owned mode class */
+body.isDibella .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+  display: none !important;
+}
+
+/* Layout-only table: its <thead>/<tfoot> carry the every-page letterhead and
+   footer, which the browser repeats on each printed page. */
+.page-frame {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.page-frame > thead > tr > td,
+.page-frame > tbody > tr > td,
+.page-frame > tfoot > tr > td {
+  padding: 0;
+  vertical-align: top;
+}
+
+/* On screen the real footer follows the frame; its print spacer copy is not
+   needed. */
+.page-footer-spacer {
+  display: none;
+}
+
+/* "Hide footer" print setting. */
+.sri-lankan-invoice.is-footer-hidden .template-footer {
+  display: none !important;
+}
+
+.invoice-title-wrap {
+  position: relative;
+  padding-bottom: 25px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.invoice-title-wrap h1 {
+  margin: 0;
+  border: 1px solid var(--sri-rule);
+  padding: 6px 13px 5px;
+  font-size: 1.5385em !important;
+  line-height: 1;
+  font-weight: 700;
+  font-family: var(
+    --title-font,
+    var(--subtitle-font, Arial, Helvetica, sans-serif)
+  ) !important;
+  text-transform: uppercase;
+}
+
+.title-widgets {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.two-column-row,
+.party-grid,
+.shipping-grid,
+.payment-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sri-section-gap);
+}
+
+.two-column-row > div,
+.additional-info,
+.footer-field,
+.detail-panel,
+.content-panel {
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 5px 9px;
+}
+
+.party-grid {
+  margin-top: var(--sri-section-gap);
+}
+
+.party-box {
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 5px 9px;
+}
+
+.party-box p,
+.detail-panel p {
+  margin: 0 0 5px;
+}
+
+.address-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px;
+  margin-bottom: 7px;
+}
+
+.party-detail {
+  overflow-wrap: break-word;
+}
+
+.additional-info,
+.document-details,
+.shipping-grid,
+.detail-panel,
+.content-panel,
+.payment-details-grid,
+[data-ceres-payment-table],
+[data-ceres-tax-summary],
+[data-ceres-hsn-summary],
+[data-ceres-batch-summary] {
+  margin-top: var(--sri-section-gap);
+}
+
+.summary-section {
+  border: 0;
+  background: var(--sri-panel);
+}
+
+.summary-section > h2,
+.summary-section .ceres-table-heading {
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid var(--sri-rule);
+  font-weight: 700;
+}
+
+.summary-section .ceres-table-section {
+  margin: 0 !important;
+}
+
+.summary-section .ceres-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-section .ceres-table th,
+.summary-section .ceres-table td {
+  padding: 5px;
+  border: 1px solid var(--sri-table-rule);
+}
+
+.summary-section .ceres-table thead:first-child tr:first-child > * {
+  border-top: 0;
+}
+
+.batch-summary-table td.number-cell {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.contact-details-bar {
+  margin-top: 10px;
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 8px;
+  text-align: center;
+}
+
+.contact-details-bar p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.contact-details-bar strong {
+  white-space: nowrap;
+}
+
+.attachment-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+  margin: 5px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attachment-list li,
+.attachment-list a {
+  min-width: 0;
+}
+
+.attachment-list a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+}
+
+.attachment-number {
+  flex: 0 0 auto;
+  min-width: 20px;
+  text-align: end;
+  text-decoration: none;
+}
+
+.attachment-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closing-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  margin-top: 6px;
+}
+
+.closing-info-grid > .additional-info,
+.closing-info-grid > .attachments-panel {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.closing-info-grid > :only-child {
+  grid-column: 1 / -1;
+}
+
+.additional-info {
+  padding-block: 10px;
+}
+
+.information-entry {
+  display: block;
+  margin-top: 3px;
+}
+
+.label {
+  font-weight: 400;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: 3px 14px;
+}
+
+.detail-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px;
+  overflow-wrap: break-word;
+}
+
+.document-details.detail-grid {
+  gap: var(--sri-section-gap);
+}
+
+.document-details .detail-row {
+  border: 1px solid var(--sri-rule);
+  background: var(--sri-panel);
+  padding: 5px 9px;
+}
+
+.document-details .detail-row:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.shipping-grid.is-single {
+  grid-template-columns: 1fr;
+}
+
+.detail-panel h2,
+.content-panel h2,
+.content-panel h3 {
+  margin: 0 0 6px;
+  font-size: 1em;
+}
+
+.transport-panel h2 {
+  font-weight: 400;
+}
+
+.content-panel ol {
+  margin: 4px 0 0;
+  margin-inline-start: 20px;
+  padding: 0;
+}
+
+.content-panel li,
+.content-panel li::marker,
+.sri-lankan-invoice .toastui-editor-contents ol > li::before {
+  color: var(--sri-ink) !important;
+}
+
+.sri-lankan-invoice .toastui-editor-contents ul > li::before {
+  background-color: var(--sri-ink) !important;
+}
+
+.compliance-strip:empty,
+.qr-box.is-empty {
+  display: none;
+}
+
+.irn-value {
+  margin: 6px 0;
+  font-size: 1em;
+  overflow-wrap: anywhere;
+}
+
+.qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qr-box img,
+.compliance-qr {
+  display: block;
+  width: 82px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.upi-qr {
+  display: block;
+  width: 100px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.items-table-wrap {
+  width: 100%;
+  margin-top: var(--sri-section-gap);
+  overflow-x: auto;
+}
+
+.line-items {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.line-items th,
+.line-items td {
+  border: 1px solid var(--sri-table-rule);
+  padding: 6px 8px;
+  line-height: 1.4;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.line-items thead th {
+  height: auto;
+  text-align: center;
+  vertical-align: middle;
+  font-weight: 700;
+  font-size: 1em;
+  line-height: 1.25;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-reference {
+  width: 9%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-item {
+  width: 28%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-qty,
+.items-table-wrap[data-column-count="7"] .line-items .col-gst-rate {
+  width: 9%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-rate {
+  width: 13%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-amount {
+  width: 17%;
+}
+
+.items-table-wrap[data-column-count="7"] .line-items .col-total {
+  width: 15%;
+}
+
+.line-items .col-reference {
+  width: 15%;
+}
+
+.line-items .col-item {
+  width: 38%;
+}
+
+.line-items .col-qty {
+  width: 14%;
+}
+
+.line-items .col-rate {
+  width: 14%;
+}
+
+.line-items .col-amount {
+  width: 19%;
+}
+
+/* Dense tables let compact columns hug their rendered content. The item name
+   receives the remaining width; its long description uses a separate row. */
+.items-table-wrap.is-dense .line-items {
+  table-layout: auto;
+}
+
+.items-table-wrap.is-dense .line-items col {
+  width: 1%;
+}
+
+.items-table-wrap.is-dense .line-items col.col-item {
+  width: auto;
+}
+
+.items-table-wrap.is-dense .line-items th:not(.col-item),
+.items-table-wrap.is-dense .line-items .item-row > td:not(.col-item) {
+  width: 1%;
+}
+
+.items-table-wrap.is-dense .line-items th,
+.items-table-wrap.is-dense .line-items td {
+  width: auto;
+  padding-right: 6px;
+  padding-left: 6px;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+.items-table-wrap.is-dense .line-items td * {
+  font-size: 1em !important;
+}
+
+.items-table-wrap.is-dense .line-items thead th {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.items-table-wrap.is-dense .line-items td.number-cell {
+  min-width: 0;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.line-items .number-cell {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
+}
+
+.line-items thead th.number-cell {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.line-items thead th.col-index {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* One authoritative alignment system for the line-item table. Generic
+   number/text utility classes must not override these column positions. */
+.line-items thead th,
+.line-items .item-row > td {
+  text-align: center !important;
+}
+
+.line-items thead th {
+  vertical-align: middle;
+}
+
+.line-items .item-row > td {
+  vertical-align: top;
+}
+
+.line-items thead th.col-item,
+.line-items .item-row > td.col-item {
+  text-align: start !important;
+}
+
+.line-items thead th:last-child,
+.line-items .item-row > td:last-child {
+  text-align: end !important;
+}
+
+.item-code,
+.item-description {
+  display: block;
+  margin-top: 3px;
+  font-size: 1em;
+  font-weight: 400;
+}
+
+.item-description-row > td {
+  padding: 8px 5px;
+  text-align: start !important;
+  vertical-align: top;
+}
+
+.item-description-row .item-description {
+  margin-top: 0;
+}
+
+.item-description .markdown-viewer-widget,
+.item-description .toastui-editor-contents,
+.item-description .toastui-editor-contents p,
+.item-description p {
+  margin: 0 !important;
+  padding: 0;
+  line-height: 1.3;
+}
+
+.item-description .toastui-editor-contents ul,
+.item-description .toastui-editor-contents ol,
+.item-description ul,
+.item-description ol {
+  margin: 0 !important;
+  padding-inline-start: 16px;
+}
+
+.item-description .toastui-editor-contents li,
+.item-description li {
+  margin: 0 !important;
+  padding: 0;
+  line-height: 1.3;
+}
+
+.item-description p + p,
+.item-description li + li {
+  margin-top: 2px !important;
+}
+
+.item-description li,
+.item-description li::marker {
+  color: var(--sri-ink) !important;
+}
+
+.ceres-image-gallery {
+  margin-top: 4px;
+}
+
+.total-row th,
+.total-row td {
+  padding: 10px 5px;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.items-total-row td {
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.line-items .group-subtotal-row > td {
+  font-weight: 700;
+}
+
+.total-row th {
+  text-align: start !important;
+}
+
+.total-row .total-value {
+  text-align: end !important;
+  white-space: nowrap;
+  font-weight: 700;
+  font-family: var(--subtitle-font, Arial, Helvetica, sans-serif);
+}
+
+.footer-field {
+  margin-top: 6px;
+}
+
+.payment-field {
+  margin-top: 7px;
+}
+
+.sri-lankan-invoice .ceres-table-section {
+  margin: 9px 0 0;
+  overflow-x: auto;
+}
+
+.sri-lankan-invoice .ceres-table-heading {
+  margin: 0 0 5px;
+  color: var(--sri-ink);
+  font-size: 1em;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.sri-lankan-invoice .ceres-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1em;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table th,
+.sri-lankan-invoice .ceres-table-section .ceres-table td {
+  border: 1px solid var(--sri-table-rule);
+  padding: 4px 5px;
+  background: transparent;
+  color: var(--sri-ink);
+  line-height: 1.2;
+  vertical-align: top;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table thead th {
+  background: transparent;
+  color: var(--sri-ink);
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table tbody tr:nth-child(even) {
+  background: transparent;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table tfoot td {
+  border-top: 1px solid var(--sri-table-rule);
+  font-weight: 400;
+}
+
+.sri-lankan-invoice .ceres-table-section .ceres-table-words {
+  color: var(--sri-ink);
+  font-size: 1em;
+}
+
+.nowrap {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.signature-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  break-inside: avoid;
+}
+
+.signature-box {
+  width: 230px;
+  padding-block: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+}
+
+.signature-image {
+  max-width: 150px;
+  height: auto;
+  object-fit: contain;
+}
+
+.ceres-continuation-header,
+.ceres-page-numbering {
+  display: none;
+}
+
+@media (width <= 560px) {
+  .two-column-row,
+  .party-grid,
+  .shipping-grid,
+  .payment-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  html,
+  body,
+  [id="documentOutput"] {
+    width: auto;
+    height: auto;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+    print-color-adjust: exact;
+  }
+
+  html,
+  body {
+    max-height: none !important;
+  }
+
+  [id="ceresManifestBadge"],
+  [id="ceresExampleModal"] {
+    display: none !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Print text scale (pdfOptions.textScale) scales text only; every size in
+     the template is em-relative to this one. */
+  .sri-lankan-invoice {
+    font-size: calc(0.8125em * var(--sri-text-scale, 1));
+  }
+
+  /* An every-page letterhead/footer repeats on each printed page; the gap to
+     the content lives in their cells so every page gets the same spacing. */
+  .page-frame-header > tr > td:has(> .invoice-letterhead:not(.is-empty)) {
+    padding-bottom: var(--sri-section-gap);
+  }
+
+  .sri-lankan-invoice:not(.is-footer-hidden)
+    .page-frame-footer
+    > tr
+    > td:has(> .invoice-letterhead-footer:not(.is-empty)) {
+    padding-top: var(--sri-section-gap);
+  }
+
+  /* Every-page footer: the real one is fixed to the foot of each printed
+     page, the last page included; the invisible copy in the repeating <tfoot>
+     keeps its height free so content never runs under it. */
+  .invoice-letterhead-footer.page-footer-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  .invoice-letterhead-footer.page-footer-spacer:not(.is-empty),
+  .invoice-letterhead-footer.page-footer-spacer:not(.is-empty) img {
+    visibility: hidden !important;
+  }
+
+  .invoice-letterhead-footer.page-footer-spacer.is-empty {
+    display: none;
+  }
+
+  /* Lydia's long PDF is one continuous canvas: the footer simply ends the
+     document there, and needs no reserved space on each page. */
+  body.is-sri-lydia-pageless-print
+    .invoice-letterhead-footer.page-footer-fixed {
+    position: static;
+  }
+
+  body.is-sri-lydia-pageless-print .page-frame-footer {
+    display: none;
+  }
+
+  .sri-lankan-invoice {
+    width: 100%;
+    max-width: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .two-column-row,
+  .party-grid,
+  .shipping-grid,
+  .payment-details-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .sri-lankan-invoice,
+  .sri-lankan-invoice p,
+  .sri-lankan-invoice li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .items-table-wrap {
+    margin-top: var(--sri-section-gap);
+    overflow: visible;
+  }
+
+  .line-items thead {
+    display: table-header-group;
+  }
+
+  .line-items tfoot,
+  .ceres-table tfoot {
+    display: table-footer-group;
+  }
+
+  /* Chromium can drop a collapsed top border when a table header repeats on a
+     new PDF page. This cap ensures every continuation begins with one rule. */
+  .line-items thead th {
+    background-image: linear-gradient(
+      var(--sri-table-rule),
+      var(--sri-table-rule)
+    );
+    background-position: top left;
+    background-repeat: no-repeat;
+    background-size: 100% 0.5px;
+  }
+
+  .line-items tbody tr,
+  .line-items .total-row,
+  .ceres-table tr {
+    break-inside: avoid-page;
+  }
+
+  .line-items .item-row {
+    break-inside: avoid-page;
+  }
+
+  .line-items .item-row:has(+ .item-description-row) {
+    break-after: avoid-page;
+  }
+
+  .line-items .item-description-row {
+    break-before: avoid-page;
+    break-inside: auto;
+  }
+
+  .item-description,
+  .item-description .markdown-viewer-widget,
+  .item-description .toastui-editor-contents {
+    overflow: visible;
+  }
+
+  .item-description table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .item-description table thead,
+  .ceres-table thead {
+    display: table-header-group;
+  }
+
+  .item-description table tr {
+    break-inside: avoid-page;
+  }
+
+  .line-items td.number-cell,
+  .line-items td.col-index,
+  .line-items td.col-qty,
+  .line-items td.col-rate,
+  .line-items td.col-amount,
+  .line-items .total-value,
+  .nowrap {
+    overflow-wrap: normal;
+    word-break: normal;
+    white-space: nowrap;
+  }
+
+  .items-table-wrap.is-dense .line-items td.number-cell,
+  .items-table-wrap.is-dense .line-items td.col-qty,
+  .items-table-wrap.is-dense .line-items td.col-rate,
+  .items-table-wrap.is-dense .line-items td.col-amount,
+  .items-table-wrap.is-dense .line-items td.col-total {
+    min-width: 0;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .line-items th.col-item,
+  .line-items td.col-item,
+  .line-items td.col-item p,
+  .line-items td.col-item span,
+  .line-items td.col-item div,
+  .party-detail,
+  .detail-row {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .ceres-table-section,
+  .summary-table-wrap {
+    overflow: visible;
+  }
+
+  .party-grid,
+  .invoice-meta,
+  .supply-meta,
+  .document-details,
+  .additional-info,
+  .shipping-grid,
+  .detail-panel,
+  .footer-field,
+  .payment-details-grid,
+  .signature-section,
+  .invoice-letterhead,
+  .invoice-letterhead-footer,
+  .compliance-strip,
+  .sri-lankan-invoice > .ceres-table-section,
+  [data-ceres-tax-summary],
+  [data-ceres-hsn-summary],
+  [data-ceres-contact-details],
+  .refrens-branding-widget {
+    break-inside: avoid;
+  }
+
+  [data-ceres-attachments],
+  [data-ceres-batch-summary],
+  [data-ceres-payment-table],
+  .closing-info-grid {
+    break-inside: auto;
+  }
+
+  [data-ceres-attachments] h2,
+  [data-ceres-batch-summary] .ceres-table-heading,
+  [data-ceres-payment-table] .ceres-table-heading {
+    break-after: avoid;
+  }
+
+  .attachment-list li {
+    break-inside: avoid-page;
+  }
+
+  .invoice-letterhead:not(.is-empty),
+  .invoice-letterhead-footer:not(.is-empty),
+  .invoice-letterhead:not(.is-empty) img,
+  .invoice-letterhead-footer:not(.is-empty) img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-width: 100%;
+    break-inside: avoid-page;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .invoice-letterhead-footer:not(.is-empty) {
+    break-before: avoid-page;
+  }
+
+  .content-panel h2,
+  .content-panel h3,
+  .ceres-table-heading {
+    break-after: avoid;
+  }
+
+  /* Notes, terms, and their Markdown content may grow beyond one sheet. They
+     must fragment naturally instead of moving as an oversized block. */
+  .content-panel,
+  .notes-panel,
+  .terms-panel,
+  .content-panel .markdown-viewer-widget,
+  .content-panel .toastui-editor-contents {
+    break-inside: auto;
+  }
+
+  .content-panel p,
+  .content-panel li,
+  .item-description p,
+  .item-description li {
+    orphans: 2;
+    widows: 2;
+  }
+
+  .sri-lankan-invoice img {
+    max-width: 100%;
+  }
+
+  .sri-lankan-invoice.is-measuring-print-fit .line-items {
+    width: 100%;
+    table-layout: auto !important;
+    font-size: 1em !important;
+  }
+
+  .sri-lankan-invoice.is-measuring-print-fit .line-items thead th,
+  .sri-lankan-invoice.is-measuring-print-fit .line-items td:not(.col-item) {
+    overflow-wrap: normal !important;
+    white-space: nowrap !important;
+  }
+
+  /* Scale the table once; descendants inherit 1em from it. Applying the
+     factor to every descendant compounded it at each nesting level. */
+  .sri-lankan-invoice.is-compact-print-table .line-items {
+    font-size: 0.8462em !important;
+  }
+
+  .sri-lankan-invoice.is-compact-print-table .line-items {
+    table-layout: auto;
+  }
+
+  .sri-lankan-invoice.is-compact-print-table .line-items col {
+    width: 1%;
+  }
+
+  .sri-lankan-invoice.is-compact-print-table .line-items col.col-item {
+    width: auto;
+  }
+
+  .sri-lankan-invoice.is-compact-print-table .line-items th,
+  .sri-lankan-invoice.is-compact-print-table .line-items td {
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  /* Lydia's PDF mode uses one continuous canvas and owns the recurring
+     header/footer gap, so page-fragment caps must not be added there. */
+  body.is-sri-lydia-pageless-print .items-table-wrap {
+    margin-top: var(--sri-section-gap);
+  }
+
+  body.is-sri-lydia-pageless-print .line-items thead th {
+    background-image: none;
+  }
+}
