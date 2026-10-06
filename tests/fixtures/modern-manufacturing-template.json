@@ -51,18 +51,7 @@
       "phone": "+91 20 2745 1100",
       "email": "plant2@alphaengineering.example"
     },
-    "customFields": [
-      {
-        "label": "Order Date",
-        "value": "2026-09-14T18:30:00.000Z",
-        "dataType": "date",
-        "params": { "showInInvoice": true }
-      }
-    ],
-    "transportDetails": {
-      "vehicleNumber": "KA01AB1234",
-      "transporter": { "name": "Speedway Logistics Pvt Ltd" }
-    },
+    "transportDetails": { "vehicleNumber": "KA01AB1234", "transporter": { "name": "Speedway Logistics Pvt Ltd" } },
     "irn": { "EwbNo": "2610 9890 1234" },
     "columns": [
       { "key": "name", "label": "Description of Goods", "dataType": "text" },
@@ -102,7 +91,8 @@
       "cgst": 9311.85,
       "sgst": 9311.85,
       "igst": 0,
-      "total": 122088.7
+      "total": 122088.7,
+      "totalRoundOff": 0
     },
     "customLabels": {
       "invoiceNumber": "Invoice No.",
@@ -110,12 +100,15 @@
       "purchaseOrderNumber": "Order No.",
       "billedTo": "Bill To (Buyer)",
       "shippedTo": "Ship To (Consignee)",
-      "subTotal": "Total Taxable Value (Rs.)",
       "total": "Grand Total (Rs.)",
       "totalInWords": "Amount in Words",
       "totalInWordsValue": "INR One Lakh Twenty-Two Thousand Eighty-Eight and Seventy Paise Only",
-      "notes": "Declaration",
-      "signature": "Authorised Signatory"
+      "notes": "Notes",
+      "signature": "Authorised Signatory",
+      "amount": "Total Taxable Value (Rs.)",
+      "cgst": "CGST (Rs.)",
+      "sgst": "SGST (Rs.)",
+      "roundOff": "Round Off (Rs.)"
     },
     "notes": "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct. The goods are of Indian origin and comply with applicable quality standards.",
     "terms": [
@@ -134,7 +127,7 @@
       "bank": "State Bank of India",
       "accountNo": "41234567890",
       "ifsc": "SBIN0041234",
-      "customLabels": { "accountHolderName": "Beneficiary Name" }
+      "customLabels": { "accountHolderName": "Beneficiary Name", "ifsc": "IFSC Code" }
     },
     "paymentOptions": { "accountTransfer": true },
     "advanceOptions": {
@@ -149,6 +142,21 @@
       "currency": "INR",
       "locale": "en-IN",
       "configuration": { "experimental": { "hideCurrencyCode": true } }
-    }
+    },
+    "customHeaders": [
+      { "label": "Order Date", "value": "15-Sep-2026" }
+    ],
+    "customFields": [
+      { "label": "Payment Terms", "value": "Net 30 days", "dataType": "text", "params": { "showInInvoice": true } },
+      { "label": "Delivery Terms", "value": "Ex-works Belagavi", "dataType": "text", "params": { "showInInvoice": true } },
+      { "label": "PO Reference", "value": "PO/450789 dated 15-Sep-2026", "dataType": "text", "params": { "showInInvoice": true } },
+      { "label": "Inspection", "value": "TC-0921 attached", "dataType": "text", "params": { "showInInvoice": true } },
+      { "label": "Sales Contact", "value": "Rohan Kulkarni", "dataType": "text", "params": { "showInInvoice": true } }
+    ],
+    "attachments": [
+      "https://cdn.example/files/Test%20certificate%20TC-0921.pdf",
+      "https://cdn.example/files/Packing%20list%20PL-0156.pdf",
+      "https://cdn.example/files/Drawing%20VF-2231%20Rev%20C.pdf"
+    ]
   }
 }

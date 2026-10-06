@@ -6,3 +6,7 @@ public/
 .DS_Store
 webpack.temp.config.js
 coverage/
+
+# Playwright
+/test-results/
+/playwright-report/
