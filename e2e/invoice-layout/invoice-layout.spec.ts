@@ -413,19 +413,20 @@ test("D1: tokens, typography, spacing and column widths match Figma", async ({
   ).toBe("rgb(26, 33, 48)");
 
   // K10 typography (size / weight)
+  // CHANGED (user request, 2026-10-07): body text 12 px → 13 px.
   const type: [string, string, string][] = [
     ['[data-section="header"] [data-role="company-name"]', "18px", "600"],
     ['[data-section="banner"] [data-role="title"]', "14px", "700"],
-    ['[data-testid="items-header"] [data-col="desc"]', "12px", "700"],
-    ['[data-testid="item-row"] [data-col="qty"]', "12px", "400"],
-    ['[data-testid="item-row"] [data-col="amt"]', "12px", "700"],
+    ['[data-testid="items-header"] [data-col="desc"]', "13px", "700"],
+    ['[data-testid="item-row"] [data-col="qty"]', "13px", "400"],
+    ['[data-testid="item-row"] [data-col="amt"]', "13px", "700"],
     ['[data-section="totals"] [data-role="grand-total"]', "18px", "800"],
-    // CHANGED (user request, 2026-10-06): section titles 10 px → 12 px.
-    ['[data-section="terms"] [data-role="title"]', "12px", "700"],
-    ['[data-section="parties"] [data-role="address"]', "12px", "400"],
-    ['[data-section="banner"] [data-role="tag"]', "12px", "600"],
-    ['[data-section="additional"] [data-role="ai-label"]', "12px", "400"],
-    ['[data-section="additional"] [data-role="ai-value"]', "12px", "600"],
+    // CHANGED (user request): section titles 10 px → 12 px → 13 px.
+    ['[data-section="terms"] [data-role="title"]', "13px", "700"],
+    ['[data-section="parties"] [data-role="address"]', "13px", "400"],
+    ['[data-section="banner"] [data-role="tag"]', "13px", "600"],
+    ['[data-section="additional"] [data-role="ai-label"]', "13px", "400"],
+    ['[data-section="additional"] [data-role="ai-value"]', "13px", "600"],
   ];
   for (const [sel, size, weight] of type) {
     expect(await style(sel, "font-size"), `size ${sel}`).toBe(size);
@@ -456,21 +457,22 @@ test("D1: tokens, typography, spacing and column widths match Figma", async ({
 
   // Figma column widths (±1 px)
   // Sr and Amount include the 8 px row padding at each end of the row
-  // CHANGED (tx 80 → 86): the Total row is bold 12 px (spec §3, the 12 px choice), where
-  // "1,03,465.00" is 71.4 px wide; Figma's 80 px fits it only at 11 px. By the spec's §5 rule
-  // ("a column grows past its starting width only when its widest value, including the Total
-  // row, needs it") Taxable grows to fit it.
+  // CHANGED (batch 70 → 74, qty 40 → 42, rate 75 → 82, tx 80 → 101, c / s 75 → 79,
+  // amt 98 → 107): the table text is 13 px and money prints with its currency symbol
+  // ("₹1,22,088.70"), both user requests; Figma draws 11 px figures without a symbol. By the
+  // spec's §5 rule ("a column grows past its starting width only when its widest value,
+  // including the Total row, needs it") those columns grow to fit.
   const expected: Record<string, number> = {
     sr: 38,
-    batch: 70,
+    batch: 74,
     hsn: 70,
-    qty: 40,
+    qty: 42,
     unit: 45,
-    rate: 75,
-    tx: 86,
-    c: 75,
-    s: 75,
-    amt: 98,
+    rate: 82,
+    tx: 101,
+    c: 79,
+    s: 79,
+    amt: 107,
   };
   for (const { col, width } of (await measure(page)).cols) {
     if (expected[col])

@@ -13,7 +13,7 @@
   data-role / data-col are the spec's test hooks (section 11).
 --}}
 {{#with (mmView @root) as |view|}}
-<div class="mm-doc" data-testid="invoice-root" style="--mm-print-zoom: {{view.print.zoom}}; --mm-text-scale: {{view.print.textScale}};{{#if view.theme}} --mm-theme: {{view.theme.accent}}; --mm-theme-tint: {{view.theme.tint}};{{/if}}">
+<div class="mm-doc" data-testid="invoice-root" style="--mm-text-scale: {{view.print.textScale}};{{#if view.theme}} --mm-theme: {{view.theme.accent}}; --mm-theme-tint: {{view.theme.tint}};{{/if}}">
   <div class="no-dibella invoice-letterhead mm-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}">
     {{#if @root.invoice.letterHead}}
       <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
@@ -46,10 +46,9 @@
           <div class="mm-page-body">
           <header class="mm-header" data-testid="section" data-section="header">
             <div class="mm-brand">
+              {{!-- No logo, no stand-in: the company name leads the header (user request). --}}
               {{#if view.brand.logo}}
                 <div class="mm-logo">{{> CeresImage src=view.brand.logo alt=view.brand.name class="mm-logo-image"}}</div>
-              {{else if view.brand.initials}}
-                <div class="mm-monogram" aria-hidden="true">{{view.brand.initials}}</div>
               {{/if}}
               {{#if view.brand.name}}<h1 class="mm-brand-name" data-role="company-name">{{view.brand.name}}</h1>{{/if}}
             </div>
@@ -57,11 +56,16 @@
             <div class="mm-header-end">
               {{#if view.brand.seller}}
                 <div class="mm-seller">
-                  {{#if view.brand.seller.address}}<p class="mm-seller-address">{{view.brand.seller.address}}</p>{{/if}}
+                  {{#if view.brand.seller.address}}
+                    <div class="mm-seller-address">
+                      {{#if view.brand.seller.street}}<p class="mm-seller-street">{{view.brand.seller.street}}</p>{{/if}}
+                      {{#if view.brand.seller.region}}<p class="mm-seller-region">{{view.brand.seller.region}}</p>{{/if}}
+                    </div>
+                  {{/if}}
                   {{#if view.brand.seller.hasIdLines}}
                     <div class="mm-id-grid">
                       {{#each view.brand.seller.lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
+                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{else if isEmail}} class="mm-email"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
                       {{/each}}
                     </div>
                   {{/if}}
@@ -100,11 +104,10 @@
                   {{#if title}}<h3 class="mm-label mm-party-label">{{title}}</h3>{{/if}}
                   <p class="mm-party-name">{{name}}</p>
                   {{#if address}}<p class="mm-party-address" data-role="address">{{address}}</p>{{/if}}
-                  {{#if contactPerson}}<p class="mm-party-address">{{contactPerson}}</p>{{/if}}
                   {{#if hasIdLines}}
                     <div class="mm-id-grid">
                       {{#each lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
+                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{else if isEmail}} class="mm-email"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
                       {{/each}}
                     </div>
                   {{/if}}
@@ -123,7 +126,7 @@
                   {{#if view.shippedFrom.hasIdLines}}
                     <div class="mm-id-grid">
                       {{#each view.shippedFrom.lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
+                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{else if isEmail}} class="mm-email"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
                       {{/each}}
                     </div>
                   {{/if}}
@@ -182,7 +185,7 @@
 
           <section class="mm-items-section" data-testid="section" data-section="items">
             <div class="mm-items-scroll" data-testid="items-scroll">
-              <table class="mm-items{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}" data-testid="items-table">
+              <table class="mm-items{{#if view.print.compactTable}} is-print-compact{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}" data-testid="items-table">
                 <thead>
                   <tr data-testid="items-header">
                     <th class="mm-col-serial is-fixed" data-col="sr" style="width: {{view.table.serialWidth}}px">{{view.table.serialLabel}}</th>
@@ -414,7 +417,7 @@
                   <div class="mm-note-group">
                     {{#if view.infoRow.attachments.title}}<h3 class="mm-section-title" data-role="title">{{view.infoRow.attachments.title}}</h3>{{/if}}
                     <ol class="mm-attachments">
-                      {{#each view.infoRow.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{name}}</a></li>{{/each}}
+                      {{#each view.infoRow.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
                     </ol>
                   </div>
                 </section>
