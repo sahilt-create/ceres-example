@@ -31,6 +31,17 @@
   --mm-signature-muted: #64748b;
   --mm-on-accent: #fff;
   --mm-font: var(--subtitle-font, "Inter", sans-serif);
+
+  /*
+   * Type scale (design-to-template §4a): six steps, 13 px base pinned on screen and in print,
+   * nothing below the 10 px floor. Print overrides below compress only the steps above base.
+   */
+  --mm-font-size-xs: 10px;
+  --mm-font-size-s: 11px;
+  --mm-font-size-base: 13px;
+  --mm-font-size-m: 14px;
+  --mm-font-size-lg: 18px;
+  --mm-font-size-xl: 20px;
   --mm-title-font: var(--title-font, var(--mm-font));
 
   display: flex;
@@ -40,15 +51,17 @@
   /*
    * The host body is a flex row, so #documentOutput shrinks to its content: a width taken
    * from the viewport (the template's iframe) keeps a wide table from widening the page.
+   * No padding of its own: Lydia frames the page with the business's margins (pdfOptions
+   * xMargins), as for the default template, so the page edge is the document's edge.
    */
   width: min(100vw, 1000px);
   max-width: 100%;
   margin: 0 auto;
-  padding: 32px;
+  padding: 0;
   background: #fff;
   color: var(--mm-ink);
   font-family: var(--mm-font);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   font-weight: 400;
   line-height: 1.5385;
   -webkit-print-color-adjust: exact;
@@ -130,14 +143,14 @@
 /* Field labels 12/400; party labels take 500. Labels print as the business wrote them. */
 .mm-label {
   color: var(--mm-muted);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 400;
 }
 
 .mm-section-title {
   color: var(--mm-accent);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   font-weight: 700;
   line-height: 1.5385;
 }
@@ -175,7 +188,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: 12px 14px;
   min-width: 0;
 }
 
@@ -191,28 +204,12 @@
   object-fit: contain;
 }
 
-.mm-monogram {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  background: var(--mm-strong);
-  color: var(--mm-on-accent);
-  font-family: var(--mm-title-font);
-  font-size: calc(20px * var(--mm-text-scale, 1));
-  line-height: 1.2;
-  font-weight: 800;
-}
-
 .mm-brand-name {
   flex: 1 1 160px;
   min-width: min(160px, 100%);
   color: var(--mm-strong);
   font-family: var(--mm-title-font);
-  font-size: calc(18px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-lg) * var(--mm-text-scale, 1));
   line-height: 1.3333;
   font-weight: 600;
   overflow-wrap: break-word;
@@ -267,7 +264,7 @@
   flex-wrap: wrap;
   gap: 4px 8px;
   color: var(--mm-strong);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 500;
 }
@@ -282,10 +279,10 @@
 }
 
 /*
- * Lines fill from the right: a field left on its own — a one-field line, or the third of three
- * that wraps — sits in the right-hand column.
+ * Lines fill from the right: a line with one field puts it in the right-hand column. A field
+ * that wraps from a fuller line (VAT Number after GSTIN | PAN) stays in the left one.
  */
-.mm-seller .mm-id-grid > .mm-id-line > .mm-id:last-child:nth-child(odd) {
+.mm-seller .mm-id-grid > .mm-id-line > .mm-id:only-child {
   grid-column: -2 / -1;
 }
 
@@ -307,14 +304,14 @@
   min-width: 0;
   margin-right: auto;
   font-family: var(--mm-title-font);
-  font-size: calc(14px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-m) * var(--mm-text-scale, 1));
   line-height: 1.4286;
   font-weight: 700;
 }
 
 .mm-subtitle {
   min-width: 0;
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 400;
   overflow-wrap: break-word;
@@ -323,7 +320,7 @@
 
 .mm-copy {
   flex: none;
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 600;
   opacity: 0.8;
@@ -466,7 +463,7 @@
 
 .mm-party-name {
   color: var(--mm-strong);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 600;
   overflow-wrap: break-word;
@@ -474,7 +471,7 @@
 
 .mm-party-address {
   color: var(--mm-muted);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   overflow-wrap: break-word;
 }
@@ -499,6 +496,16 @@
 
 .mm-id-grid .mm-id {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A field alone on its line (a responsible person, a lone phone) takes the whole line. */
+.mm-id-grid > .mm-id-line > .mm-id:only-child {
+  grid-column: 1 / -1;
+}
+
+/* An email has no spaces: it breaks anywhere, and only when its column is too narrow. */
+.mm-email {
   overflow-wrap: anywhere;
 }
 
@@ -568,7 +575,7 @@
   border-radius: 6px;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
 }
 
@@ -703,7 +710,7 @@
 
 .mm-item-code {
   color: var(--mm-muted);
-  font-size: calc(11px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-s) * var(--mm-text-scale, 1));
   line-height: 1.4545;
 }
 
@@ -856,7 +863,7 @@
   display: grid;
   flex: 1 1 240px;
   grid-template-columns: minmax(100px, max-content) minmax(0, 1fr);
-  gap: 8px 24px;
+  gap: 6px 24px; /* rows 6 px apart (user request) */
   align-content: start;
   min-width: 0;
 }
@@ -875,7 +882,7 @@
 
 .mm-upi-note {
   color: var(--mm-accent);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
 }
 
@@ -887,7 +894,7 @@
 .mm-totals .ceres-subtotal-table th,
 .mm-totals .ceres-subtotal-table td {
   padding: 4px 12px;
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
 }
 
@@ -921,7 +928,7 @@
   background: var(--mm-accent);
   box-shadow: 1px 0 0 var(--mm-accent);
   color: var(--mm-on-accent);
-  font-size: calc(18px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-lg) * var(--mm-text-scale, 1));
   line-height: 1.3333;
   vertical-align: middle;
 }
@@ -931,7 +938,7 @@
 }
 
 .mm-totals .ceres-subtotal-row-grand [data-role="grand-total"] {
-  font-size: calc(18px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-lg) * var(--mm-text-scale, 1));
   line-height: 1.3333;
   font-weight: 800;
 }
@@ -945,7 +952,7 @@
 .mm-totals .ceres-subtotal-note,
 .mm-totals .ceres-subtotal-converted,
 .mm-totals .ceres-subtotal-extra {
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
 }
 
@@ -1015,7 +1022,7 @@
   width: 100%;
   min-width: 560px;
   border-collapse: collapse;
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
 }
 
@@ -1077,13 +1084,13 @@
   width: 10%;
 }
 
-/* Every column but the first is centred. */
+/* Every column but the first is centred; cells 6 × 8 px, the same at the row ends (user request). */
 .mm-widget-table .ceres-table th,
 .mm-widget-table .ceres-table td {
-  padding: 8px 12px;
+  padding: 6px 8px;
   border: 0;
   border-bottom: 1px solid var(--mm-line);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   text-align: center;
   white-space: nowrap;
@@ -1135,10 +1142,10 @@
 
 .mm-widget-table .ceres-table-heading {
   margin: 0;
-  padding: 8px 12px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--mm-line);
   color: var(--mm-accent);
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 700;
 }
@@ -1170,6 +1177,24 @@
   list-style-position: inside;
 }
 
+/*
+ * Running text reads looser than labels and figures (user request): terms, attachments, notes
+ * and item descriptions take 22 px lines at 13 px (1.6923), and their points sit 4 px apart.
+ */
+.mm-terms,
+.mm-attachments,
+.mm-note-body,
+.mm-item-desc {
+  line-height: 1.6923;
+}
+
+.mm-terms > li + li,
+.mm-attachments > li + li,
+.mm-doc .mm-note-body .toastui-editor-contents li + li,
+.mm-doc .mm-item-desc .toastui-editor-contents li + li {
+  margin-top: 4px;
+}
+
 /* A long file name breaks where it must, so it stays on the line with its number. */
 .mm-attachments a {
   color: inherit;
@@ -1181,20 +1206,23 @@
   overflow-wrap: break-word;
 }
 
-/* Additional Info: 100 px labels, 8 px to the value, rows 4 px apart; values wrap. */
+/*
+ * Additional Info: one grid for all rows, like the bank details. The label column takes the
+ * longest label (100 px at the least, half the box at most), so a label wraps only when it
+ * cannot fit (user request); 8 px to the value, rows 6 px apart; values wrap.
+ */
 .mm-info-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: fit-content(50%) minmax(0, 1fr);
+  gap: 6px 8px;
 }
 
 .mm-info-row {
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  column-gap: 8px;
+  display: contents;
 }
 
 .mm-info-label {
+  min-width: 100px;
   color: var(--mm-muted);
   font-weight: 400;
   overflow-wrap: break-word;
@@ -1254,30 +1282,23 @@
 
 /* ------------------------------------------------------------ 13. HSN summary */
 
-/* Header #f5f7fa, cells 8 × 6 with 12 px more at the row ends; columns share the width evenly. */
+/* Header #f5f7fa, cells 6 × 8 px, the same at the row ends (user request); columns share the
+   width evenly. */
 .mm-hsn-table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: calc(13px * var(--mm-text-scale, 1));
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
 }
 
 /* Every column but the first (HSN/SAC) is centred. */
 .mm-hsn-table th,
 .mm-hsn-table td {
-  padding: 8px 6px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--mm-line);
   color: var(--mm-ink);
   text-align: center;
-}
-
-.mm-hsn-table tr > :first-child {
-  padding-left: 18px;
-}
-
-.mm-hsn-table tr > :last-child {
-  padding-right: 18px;
 }
 
 .mm-hsn-table th + th,
@@ -1320,11 +1341,17 @@
   margin-top: 16px;
 }
 
+/*
+ * As wide as its widest line (user request): "For <company>" and the designation stay on
+ * one line and the rule above them spans the text, 240 px at the least; only a name wider
+ * than the page wraps.
+ */
 .mm-signature {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  width: 240px;
+  width: max-content;
+  min-width: min(240px, 100%);
   max-width: 100%;
   text-align: right;
 }
@@ -1374,8 +1401,9 @@
 
 /* ------------------------------------------------------------ footer */
 
+/* The enquiry line reads in the main text colour, like the rest of the document. */
 .mm-contact {
-  color: var(--mm-muted);
+  color: var(--mm-ink);
   text-align: center;
 }
 
@@ -1383,10 +1411,6 @@
 
 /* Screen only: the iframe viewport is the document width. */
 @media screen and (width <= 640px) {
-  .mm-doc {
-    padding: 16px;
-  }
-
   .mm-header {
     flex-direction: column;
   }
@@ -1513,19 +1537,52 @@
 /* ------------------------------------------------------------------ print / PDF */
 
 /*
- * The printout is the design, scaled to the paper. The document fills the printable width and
- * --mm-print-zoom (helpers.ts mapPrint: paper fit × Lydia print size ÷ the renderer's own
- * zoom) lays it out at the 1000 px design width inside it, so every column, box and figure
- * keeps its design proportions and nothing reflows or clips. Page margins stay with the
- * browser or PDF service; the canvas keeps a 16 px inner padding.
+ * Print at true size (design-to-template §4a): 13 px body text prints at 13 px, nothing below
+ * 10 px. The page fills the printable width; the template applies no zoom of its own, so the
+ * renderer's print size setting (Lydia's zoomSize) is what scales a printout. Margins stay
+ * with Lydia (the business's xMargins), the browser or the PDF service: none of the page's own.
  */
 @media print {
   .mm-doc {
+    /* Density comes from the steps above base only; base and the small steps stay. */
+    --mm-font-size-xs: 10px;
+    --mm-font-size-s: 11px;
+    --mm-font-size-base: 13px;
+    --mm-font-size-m: 14px;
+    --mm-font-size-lg: 16px;
+    --mm-font-size-xl: 18px;
+
     width: 100%;
     max-width: none;
     margin: 0;
-    padding: 16px;
-    zoom: var(--mm-print-zoom, 0.718);
+  }
+
+  /*
+   * The planner's column widths are for the 1000 px screen canvas: on paper the table sizes
+   * itself to the page, never wider than its content needs.
+   */
+  .mm-doc .mm-items th[style] {
+    width: auto !important;
+  }
+
+  .mm-desc-min {
+    display: none;
+  }
+
+  /*
+   * A table whose columns cannot fit the page at 13 px (helpers.ts decides it from the
+   * planner's minimum widths and the paper format) prints compact, as Solvin does: the small
+   * step (11 px) and 4 px side padding, row ends included.
+   */
+  .mm-items.is-print-compact {
+    font-size: calc(var(--mm-font-size-s) * var(--mm-text-scale, 1));
+    line-height: 1.4545;
+  }
+
+  .mm-items.is-print-compact :is(th, td) {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: inherit;
   }
 
   /* clip is not a scroll container, so a preview scroll offset cannot shift the printout. */
@@ -1641,13 +1698,16 @@
     display: none;
   }
 
-  /* Same width as the content above it: the document's 16 px print padding each side. */
+  /*
+   * Fixed to the foot of every page, edge to edge of the printable area. The template
+   * declares no page box (it would break Lydia's Pageless PDF), so the paper's own margin,
+   * if the print dialog or PDF service sets one, stays outside it.
+   */
   .mm-letterhead-footer.mm-footer-fixed {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: 0 16px;
   }
 
   /* The PDF service draws the letterhead and footer itself. */

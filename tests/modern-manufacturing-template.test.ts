@@ -14,7 +14,6 @@ import {
   formatQuantity,
   generateQrDataUrl,
   encodeQrMatrix,
-  initials,
   mapBank,
   mapCompliance,
   mapFooter,
@@ -177,7 +176,7 @@ describe("Modern Manufacturing template — render", () => {
       "Grand Total (Rs.)",
       "Beneficiary Name",
       "SBIN0041234",
-      "INR One Lakh Twenty-Two Thousand Eighty-Eight and Seventy Paise Only",
+      "INR ONE LAKH TWENTY-TWO THOUSAND EIGHTY-EIGHT AND SEVENTY PAISE ONLY",
       "Notes",
       "Terms &amp; Conditions",
       "Additional Info",
@@ -392,6 +391,17 @@ describe("Modern Manufacturing template — render", () => {
     expect(at("data-ceres-payment-table")).toBeLessThan(
       at('data-section="signature"')
     );
+  });
+
+  it("leads the header with the company name alone when there is no logo", () => {
+    const html = render((invoice) => {
+      invoice.logo = "";
+    });
+    const brand = (html.match(/<div class="mm-brand">([\s\S]*?)<\/div>/) ||
+      [])[1];
+    expect(brand).toContain('class="mm-brand-name"');
+    expect(brand).not.toContain("mm-logo");
+    expect(html).not.toContain("mm-monogram");
   });
 
   it("renders letterhead images, logo, signature and full-width descriptions", () => {
@@ -675,7 +685,62 @@ describe("Modern Manufacturing template — view model", () => {
     const set: Json = { invoice: { subUnitLength: 3 } };
     expect(withMoneyDefaults(set).invoice.subUnitLength).toBe(3);
     expect(withMoneyDefaults({ other: 1 })).toEqual({ other: 1 });
-    expect(initials("Vertex Foundry & Components")).toBe("VF");
+  });
+
+  it("labels every country's tax number and the responsible person", () => {
+    const lines = (invoice: Json, party: Json) =>
+      (
+        mapParty(invoice, { name: "Buyer", ...party }, "Billed To") as Json
+      ).lines.map((line: Json[]) =>
+        line.map((item) => `${item.label}=${item.value}`)
+      );
+    expect(
+      lines(
+        {},
+        {
+          vatNumber: "BG1",
+          trnNumber: "T1",
+          tinNumber: "N1",
+          sstNumber: "S1",
+          taxId: "X1",
+          contactPerson: { name: "Mr. Svetoslav Vasilev Totev" },
+          additionalIds: [{ label: "ID No.", value: "104000194" }],
+        }
+      )
+    ).toEqual([
+      // The tax numbers share their line, as GSTIN | PAN always has.
+      ["VAT Number=BG1", "TRN=T1", "TIN=N1", "SST=S1", "Tax ID=X1"],
+      // The responsible person leads the party's own fields, two to a line.
+      ["Responsible Person=Mr. Svetoslav Vasilev Totev", "ID No.=104000194"],
+    ]);
+    // Labels are editable; a name already printed as one of the party's fields is not repeated.
+    expect(
+      lines(
+        { customLabels: { trn: "TRN No.", contactPerson: "Contact" } },
+        { trnNumber: "T1", contactPerson: { name: "Asha" } }
+      )
+    ).toEqual([["TRN No.=T1"], ["Contact=Asha"]]);
+    expect(
+      lines(
+        { customLabels: { responsiblePerson: "МОЛ" } },
+        { contactPerson: { name: "Asha" } }
+      )
+    ).toEqual([["МОЛ=Asha"]]);
+    // Business profiles key their custom fields by id instead of listing them.
+    expect(
+      lines(
+        {},
+        {
+          contactPerson: { name: "Martin Petkov" },
+          customFields: {
+            yzkv6khclts: {
+              label: "Responsible Person",
+              value: "martin petkov",
+            },
+          },
+        }
+      )
+    ).toEqual([["Responsible Person=martin petkov"]]);
   });
 
   it("maps parties with every optional identifier and visibility flag", () => {
@@ -734,13 +799,13 @@ describe("Modern Manufacturing template — view model", () => {
     expect(party.contacts).toEqual([
       { key: "email", label: "Email", value: "b@example.com", isNum: false },
     ]);
-    expect(party.contactPerson).toBe("Asha");
     expect(party.extras.map((row: Json) => row.label)).toEqual([
       "CIN",
       "Vendor Code",
       "Region",
     ]);
-    // One kind of line for all of them: ids, contacts, then the party's fields two a line.
+    // One kind of line for all of them: ids, contacts, then the responsible person (a
+    // labelled field, user request) and the party's own fields two a line, in the order filled.
     expect(
       party.lines.map((line: Json[]) =>
         line.map((item) => `${item.label}=${item.value}`)
@@ -748,12 +813,16 @@ describe("Modern Manufacturing template — view model", () => {
     ).toEqual([
       ["GSTIN=27ABC", "VAT Number=VAT-1"],
       ["Email=b@example.com"],
-      ["CIN=C1", "Vendor Code=V9"],
-      ["Region=West"],
+      ["Responsible Person=Asha", "CIN=C1"],
+      ["Vendor Code=V9", "Region=West"],
     ]);
-    // An email keeps to one line; figures and one-word values are numbers that never wrap.
-    expect(party.lines[1][0]).toMatchObject({ isNum: false, noWrap: true });
-    expect(party.lines[2][0]).toMatchObject({ isNum: true, noWrap: true });
+    // An email breaks only when its box is too narrow; figures and one-word values never wrap.
+    expect(party.lines[1][0]).toMatchObject({
+      isNum: false,
+      noWrap: false,
+      isEmail: true,
+    });
+    expect(party.lines[2][1]).toMatchObject({ isNum: true, noWrap: true });
 
     const other = mapParty(
       {},
@@ -802,7 +871,7 @@ describe("Modern Manufacturing template — view model", () => {
       '<span class="mm-id">Phone: <span class="mm-num" data-testid="num">+91 831 298 7000</span></span>'
     );
     expect(header).toContain(
-      '<span class="mm-id">Email: <span class="mm-num">sales@vertexfoundry.com</span></span>'
+      '<span class="mm-id">Email: <span class="mm-email">sales@vertexfoundry.com</span></span>'
     );
   });
 
@@ -1836,7 +1905,8 @@ describe("Modern Manufacturing template — view model", () => {
   });
 
   it("prints words from the stored value, else computes INR, else nothing", () => {
-    expect(mapWords(state())?.value).toContain("One Lakh");
+    // In capitals, the stored value included (user request).
+    expect(mapWords(state())?.value).toContain("ONE LAKH");
     expect(
       mapWords(
         state((invoice) => {
@@ -2080,9 +2150,9 @@ describe("Modern Manufacturing template — view model", () => {
     const view = buildModernManufacturingView(state());
     expect(view.brand).toMatchObject({
       name: "Vertex Foundry Components",
-      initials: "VF",
       logo: "",
     });
+    expect(view.brand).not.toHaveProperty("initials");
     expect(view.parties.map((party) => party?.title)).toEqual([
       "Bill To (Buyer)",
       "Ship To (Consignee)",
@@ -2099,7 +2169,6 @@ describe("Modern Manufacturing template — view model", () => {
     );
     expect(sparse.brand).toMatchObject({
       name: "",
-      initials: "",
       seller: null,
     });
     expect(sparse.parties.map((party) => party?.title)).toEqual([
@@ -2151,16 +2220,44 @@ describe("Modern Manufacturing template — view model", () => {
     ).toBe(true);
   });
 
-  it("fits the print to the paper, with the Lydia print size and text scale", () => {
-    // A4 (the default): 210 mm less 1 cm margins = 718 px for the 1000 px canvas.
-    expect(mapPrint({})).toEqual({ zoom: "0.7181", textScale: "1" });
-    expect(mapPrint({ pdfOptions: { format: "A5" } }).zoom).toBe("0.4838");
-    expect(mapPrint({ pdfOptions: { format: "letter" } }).zoom).toBe("0.7404");
-    expect(mapPrint({ pdfOptions: { format: "tabloid" } }).zoom).toBe("0.7181");
-    // The renderer zooms <html> by zoomSize (not at 0.8): the size still applies once.
-    expect(mapPrint({ pdfOptions: { zoomSize: 1.2 } }).zoom).toBe("0.7181");
-    expect(mapPrint({ pdfOptions: { zoomSize: "0.8" } }).zoom).toBe("0.5745");
-    expect(mapPrint({ pdfOptions: { zoomSize: 0 } }).zoom).toBe("0.7181");
+  it("prints at true size and compacts a table too wide for the paper", () => {
+    // No zoom of its own: only the text scale and the compact-table flag.
+    expect(mapPrint({})).toEqual({ textScale: "1", compactTable: false });
+    // A4: 718 px printable (the document has no padding of its own); Description keeps 22%.
+    expect(mapPrint({}, 560).compactTable).toBe(false);
+    expect(mapPrint({}, 561).compactTable).toBe(true);
+    expect(mapPrint({ pdfOptions: { format: "A5" } }, 377).compactTable).toBe(
+      false
+    );
+    expect(mapPrint({ pdfOptions: { format: "A5" } }, 378).compactTable).toBe(
+      true
+    );
+    expect(
+      mapPrint({ pdfOptions: { format: "letter" } }, 577).compactTable
+    ).toBe(false);
+    expect(
+      mapPrint({ pdfOptions: { format: "letter" } }, 578).compactTable
+    ).toBe(true);
+    expect(
+      mapPrint({ pdfOptions: { format: "tabloid" } }, 561).compactTable
+    ).toBe(true);
+    // The renderer zooms <html> by zoomSize (not at 0.8), which narrows the page.
+    expect(mapPrint({ pdfOptions: { zoomSize: 1.2 } }, 466).compactTable).toBe(
+      false
+    );
+    expect(mapPrint({ pdfOptions: { zoomSize: 1.2 } }, 467).compactTable).toBe(
+      true
+    );
+    expect(
+      mapPrint({ pdfOptions: { zoomSize: "0.8" } }, 560).compactTable
+    ).toBe(false);
+    expect(mapPrint({ pdfOptions: { zoomSize: 0 } }, 561).compactTable).toBe(
+      true
+    );
+    // Larger text needs more room.
+    expect(mapPrint({ pdfOptions: { textScale: 1.1 } }, 520).compactTable).toBe(
+      true
+    );
     // Text scale as a ratio or a percentage, kept within 0.3–2.
     expect(mapPrint({ pdfOptions: { textScale: 1.1 } }).textScale).toBe("1.1");
     expect(mapPrint({ pdfOptions: { scale: "120" } }).textScale).toBe("1.2");
@@ -2171,9 +2268,8 @@ describe("Modern Manufacturing template — view model", () => {
     const html = render((invoice) => {
       invoice.template = { pdfOptions: { format: "a5", textScale: 1.1 } };
     });
-    expect(html).toContain(
-      'style="--mm-print-zoom: 0.4838; --mm-text-scale: 1.1;"'
-    );
+    expect(html).toContain('style="--mm-text-scale: 1.1;"');
+    expect(html).not.toContain("--mm-print-zoom");
   });
 
   it("places the document QR in the header, beside the seller", () => {
@@ -2278,10 +2374,21 @@ describe("Modern Manufacturing template — view model", () => {
 
 describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => {
   const source = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
-  // Every size is "calc(<spec size> * var(--mm-text-scale, 1))"; assertions read the spec size.
+  /*
+   * Every size is "calc(var(--mm-font-size-<step>) * var(--mm-text-scale, 1))", the steps set
+   * on .mm-doc (design-to-template §4a); assertions read the step's screen size.
+   */
+  const SCREEN_SCALE: Record<string, string> = Object.fromEntries(
+    Array.from(
+      source
+        .slice(0, source.indexOf("@media"))
+        .matchAll(/--mm-font-size-(\w+): (\d+px);/g),
+      (m) => [m[1], m[2]]
+    )
+  );
   const css = source.replace(
-    /calc\((\d+px) \* var\(--mm-text-scale, 1\)\)/g,
-    "$1"
+    /calc\(var\(--mm-font-size-(\w+)\) \* var\(--mm-text-scale, 1\)\)/g,
+    (_, step: string) => SCREEN_SCALE[step]
   );
   const rule = (selector: string): string => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -2321,9 +2428,8 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       )
     ).toBe(true);
     expect(rule(".mm-doc")).toMatch(/font-size: 13px;/);
-    expect(rule(".mm-monogram")).toMatch(
-      /font-size: 20px;\s*line-height: [\d.]+;\s*font-weight: 800;/
-    );
+    // No logo, no monogram stand-in (user request).
+    expect(css).not.toContain("mm-monogram");
     expect(rule(".mm-brand-name")).toMatch(
       /font-size: 18px;\s*line-height: [\d.]+;\s*font-weight: 600;/
     );
@@ -2366,7 +2472,10 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
 
   it("uses the spec's spacing: sections, boxes, cells and images", () => {
     expect(rule(".mm-doc")).toMatch(/gap: 16px;/);
-    expect(rule(".mm-doc")).toMatch(/padding: 32px;/);
+    // No padding of its own (user request): Lydia's business margins are the only ones, and
+    // the letterhead footer sits on the page's edge.
+    expect(rule(".mm-doc")).toMatch(/padding: 0;/);
+    expect(source).not.toMatch(/\.mm-doc \{[^}]*padding: (?!0;)/);
     expect(rule(".mm-pair-box")).toMatch(/padding: 12px;/);
     // Parties: padding 14, 6 px between lines.
     expect(css).toMatch(
@@ -2387,14 +2496,24 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     // 8 px between a box title and its content; 12 px between groups.
     expect(rule(".mm-note-group")).toMatch(/gap: 8px;/);
     expect(rule(".mm-note-block")).toMatch(/gap: 12px;/);
-    // Additional Info: label 100 px, 8 px to the value, rows 4 px apart.
-    expect(rule(".mm-info-row")).toMatch(
-      /grid-template-columns: 100px minmax\(0, 1fr\);\s*column-gap: 8px;/
+    // Additional Info: labels share a column as wide as the longest (100 px at the least, half
+    // the box at most, user request), 8 px to the value, rows 6 px apart.
+    expect(rule(".mm-info-rows")).toMatch(
+      /grid-template-columns: fit-content\(50%\) minmax\(0, 1fr\);\s*gap: 6px 8px;/
     );
-    expect(rule(".mm-info-rows")).toMatch(/gap: 4px;/);
-    // HSN: cells 8 × 6, 12 px more at the row ends.
+    expect(rule(".mm-info-row")).toMatch(/display: contents;/);
+    expect(rule(".mm-info-label")).toMatch(/min-width: 100px;/);
+    // Summary tables (HSN, tax summary, payment record): cells 6 × 8 px, the same at the
+    // row ends (user request).
     expect(css).toMatch(
-      /\.mm-hsn-table th,\s*\.mm-hsn-table td\s*\{[^}]*padding: 8px 6px;/
+      /\.mm-hsn-table th,\s*\.mm-hsn-table td\s*\{[^}]*padding: 6px 8px;/
+    );
+    expect(css).not.toMatch(/padding-(left|right): 18px;/);
+    expect(css).toMatch(
+      /\.mm-widget-table \.ceres-table th,\s*\.mm-widget-table \.ceres-table td\s*\{\s*padding: 6px 8px;/
+    );
+    expect(rule(".mm-widget-table .ceres-table-heading")).toMatch(
+      /padding: 6px 8px;/
     );
     // Columns share the width evenly (user request; the spec had 150 px numeric columns).
     expect(rule(".mm-hsn-table")).toMatch(/table-layout: fixed;/);
@@ -2421,6 +2540,11 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     );
     expect(rule(".mm-items .ceres-image-gallery")).toMatch(/gap: 8px;/);
     expect(rule(".mm-signature-section")).toMatch(/margin-top: 16px;/);
+    // The signature block (and its rule) grows with its text, 240 px at the least.
+    expect(rule(".mm-signature")).toMatch(
+      /width: max-content;\s*min-width: min\(240px, 100%\);\s*max-width: 100%;/
+    );
+    expect(rule(".mm-signature-line")).toMatch(/width: 100%;/);
   });
 
   it("gives every text size its line height on a 4 px rhythm", () => {
@@ -2433,35 +2557,68 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       "18": "1.3333",
       "20": "1.2",
     };
-    const blocks = Array.from(source.matchAll(/\{([^{}]*)\}/g), (m) => m[1]);
-    blocks
-      .filter((body) => /font-size: calc\(\d+px/.test(body))
-      .forEach((body) => {
-        const size = (
-          body.match(/font-size: calc\((\d+)px/) as RegExpMatchArray
-        )[1];
-        expect(body).toContain(`line-height: ${expected[size]};`);
-      });
+    const blocks = Array.from(css.matchAll(/\{([^{}]*)\}/g), (m) => m[1]);
+    const sized = blocks.filter((body) => /font-size: \d+px/.test(body));
+    expect(sized.length).toBeGreaterThan(15);
+    sized.forEach((body) => {
+      const size = (body.match(/font-size: (\d+)px/) as RegExpMatchArray)[1];
+      expect(body).toContain(`line-height: ${expected[size]};`);
+    });
     // No leftover fixed or "normal" line heights.
     expect(source).not.toMatch(/line-height: (1\.4|normal);/);
   });
 
   it("scales every text size by the document's text scale", () => {
     const sizes = Array.from(
-      source.matchAll(/font-size:\s*([^;]+);/g),
+      source.matchAll(/(?:^|[\s;{])font-size:\s*([^;]+);/g),
       (m) => m[1]
+      // Relative sizes (inherit, 0.9em for squeezed figures) follow their parent's step.
+    ).filter((size) => size !== "inherit" && !/^[\d.]+em$/.test(size));
+    expect(sizes.length).toBeGreaterThan(15);
+    sizes.forEach((size) =>
+      expect(size).toMatch(
+        /^calc\(var\(--mm-font-size-(xs|s|base|m|lg|xl)\) \* var\(--mm-text-scale, 1\)\)$/
+      )
     );
-    sizes
-      .filter((size) => /px/.test(size))
-      .forEach((size) =>
-        expect(size).toMatch(/^calc\(\d+px \* var\(--mm-text-scale, 1\)\)$/)
-      );
   });
 
-  it("prints the design scaled to the paper, never a reflowed copy", () => {
+  it("follows the repo type preset: six steps, 13 px base in print, 10 px floor", () => {
+    const steps = (block: string) =>
+      Object.fromEntries(
+        Array.from(block.matchAll(/--mm-font-size-(\w+): (\d+)px;/g), (m) => [
+          m[1],
+          Number(m[2]),
+        ])
+      );
     const print = source.slice(source.indexOf("@media print"));
+    const screen = steps(source.slice(0, source.indexOf("@media")));
+    const paper = steps(print);
+    expect(screen).toEqual({ xs: 10, s: 11, base: 13, m: 14, lg: 18, xl: 20 });
+    // Print compresses only the steps above base.
+    expect(paper).toEqual({ xs: 10, s: 11, base: 13, m: 14, lg: 16, xl: 18 });
+    // Nothing below 10 px anywhere (the parser found declarations, so this is not vacuous).
+    const all = Array.from(
+      source.matchAll(/(?:font-size|--mm-font-size-\w+):\s*(\d+(?:\.\d+)?)px/g),
+      (m) => Number(m[1])
+    );
+    expect(all.length).toBeGreaterThanOrEqual(12);
+    all.forEach((size) => expect(size).toBeGreaterThanOrEqual(10));
+    // No page-fit zoom: print is true size; the renderer's print size does the scaling.
+    expect(source).not.toMatch(/zoom:/);
+  });
+
+  it("prints at true size on the full printable width, compacting a wide table", () => {
+    const print = source.slice(source.indexOf("@media print"));
+    expect(print).toMatch(/\.mm-doc \{[^}]*width: 100%;[^}]*margin: 0;/);
+    // The planner's screen widths give way to the page; a compact table drops to the s step.
     expect(print).toMatch(
-      /\.mm-doc \{[^}]*width: 100%;[^}]*padding: 16px;[^}]*zoom: var\(--mm-print-zoom, 0\.718\);/
+      /\.mm-doc \.mm-items th\[style\] \{\s*width: auto !important;/
+    );
+    expect(print).toMatch(
+      /\.mm-items\.is-print-compact \{\s*font-size: calc\(var\(--mm-font-size-s\)/
+    );
+    expect(print).toMatch(
+      /\.mm-items\.is-print-compact :is\(th, td\) \{\s*padding-right: 4px;\s*padding-left: 4px;/
     );
     expect(print).toMatch(
       /\.mm-items thead,[^{]*\{\s*display: table-header-group;/
@@ -2489,7 +2646,7 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
   it("pins a repeating footer to the foot of every printed page", () => {
     const print = source.slice(source.indexOf("@media print"));
     expect(print).toMatch(
-      /\.mm-letterhead-footer\.mm-footer-fixed \{\s*position: fixed;\s*bottom: 0;/
+      /\.mm-letterhead-footer\.mm-footer-fixed \{\s*position: fixed;\s*bottom: 0;\s*left: 0;\s*width: 100%;/
     );
     expect(print).toMatch(
       /\.mm-page-frame-footer \{\s*display: table-footer-group;/
@@ -2521,17 +2678,40 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     );
   });
 
+  it("prints the enquiry line in the main text colour", () => {
+    expect(rule(".mm-contact")).toMatch(/color: var\(--mm-ink\);/);
+  });
+
   it("spaces identifier lines 4 px apart wherever they are", () => {
     expect(rule(".mm-id-grid")).toMatch(/gap: 4px 12px;/);
-    // In the header they are set from the right, a lone field in the right-hand column.
+    // In the header they are set from the right: a one-field line in the right-hand column,
+    // a field wrapping from a fuller line in the left one (as live; user request).
     expect(rule(".mm-seller .mm-id-grid")).toMatch(
       /justify-content: end;\s*text-align: right;/
     );
     expect(
-      rule(
-        ".mm-seller .mm-id-grid > .mm-id-line > .mm-id:last-child:nth-child(odd)"
-      )
+      rule(".mm-seller .mm-id-grid > .mm-id-line > .mm-id:only-child")
     ).toMatch(/grid-column: -2 \/ -1;/);
+    expect(css).not.toContain(":last-child:nth-child(odd)");
+  });
+
+  it("gives running text room to read: 22 px lines, points 4 px apart", () => {
+    expect(css).toMatch(
+      /\.mm-terms,\s*\.mm-attachments,\s*\.mm-note-body,\s*\.mm-item-desc \{\s*line-height: 1\.6923;/
+    );
+    expect(css).toMatch(
+      /\.mm-terms > li \+ li,\s*\.mm-attachments > li \+ li,[^{]*\.mm-note-body \.toastui-editor-contents li \+ li,[^{]*\.mm-item-desc \.toastui-editor-contents li \+ li \{\s*margin-top: 4px;/
+    );
+  });
+
+  it("sets the bank details rows 6 px apart", () => {
+    expect(rule(".mm-bank-rows")).toMatch(/gap: 6px 24px;/);
+  });
+
+  it("gives a field alone on its line the whole line", () => {
+    expect(rule(".mm-id-grid > .mm-id-line > .mm-id:only-child")).toMatch(
+      /grid-column: 1 \/ -1;/
+    );
   });
 
   it("lays an item's inline codes side by side", () => {

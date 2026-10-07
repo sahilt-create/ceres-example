@@ -335,8 +335,12 @@ const fieldShown = (
   );
 };
 
+/* A party's field list, as an array or as a map keyed by field id (business profiles). */
+const fieldList = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : Object.values(asRecord(value));
+
 const extraRows = (party: UnknownRecord): LabelValue[] => [
-  ...asArray(party.additionalIds)
+  ...fieldList(party.additionalIds)
     .map(asRecord)
     .filter((entry) => !isOff(entry.showInInvoice))
     .map((entry) => ({
@@ -344,7 +348,7 @@ const extraRows = (party: UnknownRecord): LabelValue[] => [
       label: text(entry.label),
       value: text(entry.value),
     })),
-  ...asArray(party.customFields)
+  ...fieldList(party.customFields)
     .map(asRecord)
     .filter((entry) => !isOff(asRecord(entry.params).showInInvoice))
     .map((entry) => ({
@@ -353,7 +357,7 @@ const extraRows = (party: UnknownRecord): LabelValue[] => [
       value: text(entry.value),
       isDate: text(entry.dataType).toLowerCase() === "date",
     })),
-  ...asArray(party.customHeaders)
+  ...fieldList(party.customHeaders)
     .map(asRecord)
     .filter((entry) => !isOff(entry.showInInvoice))
     .map((entry) => ({
@@ -398,6 +402,7 @@ export const mapParty = (
   if (party.panNumber && fieldShown(invoice, party, "pan")) {
     ids.push({ key: "pan", label: "PAN", value: text(party.panNumber) });
   }
+  const labels = asRecord(invoice.customLabels);
   if (party.vatNumber) {
     ids.push({
       key: "vat",
@@ -405,9 +410,37 @@ export const mapParty = (
       value: text(party.vatNumber),
     });
   }
+  // The other countries' tax numbers, labelled as sr-trading-2-0 labels them.
+  [
+    { key: "trnNumber", label: firstText(labels.trn, labels.trnNumber, "TRN") },
+    { key: "tinNumber", label: firstText(labels.tin, labels.tinNumber, "TIN") },
+    { key: "sstNumber", label: firstText(labels.sst, labels.sstNumber, "SST") },
+    { key: "taxId", label: firstText(labels.taxId, "Tax ID") },
+  ].forEach(({ key, label }) => {
+    if (text(party[key])) ids.push({ key, label, value: text(party[key]) });
+  });
 
-  const contactPerson = asRecord(party.contactPerson);
-  const labels = asRecord(invoice.customLabels);
+  /*
+   * The contact person reads as a field like the others, "Responsible Person: …" as
+   * Refrens prints it, unless one of the party's own fields already carries the name.
+   */
+  const extras = extraRows(party).filter((row) => row.label && row.value);
+  const personName = text(asRecord(party.contactPerson).name);
+  const person: LabelValue[] =
+    personName &&
+    !extras.some((row) => row.value.toLowerCase() === personName.toLowerCase())
+      ? [
+          {
+            key: "contactPerson",
+            label: firstText(
+              labels.contactPerson,
+              labels.responsiblePerson,
+              "Responsible Person"
+            ),
+            value: personName,
+          },
+        ]
+      : [];
   // Phone numbers never wrap (layout rule 4); an email address keeps to one line too. Party
   // boxes print the labels ("Phone: …"); the header prints the values alone.
   const contacts = [
@@ -425,31 +458,34 @@ export const mapParty = (
     },
   ].filter((contact) => contact.value);
 
-  const extras = extraRows(party).filter((row) => row.label && row.value);
   /*
    * Every identifier line reads alike (12/500, label: value), in the header and the party
-   * boxes: GSTIN | PAN, Phone | Email, then the party's own fields two to a line. Figures, codes, dates and one-word values never wrap
-   * (isNum); an email keeps to one line (noWrap); other text wraps.
+   * boxes: the tax numbers (GSTIN | PAN …), Phone | Email, then the responsible person and
+   * the party's own fields (ID No., custom fields…) two to a line, in the order they were
+   * filled in the form. Figures, codes, dates and one-word values never wrap
+   * (isNum); an email stays on one line while it fits and breaks only when its box is too
+   * narrow (isEmail), never overflowing; other text wraps.
    */
   const entry = (row: LabelValue & { isNum?: boolean }, isNum: boolean) => ({
     label: row.label,
     value: row.value,
     isDate: Boolean(row.isDate),
     isNum,
-    noWrap: isNum || row.key === "email",
+    noWrap: isNum,
+    isEmail: row.key === "email",
   });
+  const pairs = <T>(rows: T[]): T[][] =>
+    rows
+      .filter((_, index) => index % 2 === 0)
+      .map((_, index) => rows.slice(index * 2, index * 2 + 2));
   const lines = [
     ids.map((row) => entry(row, true)),
     contacts.map((row) => entry(row, row.isNum)),
-    ...extras
-      .filter((_, index) => index % 2 === 0)
-      .map((_, index) =>
-        extras
-          .slice(index * 2, index * 2 + 2)
-          .map((row) =>
-            entry(row, Boolean(row.isDate) || /^\S+$/.test(row.value))
-          )
-      ),
+    ...pairs(
+      [...person, ...extras].map((row) =>
+        entry(row, Boolean(row.isDate) || /^\S+$/.test(row.value))
+      )
+    ),
   ].filter((line) => line.length > 0);
 
   return {
@@ -463,7 +499,6 @@ export const mapParty = (
     // The identifier lines share one grid in the party boxes, so their columns align.
     lines,
     hasIdLines: lines.length > 0,
-    contactPerson: firstText(contactPerson.name),
   };
 };
 
@@ -1731,6 +1766,8 @@ export interface TableLayout {
   /* Description's width at the design width, and the minimum it is held to. */
   descriptionWidth: number;
   descriptionMin: number;
+  /* Every column but Description, shrunk to content at full size: what print has to fit. */
+  printFixedWidth: number;
 }
 
 export const planTableLayout = (inputs: WidthInput[]): TableLayout => {
@@ -1787,6 +1824,7 @@ export const planTableLayout = (inputs: WidthInput[]): TableLayout => {
       ) +
       2 -
       CELL_PADDING,
+    printFixedWidth: attempt(true, chosen.mergeUnit, 1).others,
   };
 };
 
@@ -1967,6 +2005,7 @@ export const mapItemTable = (state: UnknownRecord, ctx: FormatContext) => {
     mergeUnit,
     smallNumbers: layout.smallNumbers,
     descriptionMin: layout.descriptionMin,
+    printFixedWidth: layout.printFixedWidth,
     footer: {
       show: Boolean(visibility.showTotalsRow) && realItems.length > 0,
       // No customLabels key exists for the in-table summary row (see architect-template).
@@ -2203,7 +2242,9 @@ export const mapWords = (state: UnknownRecord) => {
     text(invoice.currency).toUpperCase() === "INR"
       ? amountInWords(toAmount(asRecord(invoice.finalTotal).total))
       : "";
-  const value = stored || computed;
+  // The amount reads in capitals, like the tax summaries' words (user request); the label
+  // is editable and keeps its own case.
+  const value = (stored || computed).toUpperCase();
   return value
     ? { label: labelOr(labels, "totalInWords", "Total (in words)"), value }
     : null;
@@ -2366,18 +2407,18 @@ export const mapFooter = (state: UnknownRecord) => {
 /* ------------------------------------------------------------------ view */
 
 /*
- * Print and PDF. The page lays the 1000 px design canvas out at the paper's printable width
- * and scales it down, so the printout is the design as on screen, never a reflowed narrow
- * copy. The printable width is the paper width less the browser's default 1 cm margins
- * (A4: 718 px); the fit depends only on the format, never on the window, because the PDF
- * service renders in a window narrower than its page.
+ * Print and PDF print at true size (design-to-template §4a): no page-fit zoom, so 13 px text
+ * prints at 13 px. The page is the paper width less the browser's default 1 cm margins
+ * (A4: 718 px; the document has no padding of its own); it depends only on the format, never on the
+ * window, because the PDF service renders in a window narrower than its page.
  *
- * zoomSize is the print size picked in Lydia (0.8 smaller, 0.9 small, 1 normal, 1.1 large,
- * 1.2 larger) and scales the whole page on top of the fit. The renderer zooms <html> by
- * zoomSize as well, except at 0.8, so that zoom is divided back out here. textScale scales
- * text only.
+ * zoomSize is the print size picked in Lydia (0.8 smaller … 1.2 larger). The renderer zooms
+ * <html> by it (except at 0.8), which narrows the page in CSS px. textScale scales text only.
+ *
+ * compactTable: when the items table's other columns, shrunk to content, would leave
+ * Description less than its 22% share of that page, the table prints at the small step
+ * with tight padding (styles.css, .is-print-compact), as Solvin's compact print table does.
  */
-const DESIGN_WIDTH = 1000;
 const PRINT_MARGINS_PX = (2 * 96) / 2.54;
 const PAPER_WIDTH_MM: Record<string, number> = {
   a3: 297,
@@ -2395,31 +2436,25 @@ const positiveNumber = (value: unknown): number | undefined => {
 const compactDecimal = (value: number): string =>
   String(Number(value.toFixed(4)));
 
-export const mapPrint = (state: UnknownRecord) => {
+export const mapPrint = (state: UnknownRecord, tableFixedWidth = 0) => {
   const pdfOptions = asRecord(state.pdfOptions);
   const paperMm =
     PAPER_WIDTH_MM[text(pdfOptions.format).toLowerCase()] ?? PAPER_WIDTH_MM.a4;
-  const pageFit = ((paperMm / 25.4) * 96 - PRINT_MARGINS_PX) / DESIGN_WIDTH;
   const pageZoom = positiveNumber(pdfOptions.zoomSize) ?? 1;
   const rendererZoom = pageZoom === 0.8 ? 1 : pageZoom;
+  const pageWidth = ((paperMm / 25.4) * 96 - PRINT_MARGINS_PX) / rendererZoom;
   const rawScale =
     positiveNumber(pdfOptions.textScale) ?? positiveNumber(pdfOptions.scale);
   // A percentage (110) or a ratio (1.1); kept readable either way.
   const ratio =
     rawScale !== undefined && rawScale > 2 ? rawScale / 100 : rawScale;
+  const textScale = Math.min(2, Math.max(0.3, ratio ?? 1));
   return {
-    zoom: compactDecimal((pageFit * pageZoom) / rendererZoom),
-    textScale: compactDecimal(Math.min(2, Math.max(0.3, ratio ?? 1))),
+    textScale: compactDecimal(textScale),
+    compactTable:
+      tableFixedWidth * textScale > pageWidth * (1 - MIN_DESCRIPTION_SHARE),
   };
 };
-
-export const initials = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter((word) => /^[A-Za-z0-9]/.test(word))
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join("");
 
 export const buildModernManufacturingView = (root: unknown) => {
   const state = asRecord(root);
@@ -2471,11 +2506,12 @@ export const buildModernManufacturingView = (root: unknown) => {
   const hsn = mapHsnSummary(state, ctx);
   const payments = asArray(invoice.allPayments);
 
+  const table = mapItemTable(state, ctx);
+
   return {
     brand: {
       name: seller ? seller.name : "",
       logo,
-      initials: logo || !seller ? "" : initials(seller.name),
       seller,
     },
     title: firstText(invoice.invoiceTitle),
@@ -2491,7 +2527,7 @@ export const buildModernManufacturingView = (root: unknown) => {
     shippedFrom,
     transport,
     hasDispatch: shippedFrom !== null || transport !== null,
-    table: mapItemTable(state, ctx),
+    table,
     bank: mapBank(state),
     totals: mapTotals(state),
     words: mapWords(state),
@@ -2525,7 +2561,7 @@ export const buildModernManufacturingView = (root: unknown) => {
     // The letterhead footer repeats at the foot of every printed page unless the document
     // asks for it on the last page only (pdfOptions.footerOnLastPage).
     footerEveryPage: !visibility.footerOnLastPage,
-    print: mapPrint(state),
+    print: mapPrint(state, table.printFixedWidth),
   };
 };
 
