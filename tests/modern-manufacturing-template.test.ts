@@ -2488,10 +2488,27 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
 
   it("uses the spec's spacing: sections, boxes, cells and images", () => {
     expect(rule(".mm-doc")).toMatch(/gap: 16px;/);
-    // No padding of its own (user request): Lydia's business margins are the only ones, and
-    // the letterhead footer sits on the page's edge.
-    expect(rule(".mm-doc")).toMatch(/padding: 0;/);
-    expect(source).not.toMatch(/\.mm-doc \{[^}]*padding: (?!0;)/);
+    // One 32 px gutter at the sides, as the default template has (user request: Lydia adds
+    // none); the letterhead and footer run through it to the page's edges, and the gutter
+    // keeps the content off the top / bottom edge when there is no letterhead / footer.
+    expect(rule(".mm-doc")).toMatch(
+      /--mm-gutter: 32px;[\s\S]*padding: 0 var\(--mm-gutter\);/
+    );
+    expect(
+      rule(".mm-doc .mm-letterhead,\n.mm-doc .mm-letterhead-footer")
+    ).toMatch(
+      /width: auto;\s*margin-right: calc\(-1 \* var\(--mm-gutter\)\);\s*margin-left: calc\(-1 \* var\(--mm-gutter\)\);/
+    );
+    expect(rule(".mm-doc:has(> .mm-letterhead.is-empty)")).toMatch(
+      /padding-top: var\(--mm-gutter\);/
+    );
+    expect(rule(".mm-doc:has(> .mm-letterhead-footer.is-empty)")).toMatch(
+      /padding-bottom: var\(--mm-gutter\);/
+    );
+    // On paper the paper's margins give the space.
+    expect(source.slice(source.indexOf("@media print"))).toMatch(
+      /--mm-gutter: 0px;/
+    );
     expect(rule(".mm-pair-box")).toMatch(/padding: 12px;/);
     // Parties: padding 14, 6 px between lines.
     expect(css).toMatch(
