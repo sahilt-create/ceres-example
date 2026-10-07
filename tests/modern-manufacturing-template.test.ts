@@ -393,6 +393,19 @@ describe("Modern Manufacturing template — render", () => {
     );
   });
 
+  it("sets the seller's street on its own line above city, state and country", () => {
+    const header = render(() => undefined).split("</header>")[0];
+    expect(header).toMatch(
+      /<p class="mm-seller-street">Plot No\. 42, Industrial Area, Shivanagar<\/p>\s*<p class="mm-seller-region">Belagavi – 590014, Karnataka, India<\/p>/
+    );
+    const party = mapParty(
+      {},
+      { name: "Works", city: "Pune", country: "IN" },
+      "Shipped From"
+    ) as Json;
+    expect(party).toMatchObject({ street: "", region: "Pune, India" });
+  });
+
   it("leads the header with the company name alone when there is no logo", () => {
     const html = render((invoice) => {
       invoice.logo = "";
@@ -2439,9 +2452,12 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     expect(rule(".mm-copy")).toMatch(
       /font-size: 13px;\s*line-height: [\d.]+;\s*font-weight: 600;/
     );
-    // The seller's address is one grey paragraph (user request; the spec had a bold line 1).
+    // The seller's street in bold, then city, state and country in grey (user request, as the
+    // spec had it).
     expect(rule(".mm-seller-address")).toMatch(/color: var\(--mm-muted\);/);
-    expect(css).not.toContain("mm-seller-street");
+    expect(rule(".mm-seller-street")).toMatch(
+      /color: var\(--mm-strong\);\s*font-weight: 600;/
+    );
     expect(rule(".mm-items thead th")).toMatch(/font-weight: 700;/);
     expect(rule(".mm-item-name")).toMatch(/font-weight: 700;/);
     expect(rule(".mm-signature-for")).toMatch(/font-weight: 700;/);
@@ -2706,6 +2722,42 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
 
   it("sets the bank details rows 6 px apart", () => {
     expect(rule(".mm-bank-rows")).toMatch(/gap: 6px 24px;/);
+  });
+
+  it("heads tables in descriptions and notes like the summary tables", () => {
+    expect(
+      rule(
+        ".mm-doc .mm-item-desc .toastui-editor-contents th,\n.mm-doc .mm-note-body .toastui-editor-contents th"
+      )
+    ).toMatch(
+      /border-color: var\(--mm-line\);\s*background: var\(--mm-title-bar\);\s*color: var\(--mm-accent\);\s*font-weight: 700;/
+    );
+    // Headings and cells read from the left (user request).
+    expect(
+      rule(
+        ".mm-doc .mm-item-desc .toastui-editor-contents :is(th, td),\n.mm-doc .mm-note-body .toastui-editor-contents :is(th, td)"
+      )
+    ).toMatch(/text-align: left;/);
+    // The same bar and text colour as the HSN summary's heading.
+    expect(rule(".mm-hsn-table thead th")).toMatch(
+      /background: var\(--mm-title-bar\);\s*color: var\(--mm-accent\);/
+    );
+  });
+
+  it("keeps each attachment on one line, cut off with an ellipsis", () => {
+    expect(rule(".mm-attachments > li")).toMatch(
+      /overflow: hidden;\s*text-overflow: ellipsis;\s*white-space: nowrap;/
+    );
+    expect(rule(".mm-attachments a")).not.toMatch(/word-break/);
+  });
+
+  it("draws list bullets and numbers in the text colour", () => {
+    expect(css).toMatch(
+      /\.mm-note-body \.toastui-editor-contents ul > li::before \{\s*background-color: currentcolor;/
+    );
+    expect(css).toMatch(
+      /\.mm-note-body \.toastui-editor-contents ol > li::before \{\s*color: inherit;/
+    );
   });
 
   it("gives a field alone on its line the whole line", () => {

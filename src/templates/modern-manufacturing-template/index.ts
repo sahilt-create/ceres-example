@@ -2,6 +2,7 @@ import template from "./template.hbs";
 import { normalizeInvoiceTemplateState } from "../../main/invoiceTemplateNormalization";
 import {
   registerModernManufacturingHelpers,
+  registerModernManufacturingPrint,
   withMoneyDefaults,
 } from "./helpers";
 import "./styles.css";
@@ -17,6 +18,7 @@ import "../../widgets/refrens-branding";
 import "../../widgets/watermark";
 
 registerModernManufacturingHelpers(window.Handlebars);
+registerModernManufacturingPrint();
 
 // Export template to global for main renderer to consume
 // The shared normalizer, then the document's decimal places made explicit (helpers.ts).

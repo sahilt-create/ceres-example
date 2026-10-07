@@ -56,7 +56,12 @@
             <div class="mm-header-end">
               {{#if view.brand.seller}}
                 <div class="mm-seller">
-                  {{#if view.brand.seller.address}}<p class="mm-seller-address">{{view.brand.seller.address}}</p>{{/if}}
+                  {{#if view.brand.seller.address}}
+                    <div class="mm-seller-address">
+                      {{#if view.brand.seller.street}}<p class="mm-seller-street">{{view.brand.seller.street}}</p>{{/if}}
+                      {{#if view.brand.seller.region}}<p class="mm-seller-region">{{view.brand.seller.region}}</p>{{/if}}
+                    </div>
+                  {{/if}}
                   {{#if view.brand.seller.hasIdLines}}
                     <div class="mm-id-grid">
                       {{#each view.brand.seller.lines}}
@@ -412,7 +417,7 @@
                   <div class="mm-note-group">
                     {{#if view.infoRow.attachments.title}}<h3 class="mm-section-title" data-role="title">{{view.infoRow.attachments.title}}</h3>{{/if}}
                     <ol class="mm-attachments">
-                      {{#each view.infoRow.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{name}}</a></li>{{/each}}
+                      {{#each view.infoRow.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
                     </ol>
                   </div>
                 </section>

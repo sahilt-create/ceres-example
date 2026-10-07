@@ -491,8 +491,11 @@ export const mapParty = (
   return {
     title,
     name,
-    // One line of text for the header and the party boxes alike.
+    // One line of text in the party boxes; the header sets the street in bold above the
+    // city, state and country (user request).
     address: [streetLine, regionLine].filter(Boolean).join(", "),
+    street: streetLine,
+    region: regionLine,
     ids,
     contacts,
     extras,
@@ -2589,4 +2592,137 @@ export const registerModernManufacturingHelpers = (
         : undefined
     )
   );
+};
+
+/* ------------------------------------------------------------------ print: footer on the page edge */
+
+/*
+ * Footer on the last page only (pdfOptions.footerOnLastPage): on paper it ends on the bottom
+ * edge of the last page, not under the last line of content (user request). CSS cannot reach
+ * the last page's foot, and a page box (@page) would break Lydia's Pageless PDF, so once the
+ * print layout is in place the template measures where that page ends and gives the footer
+ * the space above it. The footer on every page is fixed to each page's foot by CSS instead.
+ *
+ * Print layout stacks the pages' content areas, so a forced page break shows where the
+ * current page ends; a second one gives the page height. Sizes are read as laid out (with
+ * the renderer's print zoom) and written back in the footer's own pixels.
+ */
+export interface FooterPlacement {
+  /* Where the page holding the end of the content ends, and how tall a page is. */
+  pageEnd: number;
+  pageHeight: number;
+  footerTop: number;
+  footerHeight: number;
+}
+
+// 2 px to spare, so rounding never pushes the footer onto a page of its own.
+const PAGE_EDGE_SLACK = 2;
+
+/* The space to add above the footer so it ends on the page's bottom edge. */
+export const footerEdgeGap = ({
+  pageEnd,
+  pageHeight,
+  footerTop,
+  footerHeight,
+}: FooterPlacement): number => {
+  if (!(pageHeight > 0) || !(footerHeight > 0)) return 0;
+  const footerEnd = footerTop + footerHeight;
+  // A footer that does not fit under the content starts the next page and ends at its foot.
+  const target =
+    footerEnd <= pageEnd + PAGE_EDGE_SLACK ? pageEnd : pageEnd + pageHeight;
+  return Math.max(0, target - footerEnd - PAGE_EDGE_SLACK);
+};
+
+const LAST_PAGE_FOOTER =
+  ".mm-doc > .mm-letterhead-footer:not(.mm-footer-fixed):not(.is-empty)";
+
+const pageTop = (element: Element): number =>
+  element.getBoundingClientRect().top + window.scrollY;
+
+/*
+ * Laid-out pixels per CSS pixel at an element (the renderer zooms <html> for the print size):
+ * read off a 1000 px probe, as offsetHeight rounds to whole pixels.
+ */
+const layoutScale = (parent: HTMLElement, before: Element): number => {
+  const probe = document.createElement("div");
+  probe.style.cssText = "height: 1000px; margin: 0; break-inside: avoid;";
+  parent.insertBefore(probe, before);
+  const scale = probe.getBoundingClientRect().height / 1000;
+  probe.remove();
+  return scale > 0 ? scale : 1;
+};
+
+export const resetFootersOnPageEdge = (root: ParentNode = document): void => {
+  root.querySelectorAll<HTMLElement>(LAST_PAGE_FOOTER).forEach((footer) => {
+    footer.style.removeProperty("margin-top");
+    footer.style.removeProperty("break-before");
+  });
+};
+
+export const placeFootersOnPageEdge = (root: ParentNode = document): void => {
+  resetFootersOnPageEdge(root);
+  root.querySelectorAll<HTMLElement>(LAST_PAGE_FOOTER).forEach((footer) => {
+    // Not drawn (the PDF service prints its own footer): nothing to place.
+    if (!footer.getClientRects().length) return;
+
+    const parent = footer.parentElement as HTMLElement;
+    const breaks = [0, 1].map(() => {
+      const marker = document.createElement("div");
+      marker.style.cssText = "break-before: page; height: 0; margin: 0;";
+      parent.insertBefore(marker, footer);
+      return marker;
+    });
+    const [pageEnd, nextPageEnd] = breaks.map(pageTop);
+    breaks.forEach((marker) => marker.remove());
+    const pageHeight = nextPageEnd - pageEnd;
+
+    let box = footer.getBoundingClientRect();
+    const fits =
+      box.top + window.scrollY + box.height <= pageEnd + PAGE_EDGE_SLACK;
+    if (!fits) {
+      // A page of its own: a forced break keeps the margin above it (a natural one drops it).
+      footer.style.breakBefore = "page";
+      box = footer.getBoundingClientRect();
+    }
+    const target = fits ? pageEnd : nextPageEnd;
+    const gap = footerEdgeGap({
+      pageEnd: target,
+      pageHeight,
+      footerTop: box.top + window.scrollY,
+      footerHeight: box.height,
+    });
+    if (gap <= 0) return;
+    // Measured as laid out (zoomed); the margin is in the footer's own pixels.
+    footer.style.marginTop = `${gap / layoutScale(parent, footer)}px`;
+    // Should the footer still not end where it was meant to, it flows after the content as
+    // before rather than slip onto a page the print has not counted.
+    const placed = footer.getBoundingClientRect();
+    if (
+      placed.top + window.scrollY + placed.height >
+      target + PAGE_EDGE_SLACK
+    ) {
+      resetFootersOnPageEdge(parent);
+    }
+  });
+};
+
+/*
+ * Placed when the print layout applies (the print media query turning on: Chrome lays the
+ * pages out first, so the measurement is the printed one) and cleared when it ends. Lydia's
+ * Pageless PDF (isLydiaMode) has one page as tall as the content, so the footer already ends
+ * on its edge.
+ */
+export const registerModernManufacturingPrint = (): void => {
+  const state = window as typeof window & { mmPrintRegistered?: boolean };
+  if (state.mmPrintRegistered || typeof window.matchMedia !== "function") {
+    return;
+  }
+  state.mmPrintRegistered = true;
+  if (new URLSearchParams(window.location.search).has("isLydiaMode")) return;
+
+  window.matchMedia("print").addEventListener("change", (event) => {
+    if (event.matches) placeFootersOnPageEdge();
+    else resetFootersOnPageEdge();
+  });
+  window.addEventListener("afterprint", () => resetFootersOnPageEdge());
 };

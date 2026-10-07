@@ -241,10 +241,17 @@
 }
 
 /* The seller's full address, one grey paragraph (street, city, state, country). */
+
+/* The street in bold on the first line, then city, state and country in grey (user request). */
 .mm-seller-address {
   max-width: 342px;
   color: var(--mm-muted);
   overflow-wrap: break-word;
+}
+
+.mm-seller-street {
+  color: var(--mm-strong);
+  font-weight: 600;
 }
 
 .mm-header-qr {
@@ -1195,11 +1202,19 @@
   margin-top: 4px;
 }
 
-/* A long file name breaks where it must, so it stays on the line with its number. */
+/*
+ * One line per file (user request): a name wider than the box is cut off with "…" at its
+ * edge, and the full name shows on hover.
+ */
+.mm-attachments > li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mm-attachments a {
   color: inherit;
   text-decoration: underline;
-  word-break: break-all;
 }
 
 .mm-note-body {
@@ -1273,6 +1288,35 @@
   .toastui-editor-contents
   > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div) {
   margin-top: 8px;
+}
+
+/*
+ * A table written into a description or note is headed like the summary tables (user
+ * request): the grey title bar, bold accent text and the same rules, not the viewer's dark bar.
+ */
+.mm-doc .mm-item-desc .toastui-editor-contents th,
+.mm-doc .mm-note-body .toastui-editor-contents th {
+  border-color: var(--mm-line);
+  background: var(--mm-title-bar);
+  color: var(--mm-accent);
+  font-weight: 700;
+}
+
+/* Its headings and cells read from the left (user request), not centred. */
+.mm-doc .mm-item-desc .toastui-editor-contents :is(th, td),
+.mm-doc .mm-note-body .toastui-editor-contents :is(th, td) {
+  text-align: left;
+}
+
+/* Bullets and list numbers in the text's own colour (user request), not the viewer's grey. */
+.mm-doc .mm-item-desc .toastui-editor-contents ul > li::before,
+.mm-doc .mm-note-body .toastui-editor-contents ul > li::before {
+  background-color: currentcolor;
+}
+
+.mm-doc .mm-item-desc .toastui-editor-contents ol > li::before,
+.mm-doc .mm-note-body .toastui-editor-contents ol > li::before {
+  color: inherit;
 }
 
 .mm-doc .mm-item-desc .toastui-editor-contents :is(ul, ol),
@@ -1645,6 +1689,11 @@
   .mm-box,
   .mm-pair,
   .mm-summary-row,
+  /* The footer moves to a page whole (helpers.ts sets it on the last page's bottom edge). */
+  .mm-doc > .mm-letterhead-footer {
+    break-inside: avoid;
+  }
+
   .mm-signature-section {
     break-inside: avoid;
   }
