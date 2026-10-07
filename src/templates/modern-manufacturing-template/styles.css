@@ -51,13 +51,16 @@
   /*
    * The host body is a flex row, so #documentOutput shrinks to its content: a width taken
    * from the viewport (the template's iframe) keeps a wide table from widening the page.
-   * No padding of its own: Lydia frames the page with the business's margins (pdfOptions
-   * xMargins), as for the default template, so the page edge is the document's edge.
+   * One gutter, as the default template has: the content sits 32 px in from the sides, the
+   * letterhead and footer run to the page's edges. With no letterhead (or no footer) the
+   * same 32 px keeps the content off the top (or bottom) edge.
    */
+  --mm-gutter: 32px;
+
   width: min(100vw, 1000px);
   max-width: 100%;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 var(--mm-gutter);
   background: #fff;
   color: var(--mm-ink);
   font-family: var(--mm-font);
@@ -130,6 +133,22 @@
 .mm-doc .invoice-letterhead.is-empty,
 .mm-doc .invoice-letterhead-footer.is-empty {
   display: none;
+}
+
+/* The letterhead and footer run through the gutter to the page's edges. */
+.mm-doc .mm-letterhead,
+.mm-doc .mm-letterhead-footer {
+  width: auto;
+  margin-right: calc(-1 * var(--mm-gutter));
+  margin-left: calc(-1 * var(--mm-gutter));
+}
+
+.mm-doc:has(> .mm-letterhead.is-empty) {
+  padding-top: var(--mm-gutter);
+}
+
+.mm-doc:has(> .mm-letterhead-footer.is-empty) {
+  padding-bottom: var(--mm-gutter);
 }
 
 /* ------------------------------------------------------------ shared */
@@ -1455,6 +1474,10 @@
 
 /* Screen only: the iframe viewport is the document width. */
 @media screen and (width <= 640px) {
+  .mm-doc {
+    --mm-gutter: 16px;
+  }
+
   .mm-header {
     flex-direction: column;
   }
@@ -1595,6 +1618,9 @@
     --mm-font-size-m: 14px;
     --mm-font-size-lg: 16px;
     --mm-font-size-xl: 18px;
+
+    /* The paper's margins give the space on paper: no gutter of the page's own. */
+    --mm-gutter: 0px;
 
     width: 100%;
     max-width: none;
