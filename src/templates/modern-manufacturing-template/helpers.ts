@@ -18,6 +18,7 @@ import {
 } from "../../main/invoiceTemplateNormalization";
 import type { FlattenedInvoicePayload } from "../../main/invoicePayloadContract";
 import amountInWords from "../../widgets/shared/amountInWords";
+import formatCurrency from "../../widgets/shared/formatCurrency";
 import {
   asArray,
   asRecord,
@@ -36,6 +37,8 @@ import type { ImageInput } from "../../widgets/image/utils";
 interface FormatContext {
   locale: string;
   digits: number;
+  currency: string;
+  symbol: string;
 }
 
 export interface LabelValue {
@@ -107,20 +110,58 @@ const formatNumber = (
       maximumFractionDigits: max,
     }).format(value);
   } catch {
-    return value.toFixed(max);
+    // Only as many digits as the value has, as the formatter would give.
+    return String(Number(value.toFixed(max)));
   }
 };
 
-export const formatMoney = (value: unknown, ctx: FormatContext): string => {
-  if (!hasValue(value)) return "";
-  const amount = toAmount(value);
-  const formatted = formatNumber(
-    Math.abs(amount),
-    ctx.locale,
-    ctx.digits,
-    ctx.digits
-  );
-  return amount < 0 ? `(${formatted})` : formatted;
+/*
+ * Money everywhere (table, Total row, HSN summary, currency fields) goes through the shared
+ * formatCurrency, as the totals widget does: the document's currency symbol (or its custom
+ * one), its locale's grouping, its decimal places (subUnitLength, else 2), negatives in
+ * brackets.
+ */
+export const formatMoney = (value: unknown, ctx: FormatContext): string =>
+  hasValue(value)
+    ? formatCurrency(
+        toAmount(value),
+        ctx.currency,
+        ctx.locale,
+        ctx.digits,
+        ctx.symbol || undefined
+      )
+    : "";
+
+/* The document's decimal places (subUnitLength), else 2 — Refrens' default. */
+export const moneyDigits = (invoice: UnknownRecord): number => {
+  const digits = invoice.subUnitLength;
+  return typeof digits === "number" && Number.isInteger(digits) && digits >= 0
+    ? digits
+    : 2;
+};
+
+export const formatContext = (invoice: UnknownRecord): FormatContext => ({
+  locale: firstText(invoice.locale, asRecord(invoice.owner).locale, "en-IN"),
+  digits: moneyDigits(invoice),
+  currency: firstText(invoice.currency, "INR"),
+  symbol: text(invoice.customCurrencySymbol),
+});
+
+/*
+ * The template's data mapper: the shared normalizer, then the document's decimal places made
+ * explicit, so the shared widgets that format money from the document itself (totals, tax
+ * summary, payment record) print every figure with the same decimals as the table — a whole
+ * amount as "625,975.00", not "625,975".
+ */
+export const withMoneyDefaults = <T>(state: T): T => {
+  const invoice = asRecord(asRecord(state).invoice);
+  if (
+    asRecord(state).invoice &&
+    invoice.subUnitLength !== moneyDigits(invoice)
+  ) {
+    invoice.subUnitLength = moneyDigits(invoice);
+  }
+  return state;
 };
 
 export const formatQuantity = (value: unknown, ctx: FormatContext): string =>
@@ -1619,12 +1660,15 @@ const BOLD_WIDTHS: Record<string, number> = {
 };
 const DEFAULT_CHAR_WIDTH = 8;
 
-/* One-line width of a value in Inter Bold 12 px. */
+/* The table's text is 13 px (user request); the widths above are measured at 12 px. */
+const TABLE_TEXT_SCALE = 13 / 12;
+
+/* One-line width of a value in the table's bold text. */
 const textWidth = (value: string): number =>
   Array.from(value.toUpperCase()).reduce(
     (total, char) => total + (BOLD_WIDTHS[char] ?? DEFAULT_CHAR_WIDTH),
     0
-  );
+  ) * TABLE_TEXT_SCALE;
 
 /* data-col (the spec's test hook) and the Figma starting width of each account column. */
 const COLUMN_SPEC: Record<string, { col: string; width: number }> = {
@@ -2172,39 +2216,48 @@ const isTextRow = (row: SubtotalRow): boolean =>
   row.key === "conversionRate" || row.key.startsWith("extra:");
 
 /* "₹1,03,465.00" → "1,03,465.00"; "(₹50.00)" → "(50.00)". Separators and signs survive. */
-export const stripCurrencySymbol = (value: string): string =>
-  value.replace(/[^\d.,()'’\s-]/g, "").trim();
-
 const plainRow = (row: SubtotalRow) =>
   isTextRow(row)
     ? { ...row, isNum: false, isGrand: false }
-    : {
-        ...row,
-        value: stripCurrencySymbol(row.value),
-        extra: row.extra
-          ? { ...row.extra, value: stripCurrencySymbol(row.extra.value) }
-          : null,
-        isNum: true,
-        isGrand: row.key === "total",
-      };
+    : { ...row, isNum: true, isGrand: row.key === "total" };
 
 /*
- * The totals block: the shared Subtotal widget decides every row, label and visibility rule;
- * this only prints its figures without the currency symbol (the labels carry "(Rs.)" in the
- * design and the grand total carries the currency code). No Round Off row: refrens.com prints
- * none, the rounding is already in the total.
+ * The totals block: the shared Subtotal widget decides every row, label, figure (with the
+ * currency symbol) and visibility rule, at the document's decimal places. No Round Off row:
+ * refrens.com prints none, the rounding is already in the total.
  */
 export const mapTotals = (state: UnknownRecord) => {
   const invoice = asRecord(state.invoice);
-  const model = computeSubtotalRows(invoice, {
-    columns: asRecord(state.mapped).columns,
-    businessCurrency: invoice.businessCurrency,
-    businessLocale: invoice.businessLocale,
-  });
+  const model = computeSubtotalRows(
+    { ...invoice, subUnitLength: moneyDigits(invoice) },
+    {
+      columns: asRecord(state.mapped).columns,
+      businessCurrency: invoice.businessCurrency,
+      businessLocale: invoice.businessLocale,
+    }
+  );
+  const ctx = formatContext(invoice);
+  // "BGN 1 = ₹57.22": the unit side stays a whole 1, whatever the decimal places.
+  const unitRate = (row: SubtotalRow): SubtotalRow =>
+    row.key === "conversionRate"
+      ? {
+          ...row,
+          value: row.value.replace(
+            /^.*? = /,
+            `${formatCurrency(
+              1,
+              ctx.currency,
+              ctx.locale,
+              undefined,
+              ctx.symbol || undefined
+            )} = `
+          ),
+        }
+      : row;
   return {
     hidden: model.hidden,
     hideTaxes: model.hideTaxes,
-    main: model.groups.main.map(plainRow),
+    main: model.groups.main.map(unitRate).map(plainRow),
     extra: model.groups.extra.map(plainRow),
     due: model.groups.due.map(plainRow),
   };
@@ -2311,17 +2364,6 @@ export const mapFooter = (state: UnknownRecord) => {
 };
 
 /* ------------------------------------------------------------------ view */
-
-export const formatContext = (invoice: UnknownRecord): FormatContext => {
-  const digits = invoice.subUnitLength;
-  return {
-    locale: firstText(invoice.locale, asRecord(invoice.owner).locale, "en-IN"),
-    digits:
-      typeof digits === "number" && Number.isInteger(digits) && digits >= 0
-        ? digits
-        : 2,
-  };
-};
 
 /*
  * Print and PDF. The page lays the 1000 px design canvas out at the paper's printable width

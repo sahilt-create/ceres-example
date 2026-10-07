@@ -35,7 +35,8 @@ import {
   mapWords,
   placeOfSupplyText,
   registerModernManufacturingHelpers,
-  stripCurrencySymbol,
+  moneyDigits,
+  withMoneyDefaults,
   planTableLayout,
   headerParts,
   qrImage,
@@ -76,7 +77,7 @@ const state = (edit?: (invoice: Json, root: Json) => void): Json =>
 const render = (edit?: (invoice: Json, root: Json) => void): string =>
   template(state(edit));
 
-const ctx = { locale: "en-IN", digits: 2 };
+const ctx = { locale: "en-IN", digits: 2, currency: "INR", symbol: "" };
 
 const column = (key: string, extra: Json = {}): Json => ({
   key,
@@ -555,18 +556,14 @@ describe("Modern Manufacturing template — view model", () => {
     expect(formatDocumentDate("next Monday")).toBe("next Monday");
   });
 
-  it("prints the widget's totals without the currency symbol, and no Round Off", () => {
-    expect(stripCurrencySymbol("₹1,03,465.00")).toBe("1,03,465.00");
-    expect(stripCurrencySymbol("(₹50,000.00)")).toBe("(50,000.00)");
-    expect(stripCurrencySymbol("CHF 1’234.50")).toBe("1’234.50");
-
+  it("prints the widget's totals with the currency symbol, and no Round Off", () => {
     // The fixture carries totalRoundOff: 0 and a roundOff label; neither prints a row.
     const totals = mapTotals(state());
     expect(totals.main.map((row) => `${row.label}=${row.value}`)).toEqual([
-      "Total Taxable Value (Rs.)=1,03,465.00",
-      "CGST (Rs.)=9,311.85",
-      "SGST (Rs.)=9,311.85",
-      "Grand Total (Rs.)=1,22,088.70",
+      "Total Taxable Value (Rs.)=₹1,03,465.00",
+      "CGST (Rs.)=₹9,311.85",
+      "SGST (Rs.)=₹9,311.85",
+      "Grand Total (Rs.)=₹1,22,088.70",
     ]);
 
     const rich = mapTotals(
@@ -602,35 +599,82 @@ describe("Modern Manufacturing template — view model", () => {
         invoice.balance = { paid: 1000, due: 500 };
       })
     );
+    // A foreign-currency document: every figure carries its currency and decimals, the
+    // business-currency line follows, and the rate reads "BGN 1 = ₹57.22".
+    const bgn = mapTotals(
+      state((invoice) => {
+        invoice.currency = "BGN";
+        delete invoice.subUnitLength;
+        invoice.conversionRates = { INR: 57.22 };
+        invoice.owner.currency = "INR";
+        invoice.finalTotal.total = 625975;
+      })
+    );
+    const grand = bgn.main.find((row) => row.key === "total");
+    expect(grand?.value).toBe("BGN\u00a06,25,975.00");
+    expect(grand?.converted).toBe("₹3,58,18,289.50");
+    expect(bgn.main.find((row) => row.key === "conversionRate")?.value).toBe(
+      "BGN\u00a01 = ₹57.22"
+    );
     // A non-zero round-off is already in the total: still no row of its own.
     expect(rich.main.some((row) => row.key === "roundOff")).toBe(false);
     expect(rich.main[rich.main.length - 1].key).toBe("total");
-    // Free text keeps every character; money rows lose only the symbol.
+    // Free text keeps every character; money rows keep their currency symbol.
     expect(rich.extra[0].value).toBe("MH-12 ₹ free text");
-    expect(rich.due.map((row) => row.value)).toEqual(["(1,000.00)", "500.00"]);
+    expect(rich.due.map((row) => row.value)).toEqual([
+      "(₹1,000.00)",
+      "₹500.00",
+    ]);
     const charge = rich.main.find((row) => row.key.startsWith("charge:"));
-    expect(charge?.value).toBe("100.00");
+    expect(charge?.value).toBe("₹100.00");
     const taxed = rich.main.find((row) => row.key === "taxedCharge:tc");
-    expect(taxed?.value).toBe("200.00");
-    expect(taxed?.extra?.value).toBe("36.00");
+    expect(taxed?.value).toBe("₹200.00");
+    expect(taxed?.extra?.value).toBe("₹36.00");
   });
 
   it("formats money, quantities and the context", () => {
+    // The shared formatCurrency: the document's symbol, grouping and decimal places.
     expect(formatMoney("", ctx)).toBe("");
-    expect(formatMoney(-1234.5, ctx)).toBe("(1,234.50)");
-    expect(formatMoney("100000", ctx)).toBe("1,00,000.00");
-    // An invalid locale falls back to fixed decimals instead of throwing.
-    expect(formatMoney(5, { locale: "en_IN", digits: 2 })).toBe("5.00");
+    expect(formatMoney(-1234.5, ctx)).toBe("(₹1,234.50)");
+    expect(formatMoney("100000", ctx)).toBe("₹1,00,000.00");
+    expect(formatMoney(625975, ctx)).toBe("₹6,25,975.00");
+    expect(formatMoney(625975, { ...ctx, currency: "BGN" })).toBe(
+      "BGN\u00a06,25,975.00"
+    );
+    expect(formatMoney(12.5, { ...ctx, symbol: "Rs." })).toBe("Rs. 12.50");
+    expect(formatMoney(7, { ...ctx, digits: 0 })).toBe("₹7");
+    // An invalid locale falls back to the currency code and fixed decimals.
+    expect(formatMoney(5, { ...ctx, locale: "en_IN" })).toBe("INR 5.00");
     expect(formatQuantity(null, ctx)).toBe("");
     expect(formatQuantity(1250.5, ctx)).toBe("1,250.5");
-    expect(formatContext({ subUnitLength: 3, locale: "en-US" })).toEqual({
-      locale: "en-US",
-      digits: 3,
-    });
+    // An invalid locale falls back to fixed decimals instead of throwing.
+    expect(formatQuantity(5, { ...ctx, locale: "en_IN" })).toBe("5");
+    expect(formatQuantity(2.25, { ...ctx, locale: "en_IN" })).toBe("2.25");
+    expect(
+      formatContext({
+        subUnitLength: 3,
+        locale: "en-US",
+        currency: "BGN",
+        customCurrencySymbol: "лв",
+      })
+    ).toEqual({ locale: "en-US", digits: 3, currency: "BGN", symbol: "лв" });
     expect(
       formatContext({ subUnitLength: 1.5, owner: { locale: "de-DE" } })
-    ).toEqual({ locale: "de-DE", digits: 2 });
-    expect(formatContext({})).toEqual({ locale: "en-IN", digits: 2 });
+    ).toEqual({ locale: "de-DE", digits: 2, currency: "INR", symbol: "" });
+    expect(formatContext({})).toEqual({
+      locale: "en-IN",
+      digits: 2,
+      currency: "INR",
+      symbol: "",
+    });
+    // The data mapper makes the decimal places explicit for the shared widgets.
+    expect(moneyDigits({ subUnitLength: 0 })).toBe(0);
+    expect(moneyDigits({ subUnitLength: -1 })).toBe(2);
+    const bare: Json = { invoice: { currency: "BGN" } };
+    expect(withMoneyDefaults(bare).invoice.subUnitLength).toBe(2);
+    const set: Json = { invoice: { subUnitLength: 3 } };
+    expect(withMoneyDefaults(set).invoice.subUnitLength).toBe(3);
+    expect(withMoneyDefaults({ other: 1 })).toEqual({ other: 1 });
     expect(initials("Vertex Foundry & Components")).toBe("VF");
   });
 
@@ -1251,16 +1295,16 @@ describe("Modern Manufacturing template — view model", () => {
       gstRate: "18%",
       margin: "12.5%",
       discount: "10%",
-      rate: "100.00",
-      cess: "2.00",
-      freight: "30.00",
-      duty: "4.00",
+      rate: "₹100.00",
+      cess: "₹2.00",
+      freight: "₹30.00",
+      duty: "₹4.00",
       weight: "2.25",
       grade: "A",
       finish: "Matt",
       colours: "Red, Blue",
-      sgst: "9.00",
-      total: "472.00",
+      sgst: "₹9.00",
+      total: "₹472.00",
     });
     const classes = Object.fromEntries(
       (table.rows[0] as Json).cells.map((cell: Json) => [
@@ -1274,7 +1318,7 @@ describe("Modern Manufacturing template — view model", () => {
     const second = (table.rows[1] as Json).cells.find(
       (cell: Json) => cell.key === "discount"
     );
-    expect(second.value).toBe("5.00");
+    expect(second.value).toBe("₹5.00");
 
     const footer = Object.fromEntries(
       table.footer.cells.map((cell) => [cell.key, cell.value])
@@ -1284,7 +1328,7 @@ describe("Modern Manufacturing template — view model", () => {
     expect(footer.discount).toBe("");
     expect(footer.quantity).toBe("5");
     expect(footer.weight).toBe("2.25");
-    expect(footer.total).toBe("531.00");
+    expect(footer.total).toBe("₹531.00");
 
     const sumsDiscount = mapItemTable(
       state((invoice) => {
@@ -1296,7 +1340,7 @@ describe("Modern Manufacturing template — view model", () => {
     );
     expect(
       sumsDiscount.footer.cells.find((cell) => cell.key === "discount")?.value
-    ).toBe("10.00");
+    ).toBe("₹10.00");
   });
 
   it("puts the thumbnail beside the item name and images[] with the description", () => {
@@ -1527,16 +1571,16 @@ describe("Modern Manufacturing template — view model", () => {
     ]);
     expect(figma.widths).toEqual({
       hsn: 70,
-      quantity: 40,
+      quantity: 42,
       unit: 45,
       rate: 75,
-      amount: 86,
+      amount: 92,
       cgst: 75,
       sgst: 75,
-      total: 98,
+      total: 99,
     });
     // 934 px inside the table's outline, less Sr (30 + 8) and the other columns.
-    expect(figma.descriptionWidth).toBe(934 - 38 - 564);
+    expect(figma.descriptionWidth).toBe(934 - 38 - 573);
     expect(figma).toMatchObject({ mergeUnit: false, smallNumbers: false });
 
     // Too wide: shrink to content, then merge Unit into Qty, then smaller numbers.
@@ -1554,8 +1598,8 @@ describe("Modern Manufacturing template — view model", () => {
       mergeUnit: false,
       smallNumbers: false,
     });
-    expect(planTableLayout(wide(8, "1,250.00")).widths.c0).toBe(66);
-    expect(planTableLayout(wide(9, "1,250.00"))).toMatchObject({
+    expect(planTableLayout(wide(8, "1,250.00")).widths.c0).toBe(70);
+    expect(planTableLayout(wide(6, "12,50,000.00"))).toMatchObject({
       mergeUnit: true,
       smallNumbers: false,
     });
@@ -1583,14 +1627,15 @@ describe("Modern Manufacturing template — view model", () => {
         values: ["Work will resume after advance payment ".repeat(20)],
       },
     ]);
-    // 75 px start + the row's end padding: a long note never widens a text column.
-    expect(note.widths.note).toBe(83);
+    // A long note sizes a text column by its longest word only (at 13 px, "ADVANCE" /
+    // "PAYMENT" need a little over the 75 px start), plus the row's end padding.
+    expect(note.widths.note).toBe(88);
     // A character outside the measured glyph table counts as a wide one.
     const lot = planTableLayout([
       name,
       { column: col("lot", "Lot", "code"), values: ["#########"] },
     ]);
-    expect(lot.widths.lot).toBe(9 * 8 + 13 + 8);
+    expect(lot.widths.lot).toBe((9 * 8 * 13) / 12 + 13 + 8);
   });
 
   it("maps the HSN summary for either tax path", () => {
@@ -1600,9 +1645,9 @@ describe("Modern Manufacturing template — view model", () => {
     expect(intra.labels.hsn).toBe("HSN/SAC");
     expect(intra.rows[3]).toMatchObject({
       hsn: "8483",
-      total: "41,966.70",
+      total: "₹41,966.70",
     });
-    expect(intra.totals.total).toBe("1,22,088.70");
+    expect(intra.totals.total).toBe("₹1,22,088.70");
     // Tax in words under the Total row: CGST + SGST here, across all five columns.
     expect(intra.words).toEqual({
       label: "Total Tax In Words",
@@ -1653,7 +1698,7 @@ describe("Modern Manufacturing template — view model", () => {
     expect(inter.isHidden).toBe(true);
     expect(inter.labels.hsn).toBe("HSN Code");
     expect(inter.rows).toEqual([
-      expect.objectContaining({ igst: "18.00", total: "119.00" }),
+      expect.objectContaining({ igst: "₹18.00", total: "₹119.00" }),
     ]);
   });
 
@@ -1914,7 +1959,7 @@ describe("Modern Manufacturing template — view model", () => {
     expect(info?.rows.map((row) => [row.label, row.value, row.isDate])).toEqual(
       [
         ["Order Date", "2026-09-14T18:30:00.000Z", true],
-        ["Advance", "500.00", false],
+        ["Advance", "₹500.00", false],
         ["Lines", "A, B", false],
       ]
     );
@@ -2269,13 +2314,13 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     );
   });
 
-  it("follows the spec's type scale on Inter", () => {
+  it("follows the type scale on Inter (body text 13 px, user request)", () => {
     expect(
       css.startsWith(
         '@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800'
       )
     ).toBe(true);
-    expect(rule(".mm-doc")).toMatch(/font-size: 12px;/);
+    expect(rule(".mm-doc")).toMatch(/font-size: 13px;/);
     expect(rule(".mm-monogram")).toMatch(
       /font-size: 20px;\s*line-height: [\d.]+;\s*font-weight: 800;/
     );
@@ -2286,7 +2331,7 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       /font-size: 14px;\s*line-height: [\d.]+;\s*font-weight: 700;/
     );
     expect(rule(".mm-copy")).toMatch(
-      /font-size: 12px;\s*line-height: [\d.]+;\s*font-weight: 600;/
+      /font-size: 13px;\s*line-height: [\d.]+;\s*font-weight: 600;/
     );
     // The seller's address is one grey paragraph (user request; the spec had a bold line 1).
     expect(rule(".mm-seller-address")).toMatch(/color: var\(--mm-muted\);/);
@@ -2298,13 +2343,13 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       /font-size: 13px;\s*line-height: [\d.]+;\s*font-weight: 600;/
     );
     // UPI note 12 px (user request; the spec had 11 px).
-    expect(rule(".mm-upi-note")).toMatch(/font-size: 12px;/);
+    expect(rule(".mm-upi-note")).toMatch(/font-size: 13px;/);
     // Rows after the grand total are ruled off from the words line.
     expect(css).toMatch(
       /\.mm-totals:has\(\.ceres-subtotal-table-extra, \.ceres-subtotal-table-due\) \.mm-words \{\s*padding-top: 8px;\s*border-top: 1px solid var\(--mm-line\);/
     );
     expect(rule(".mm-section-title")).toMatch(
-      /font-size: 12px;[^}]*font-weight: 700;/
+      /font-size: 13px;[^}]*font-weight: 700;/
     );
     expect(css).toMatch(
       /\[data-role="grand-total"\]\s*\{[^}]*font-size: 18px;\s*line-height: [\d.]+;\s*font-weight: 800;/
@@ -2463,6 +2508,19 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     expect(rule(".mm-party-label")).toMatch(/color: var\(--mm-accent\);/);
   });
 
+  it("moves the company name below a logo it cannot fit beside", () => {
+    expect(rule(".mm-brand")).toMatch(/flex-wrap: wrap;/);
+    expect(rule(".mm-brand-name")).toMatch(
+      /flex: 1 1 160px;\s*min-width: min\(160px, 100%\);/
+    );
+  });
+
+  it("lets a details cell hug a value that cannot wrap", () => {
+    expect(rule(".mm-details")).toMatch(
+      /grid-template-columns: repeat\(\s*var\(--mm-detail-columns, 5\),\s*minmax\(min-content, 1fr\)\s*\);/
+    );
+  });
+
   it("spaces identifier lines 4 px apart wherever they are", () => {
     expect(rule(".mm-id-grid")).toMatch(/gap: 4px 12px;/);
     // In the header they are set from the right, a lone field in the right-hand column.
@@ -2470,7 +2528,9 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       /justify-content: end;\s*text-align: right;/
     );
     expect(
-      rule(".mm-seller .mm-id-grid > .mm-id-line > .mm-id:only-child")
+      rule(
+        ".mm-seller .mm-id-grid > .mm-id-line > .mm-id:last-child:nth-child(odd)"
+      )
     ).toMatch(/grid-column: -2 \/ -1;/);
   });
 

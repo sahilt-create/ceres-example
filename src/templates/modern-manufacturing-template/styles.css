@@ -5,7 +5,7 @@
  * node 18506:2360; item images per node 18743:689); behaviour per INVOICE_TEMPLATE_SPEC_v2.
  *
  * Design canvas: 1000 px with 32 px padding (936 px of content), 16 px between sections,
- * Inter at 12 px. Tokens are the spec's section 2; the type scale is its section 3. The
+ * Inter at 13 px body text (user request; the spec has 12). Tokens are the spec's section 2. The
  * theme colour (default blue #013d7f, header dividers #bddcff) is the document's setting:
  * helpers.ts sets --mm-theme / --mm-theme-tint for any other colour.
  *
@@ -48,9 +48,9 @@
   background: #fff;
   color: var(--mm-ink);
   font-family: var(--mm-font);
-  font-size: calc(12px * var(--mm-text-scale, 1));
+  font-size: calc(13px * var(--mm-text-scale, 1));
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.5385;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -130,16 +130,16 @@
 /* Field labels 12/400; party labels take 500. Labels print as the business wrote them. */
 .mm-label {
   color: var(--mm-muted);
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   font-weight: 400;
 }
 
 .mm-section-title {
   color: var(--mm-accent);
-  font-size: calc(12px * var(--mm-text-scale, 1));
+  font-size: calc(13px * var(--mm-text-scale, 1));
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.5385;
 }
 
 /*
@@ -167,10 +167,15 @@
   gap: 24px;
 }
 
+/*
+ * Logo and company name side by side; when the name cannot keep a readable width beside the
+ * logo (a wide logo, long seller details), it moves below the logo instead of breaking up.
+ */
 .mm-brand {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 8px 14px;
   min-width: 0;
 }
 
@@ -203,7 +208,8 @@
 }
 
 .mm-brand-name {
-  min-width: 0;
+  flex: 1 1 160px;
+  min-width: min(160px, 100%);
   color: var(--mm-strong);
   font-family: var(--mm-title-font);
   font-size: calc(18px * var(--mm-text-scale, 1));
@@ -261,8 +267,8 @@
   flex-wrap: wrap;
   gap: 4px 8px;
   color: var(--mm-strong);
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   font-weight: 500;
 }
 
@@ -275,8 +281,11 @@
   text-align: right;
 }
 
-/* Lines fill from the right: a line with one field puts it in the right-hand column. */
-.mm-seller .mm-id-grid > .mm-id-line > .mm-id:only-child {
+/*
+ * Lines fill from the right: a field left on its own — a one-field line, or the third of three
+ * that wraps — sits in the right-hand column.
+ */
+.mm-seller .mm-id-grid > .mm-id-line > .mm-id:last-child:nth-child(odd) {
   grid-column: -2 / -1;
 }
 
@@ -305,8 +314,8 @@
 
 .mm-subtitle {
   min-width: 0;
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   font-weight: 400;
   overflow-wrap: break-word;
   text-align: right;
@@ -314,8 +323,8 @@
 
 .mm-copy {
   flex: none;
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   font-weight: 600;
   opacity: 0.8;
   white-space: nowrap;
@@ -323,9 +332,17 @@
 
 /* ------------------------------------------------------------ 3. invoice details */
 
+/*
+ * Columns share the width, but none shrinks below its content's narrowest form: a value that
+ * cannot wrap (a long invoice number) widens its own cell instead of running into the next,
+ * and the other cells share what is left, wrapping their text.
+ */
 .mm-details {
   display: grid;
-  grid-template-columns: repeat(var(--mm-detail-columns, 5), minmax(0, 1fr));
+  grid-template-columns: repeat(
+    var(--mm-detail-columns, 5),
+    minmax(min-content, 1fr)
+  );
 }
 
 /*
@@ -457,8 +474,8 @@
 
 .mm-party-address {
   color: var(--mm-muted);
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   overflow-wrap: break-word;
 }
 
@@ -551,8 +568,8 @@
   border-radius: 6px;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
 .mm-items th,
@@ -858,8 +875,8 @@
 
 .mm-upi-note {
   color: var(--mm-accent);
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
 /* Totals rows: padding 12, 8 px apart; labels 400 muted, values 600 ink. */
@@ -870,8 +887,8 @@
 .mm-totals .ceres-subtotal-table th,
 .mm-totals .ceres-subtotal-table td {
   padding: 4px 12px;
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
 .mm-totals .ceres-subtotal-table:first-child tr:first-child th,
@@ -928,8 +945,8 @@
 .mm-totals .ceres-subtotal-note,
 .mm-totals .ceres-subtotal-converted,
 .mm-totals .ceres-subtotal-extra {
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
 /* The widget's own words line is replaced by the one under the grand total. */
@@ -998,8 +1015,8 @@
   width: 100%;
   min-width: 560px;
   border-collapse: collapse;
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
 /*
@@ -1066,8 +1083,8 @@
   padding: 8px 12px;
   border: 0;
   border-bottom: 1px solid var(--mm-line);
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   text-align: center;
   white-space: nowrap;
 }
@@ -1121,8 +1138,8 @@
   padding: 8px 12px;
   border-bottom: 1px solid var(--mm-line);
   color: var(--mm-accent);
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
   font-weight: 700;
 }
 
@@ -1242,8 +1259,8 @@
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: calc(12px * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(13px * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
 /* Every column but the first (HSN/SAC) is centred. */

@@ -1,6 +1,9 @@
 import template from "./template.hbs";
 import { normalizeInvoiceTemplateState } from "../../main/invoiceTemplateNormalization";
-import { registerModernManufacturingHelpers } from "./helpers";
+import {
+  registerModernManufacturingHelpers,
+  withMoneyDefaults,
+} from "./helpers";
 import "./styles.css";
 // Register only the widgets template.hbs uses.
 import "../../widgets/date-time";
@@ -16,5 +19,8 @@ import "../../widgets/watermark";
 registerModernManufacturingHelpers(window.Handlebars);
 
 // Export template to global for main renderer to consume
-window.CeresTemplateDataMapper = normalizeInvoiceTemplateState as any;
+// The shared normalizer, then the document's decimal places made explicit (helpers.ts).
+window.CeresTemplateDataMapper = ((
+  payload: Parameters<typeof normalizeInvoiceTemplateState>[0]
+) => withMoneyDefaults(normalizeInvoiceTemplateState(payload))) as any;
 window.CeresTemplate = template;
