@@ -19,6 +19,7 @@ import {
   withTemplateSettings,
   mapTotals,
   currencyMark,
+  discountRate,
   isSquareLogo,
   mapStockSummary,
   onThemeColor,
@@ -169,10 +170,10 @@ describe("Apex Engineering — render", () => {
       "Sample House, 1/1 Sample Street, Kolkata – 700001, West Bengal, India"
     );
     expect(html).toMatch(
-      /ax-field-label">GSTIN<\/span> <span class="ax-field-value ax-num">19AAAAA0000A1Z5/
+      /ax-field-label">GSTIN<\/span> <span class="ax-field-value ax-num ax-break">19AAAAA0000A1Z5/
     );
     expect(html).toMatch(
-      /ax-field-label">Email<\/span> <span class="ax-field-value ax-email">client@example.com/
+      /ax-field-label">Email<\/span> <span class="ax-field-value ax-email ax-break">client@example.com/
     );
     // The cost card: the grand total, as the table's last totals row prints it.
     expect(html).toContain('<p class="ax-cost-label">Equipment Cost</p>');
@@ -318,7 +319,7 @@ describe("Apex Engineering — boolean settings", () => {
       invoice.hideTaxes = true;
       invoice.advanceOptions.hideTaxes = true;
     });
-    expect(tagWith(noTaxes, 'data-ceres-subtotal-row="cgst"')).toContain(
+    expect(tagWith(noTaxes, 'data-ceres-subtotal-row="cgst:18"')).toContain(
       "is-hidden-by-taxes"
     );
     expect(noTaxes).not.toContain("ax-cost-note");
@@ -793,9 +794,14 @@ describe("Apex Engineering — boolean settings", () => {
         };
       })
     ).toContain("Digitally signed by A. Signer");
-    expect(render()).toContain("For Apex Engineering");
+    // No signature on the document: no "For … / Authorized Signatory" block at all.
+    expect(render()).not.toContain('data-testid="signature"');
+    expect(render()).not.toContain("For Apex Engineering");
     // In the footer row, after the contact strip.
-    const html = render();
+    const html = render((invoice) => {
+      invoice.signature = "https://example.com/sign.png";
+    });
+    expect(html).toContain("For Apex Engineering");
     const at = html.indexOf('data-testid="signature"');
     expect(at).toBeGreaterThan(html.indexOf('data-section="footer"'));
     expect(at).toBeGreaterThan(html.indexOf('data-testid="contact"'));
@@ -1157,7 +1163,10 @@ describe("Apex Engineering — files and CSS", () => {
   it("spaces the client panel as the design does", () => {
     expect(source).toMatch(/\.ax-panel \{[^}]*justify-content: space-between;/);
     expect(source).toMatch(/\.ax-party \{[^}]*flex: 0 1 231px;/);
-    expect(source).toMatch(/\.ax-party-fields \{[^}]*flex: 0 1 198px;/);
+    // The fields column: 198 px at the least, hugging a longer GSTIN / phone up to 40%.
+    expect(source).toMatch(
+      /\.ax-party-fields \{[^}]*width: max-content;[^}]*min-width: min\(198px, 100%\);[^}]*max-width: 40%;/
+    );
     expect(source).toMatch(/\.ax-panel-slot \{[^}]*flex: none;/);
   });
 
@@ -1522,5 +1531,116 @@ describe("Apex Engineering — PDF service page hooks", () => {
     const footer = tag(once, "data-ceres-page-footer");
     expect(footer).toContain('data-ceres-page-policy="last"');
     expect(footer).not.toContain("no-dibella");
+  });
+});
+
+describe("Apex Engineering — frames hug long values", () => {
+  const source = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+  it("widens the bank card for a long account number or UPI ID instead of overflowing", () => {
+    expect(source).toMatch(
+      /\.ax-row > \.ax-bank-card \{[^}]*width: 359px;[^}]*min-width: min-content;[^}]*max-width: 100%;/
+    );
+    expect(source).toMatch(
+      /\.ax-bank-rows \{[^}]*grid-template-columns: repeat\(2, minmax\(max-content, 1fr\)\);/
+    );
+  });
+});
+
+describe("Apex Engineering — party tax numbers only when on the document", () => {
+  const ids = (edit: (invoice: Json) => void) =>
+    view(edit).brand.fields.map((row: Json) => row.label);
+  it("does not print a stored VAT / TRN number on an Indian GST document", () => {
+    expect(
+      ids((invoice) => {
+        invoice.billedBy.vatNumber = "VAT000000000";
+        invoice.billedBy.trnNumber = "100000000000003";
+      })
+    ).not.toEqual(expect.arrayContaining(["VAT Number"]));
+  });
+  it("prints it where the document carries it, and never when switched off", () => {
+    expect(
+      ids((invoice) => {
+        invoice.taxType = "UAE";
+        invoice.billedBy.vatNumber = "VAT000000000";
+      })
+    ).toContain("VAT Number");
+    expect(
+      ids((invoice) => {
+        invoice.billedBy.vatNumber = "VAT000000000";
+        invoice.billedBy.fieldVisibility = { vat: true };
+      })
+    ).toContain("VAT Number");
+    expect(
+      ids((invoice) => {
+        invoice.taxType = "UAE";
+        invoice.billedBy.vatNumber = "VAT000000000";
+        invoice.billedBy.fieldVisibility = { vatNumber: false };
+      })
+    ).not.toContain("VAT Number");
+  });
+});
+
+describe("Apex Engineering — unbroken field values", () => {
+  it("lets an email or GSTIN carry on from its label and break only at the edge", () => {
+    const html = render((invoice) => {
+      invoice.billedTo.email = "sample.client@example.com";
+    });
+    expect(html).toMatch(
+      /ax-field-label">Email<\/span> <span class="ax-field-value ax-email ax-break">sample.client@example\.com/
+    );
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.ax-field \.ax-field-value\.ax-break \{[^}]*word-break: break-all;/
+    );
+  });
+});
+
+describe("Apex Engineering — rates on the tax and discount rows", () => {
+  const labels = (edit?: (invoice: Json) => void) =>
+    mapTotals(state(edit)).main.map((row: Json) => row.label);
+  it("prints each tax row with its rate: CGST (9%), SGST (9%) for 18% items", () => {
+    expect(labels()).toEqual(
+      expect.arrayContaining(["CGST (9%)", "SGST (9%)", "Discount (10%)"])
+    );
+    // The tax amount is the document's own.
+    const cgst = mapTotals(state()).main.find((row: Json) =>
+      row.key.startsWith("cgst")
+    );
+    expect(cgst?.value).toBe("₹77,925.89");
+  });
+  it("IGST shows the whole rate; mixed rates give one row per rate", () => {
+    expect(
+      labels((invoice) => {
+        invoice.igst = true;
+        invoice.items.forEach((item: Json) => {
+          if (!item.group) item.igst = (item.cgst || 0) + (item.sgst || 0);
+        });
+        invoice.finalTotal.igst = 155851.78;
+      })
+    ).toContain("IGST (18%)");
+    const mixed = labels((invoice) => {
+      invoice.items[1].gstRate = 28;
+    });
+    expect(mixed).toEqual(expect.arrayContaining(["CGST (9%)", "CGST (14%)"]));
+  });
+  it("discount rate: the document's own, else the items' shared share, else the effective rate", () => {
+    expect(
+      discountRate({ finalTotal: { discountPercentage: 10, discount: 5 } })
+    ).toBe("10");
+    expect(
+      discountRate({
+        finalTotal: { discount: 50, subTotal: 1000 },
+        items: [
+          { discount: { amount: 5, discountType: "PERCENTAGE" } },
+          { discount: { amount: 5, discountType: "PERCENTAGE" } },
+        ],
+      })
+    ).toBe("5");
+    expect(
+      discountRate({
+        finalTotal: { discount: 1055, subTotal: 10000 },
+      })
+    ).toBe("10.55");
+    expect(discountRate({ finalTotal: {} })).toBe("");
   });
 });

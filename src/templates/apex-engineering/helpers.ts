@@ -588,6 +588,60 @@ const fieldShown = (
   );
 };
 
+/*
+ * A party's VAT / TRN / TIN / SST / Tax ID prints only when the document carries it (user
+ * rule: nothing that was not added in the form). A business profile keeps these numbers
+ * whatever the document, so a stored value alone is not enough:
+ *   - a switch that hides it anywhere (`<key>ShowInInvoice`, `hide<Key>`, the party's or the
+ *     business's fieldVisibility) hides it;
+ *   - an Indian GST document's form has GSTIN and PAN only, so there these show only when a
+ *     switch turns them on explicitly; elsewhere (a VAT / TRN geography) they show by default.
+ */
+export const taxIdShown = (
+  invoice: UnknownRecord,
+  party: UnknownRecord,
+  aliases: string[]
+): boolean => {
+  const names = aliases.map((alias) => alias.toLowerCase());
+  const business = asRecord(
+    asRecord(ownerConfiguration(invoice).experimental).fieldVisibility
+  );
+  const fromMap = (map: UnknownRecord) =>
+    Object.keys(map)
+      .filter((key) => names.includes(key.toLowerCase()))
+      .map((key) => {
+        const value = map[key];
+        const record = asRecord(value);
+        return [
+          value,
+          record.showInDocument,
+          record.showInInvoice,
+          record.visible,
+        ]
+          .map(optionalFlag)
+          .find((flag) => flag !== undefined);
+      });
+  const switches = [
+    ...aliases.flatMap((alias) => {
+      const cap = alias.charAt(0).toUpperCase() + alias.slice(1);
+      return [
+        party[`${alias}ShowInInvoice`],
+        party[`show${cap}InInvoice`],
+        party[`show${cap}`],
+      ].map(optionalFlag);
+    }),
+    ...fromMap(asRecord(party.fieldVisibility)),
+    ...fromMap(business),
+  ].filter((flag): flag is boolean => flag !== undefined);
+  const hidden = aliases.some((alias) => {
+    const cap = alias.charAt(0).toUpperCase() + alias.slice(1);
+    return optionalFlag(party[`hide${cap}`]) === true;
+  });
+  if (hidden || switches.includes(false)) return false;
+  if (switches.includes(true)) return true;
+  return text(invoice.taxType).toUpperCase() !== "INDIA";
+};
+
 /* A party's field list, as an array or as a map keyed by field id (business profiles). */
 const fieldList = (value: unknown): unknown[] =>
   Array.isArray(value) ? value : Object.values(asRecord(value));
@@ -656,21 +710,43 @@ export const mapParty = (
     ids.push({ key: "pan", label: "PAN", value: text(party.panNumber) });
   }
   const labels = asRecord(invoice.customLabels);
-  if (party.vatNumber) {
-    ids.push({
-      key: "vat",
-      label: firstText(party.vatLabel, "VAT Number"),
-      value: text(party.vatNumber),
-    });
-  }
-  // The other countries' tax numbers, labelled as sr-trading-2-0 labels them.
+  // The other geographies' tax numbers (VAT, TRN, TIN, SST, Tax ID), labelled as
+  // sr-trading-2-0 labels them — only where the document carries them (taxIdShown).
   [
-    { key: "trnNumber", label: firstText(labels.trn, labels.trnNumber, "TRN") },
-    { key: "tinNumber", label: firstText(labels.tin, labels.tinNumber, "TIN") },
-    { key: "sstNumber", label: firstText(labels.sst, labels.sstNumber, "SST") },
-    { key: "taxId", label: firstText(labels.taxId, "Tax ID") },
-  ].forEach(({ key, label }) => {
-    if (text(party[key])) ids.push({ key, label, value: text(party[key]) });
+    {
+      key: "vatNumber",
+      aliases: ["vat", "vatNumber"],
+      label: firstText(
+        labels.vat,
+        labels.vatNumber,
+        party.vatLabel,
+        "VAT Number"
+      ),
+    },
+    {
+      key: "trnNumber",
+      aliases: ["trn", "trnNumber"],
+      label: firstText(labels.trn, labels.trnNumber, "TRN"),
+    },
+    {
+      key: "tinNumber",
+      aliases: ["tin", "tinNumber"],
+      label: firstText(labels.tin, labels.tinNumber, "TIN"),
+    },
+    {
+      key: "sstNumber",
+      aliases: ["sst", "sstNumber"],
+      label: firstText(labels.sst, labels.sstNumber, "SST"),
+    },
+    {
+      key: "taxId",
+      aliases: ["taxId"],
+      label: firstText(labels.taxId, "Tax ID"),
+    },
+  ].forEach(({ key, aliases, label }) => {
+    if (text(party[key]) && taxIdShown(invoice, party, aliases)) {
+      ids.push({ key, label, value: text(party[key]) });
+    }
   });
 
   /*
@@ -727,6 +803,10 @@ export const mapParty = (
     noWrap: isNum,
     isEmail: row.key === "email",
     isPhone: row.key === "phone",
+    // One unbroken word (an email, a GSTIN, a code): it starts on its label's line and only
+    // what does not fit runs on to the next (user request), instead of the whole value
+    // dropping below the label.
+    isToken: !row.isDate && !/\s/.test(row.value),
   });
   const pairs = <T>(rows: T[]): T[][] =>
     rows
@@ -2663,13 +2743,56 @@ const plainRow = (row: SubtotalRow) =>
  * currency symbol) and visibility rule, at the document's decimal places. No Round Off row:
  * refrens.com prints none, the rounding is already in the total.
  */
+/*
+ * The discount row's rate (user request: a percentage after the discount label): the
+ * document's own discountPercentage; else the one percentage every discounted item shares;
+ * else the effective rate, the discount over the subtotal. "" when there is no discount.
+ */
+export const discountRate = (invoice: UnknownRecord): string => {
+  const finalTotal = asRecord(invoice.finalTotal);
+  const ctx = formatContext(invoice);
+  const own = toAmount(finalTotal.discountPercentage);
+  if (own > 0) return formatNumber(own, ctx.locale, 0, 2);
+  const discounted = asArray(invoice.items)
+    .map(asRecord)
+    .filter(isRealItem)
+    .map(discountParts)
+    .filter((part) => toAmount(part.amount) > 0);
+  const shares = discounted
+    .map((part) => (part.isPercent ? toAmount(part.amount) : NaN))
+    .filter((rate, index, all) => all.indexOf(rate) === index);
+  if (discounted.length && shares.length === 1 && Number.isFinite(shares[0])) {
+    return formatNumber(shares[0], ctx.locale, 0, 2);
+  }
+  const discount = toAmount(
+    pickFirst(finalTotal.discount, finalTotal.totalDiscount)
+  );
+  const subTotal = toAmount(finalTotal.subTotal);
+  return discount > 0 && subTotal > 0
+    ? formatNumber((discount / subTotal) * 100, ctx.locale, 0, 2)
+    : "";
+};
+
 export const mapTotals = (
   state: UnknownRecord,
   settings: ApexSettings = resolveSettings(state)
 ) => {
   const invoice = asRecord(state.invoice);
+  const advanceOptions = asRecord(invoice.advanceOptions);
+  const view = text(advanceOptions.taxSummaryView).toUpperCase();
+  // Tax rows carry their rate (user request): the Subtotal widget's per-rate breakup,
+  // "CGST (9%)" / "SGST (9%)" / "IGST (18%)" — one row per rate when the items' rates differ.
   const model = computeSubtotalRows(
-    { ...invoice, subUnitLength: moneyDigits(invoice) },
+    {
+      ...invoice,
+      subUnitLength: moneyDigits(invoice),
+      advanceOptions: {
+        ...advanceOptions,
+        taxSummaryView: ["BOTH", "INVOICE_SUMMARY"].includes(view)
+          ? view
+          : "INVOICE_SUMMARY",
+      },
+    },
     {
       columns: asRecord(state.mapped).columns,
       businessCurrency: invoice.businessCurrency,
@@ -2694,10 +2817,19 @@ export const mapTotals = (
           ),
         }
       : row;
+  // "Discount (10%)": the rate after the label, with its space (the widget writes none).
+  const rate = discountRate(invoice);
+  const withDiscountRate = (row: SubtotalRow): SubtotalRow =>
+    row.key === "discount" && rate
+      ? {
+          ...row,
+          label: `${row.label.replace(/\s*\([^)]*%\)\s*$/, "")} (${rate}%)`,
+        }
+      : row;
   return {
     hidden: model.hidden,
     hideTaxes: model.hideTaxes,
-    main: model.groups.main.map(unitRate).map(plainRow),
+    main: model.groups.main.map(unitRate).map(withDiscountRate).map(plainRow),
     extra: model.groups.extra.map(plainRow),
     // "Show balance due" off drops the Balance Due row; what was paid still prints.
     due: model.groups.due
@@ -2767,7 +2899,9 @@ export const mapSignature = (state: UnknownRecord) => {
 
   const image = isDigital ? "" : text(invoice.signature);
   return {
-    // The design closes "For …" and the signatory line up; space opens only for a mark.
+    // The block prints only for a signature the document has — an image, or a digital
+    // signing request (user rule); without one there is no "For … / Authorised Signatory".
+    show: image !== "" || isDigital,
     hasMark: image !== "" || isDigital,
     forLabel: [
       labelOr(labels, "for", "For"),

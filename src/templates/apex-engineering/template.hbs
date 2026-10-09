@@ -117,7 +117,7 @@
                 {{#if fields.length}}
                   <div class="ax-party-fields">
                     {{#each fields}}
-                      <p class="ax-field"><span class="ax-field-label">{{label}}</span> <span class="ax-field-value{{#if noWrap}} ax-num{{else if isEmail}} ax-email{{/if}}">{{#if isDate}}{{axDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                      <p class="ax-field"><span class="ax-field-label">{{label}}</span> <span class="ax-field-value{{#if noWrap}} ax-num{{else if isEmail}} ax-email{{/if}}{{#if isToken}} ax-break{{/if}}">{{#if isDate}}{{axDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
                     {{/each}}
                   </div>
                 {{/if}}
@@ -170,7 +170,7 @@
                     {{#if fields.length}}
                       <div class="ax-party-fields">
                         {{#each fields}}
-                          <p class="ax-field"><span class="ax-field-label">{{label}}</span> <span class="ax-field-value{{#if noWrap}} ax-num{{else if isEmail}} ax-email{{/if}}">{{#if isDate}}{{axDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                          <p class="ax-field"><span class="ax-field-label">{{label}}</span> <span class="ax-field-value{{#if noWrap}} ax-num{{else if isEmail}} ax-email{{/if}}{{#if isToken}} ax-break{{/if}}">{{#if isDate}}{{axDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
                         {{/each}}
                       </div>
                     {{/if}}
@@ -563,7 +563,9 @@
             {{/if}}
 
 
-            {{!-- The signature closes the footer row on the right (user request). --}}
+            {{!-- The signature closes the footer row on the right (user request); only when the
+                  document has one. --}}
+            {{#if view.signature.show}}
             <section class="ax-signature" data-testid="signature">
               {{#if view.signature.hasMark}}
                 <div class="ax-signature-mark">
@@ -584,6 +586,7 @@
               {{#if view.signature.forLabel}}<p class="ax-signature-for">{{view.signature.forLabel}}</p>{{/if}}
               {{#if view.signature.label}}<p class="ax-signature-label">{{view.signature.label}}</p>{{/if}}
             </section>
+            {{/if}}
           </footer>
 
           {{> RefrensBranding @root.invoice}}

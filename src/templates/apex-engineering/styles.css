@@ -412,12 +412,19 @@
   line-height: 1.5;
 }
 
+/*
+ * The fields column hugs its content (user request): the design's 198 px at the least (182 px
+ * of fields after the divider and its 16 px), wider for a long GSTIN or phone line, up to 40%
+ * of the panel; beyond that a value wraps rather than leave the frame.
+ */
 .ax-party-fields {
   display: flex;
-  flex: 0 1 198px; /* 182 px of fields after the divider and its 16 px */
+  flex: 0 1 auto;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
+  width: max-content;
+  min-width: min(198px, 100%);
+  max-width: 40%;
   padding-inline-start: 16px;
   border-inline-start: 1px solid var(--ax-line);
 }
@@ -440,6 +447,20 @@
 
 .ax-field-value {
   overflow-wrap: anywhere;
+}
+
+/* A figure in the client panel's fields wraps only when even the widest column cannot hold it. */
+.ax-party-fields .ax-field-value.ax-num {
+  white-space: normal;
+}
+
+/*
+ * An unbroken value (email, GSTIN, code) carries on from its label's line and breaks only
+ * where it meets the column's edge (user request); worded values wrap between words.
+ */
+.ax-field .ax-field-value.ax-break {
+  white-space: normal;
+  word-break: break-all;
 }
 
 /* The cost card: white, 8 px corners, the grand total under its label and tax note. */
@@ -526,9 +547,16 @@
   flex: 1 1 0;
 }
 
+/* A long transport figure (a transporter ID, a vehicle number) wraps inside its column. */
+.ax-transport .ax-kv-value.ax-num {
+  white-space: normal;
+}
+
 .ax-dispatch .ax-party-fields {
   flex: none;
+  width: auto;
   min-width: 0;
+  max-width: none;
   margin-top: 4px;
   padding-inline-start: 0;
   border-inline-start: 0;
@@ -595,10 +623,17 @@
   flex: 1 1 0;
 }
 
-/* Bank Details: 335 px of content, labels and values in two equal columns. */
+/*
+ * Bank Details: 335 px of content, labels and values in two equal columns — and the card hugs
+ * its content (user request): a label or value too long for its half (a 28-digit account
+ * number, a long UPI ID) widens its column and the card, so every row stays on one line
+ * inside the frame. Narrow pages wrap instead (container queries).
+ */
 .ax-row > .ax-bank-card {
   flex: 0 0 auto;
   width: 359px;
+  min-width: min-content;
+  max-width: 100%;
 }
 
 .ax-row > .ax-bank-card:only-child {
@@ -608,7 +643,7 @@
 .ax-bank-rows {
   flex: none;
   width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(max-content, 1fr));
 }
 
 /* The bank rows, then the UPI QR and its caption below them (user request). */
@@ -672,7 +707,8 @@
 .ax-terms > li {
   display: flex;
   gap: 4px;
-  overflow-wrap: break-word;
+  min-width: 0;
+  overflow-wrap: anywhere; /* a long unbroken word or link breaks inside the card */
 }
 
 .ax-terms > li::before {
@@ -1220,7 +1256,12 @@
 
 .ax-contact-text {
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Phone numbers keep to one line while they fit; several numbers wrap at their spaces. */
+.ax-contact-text.ax-num {
+  white-space: normal;
 }
 
 /*
@@ -1425,6 +1466,21 @@
   .ax-widget-table .ceres-table :is(th, td) {
     white-space: normal;
   }
+
+  /* The bank card and the fields column fill their row; long figures wrap inside them. */
+  .ax-row > .ax-bank-card,
+  .ax-party-fields {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .ax-bank-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ax-bank-rows .ax-kv-value.ax-num {
+    white-space: normal;
+  }
 }
 
 /* Under 520 px (a phone, a large print size on A5): every column of the panels stacks. */
@@ -1498,6 +1554,16 @@
    */
   .ax-items.is-print-compact :is(th, td) {
     padding-inline: 4px;
+  }
+
+  /* On a page too narrow for the table, a long code (a model number) wraps rather than clip. */
+  .ax-items.is-print-compact td.is-word {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ax-items.is-print-compact td.is-word .ax-num {
+    white-space: normal;
   }
 
   /*
