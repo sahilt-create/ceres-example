@@ -6,6 +6,7 @@ import path from "path";
 import {
   drawRiyalSigns,
   fitTotals,
+  placeFootersOnPageEdge,
   respellTaxWords,
 } from "../src/templates/Ecommerce-Template/helpers";
 
@@ -77,5 +78,38 @@ describe("Ecommerce template — after the render, in the browser", () => {
     box.getBoundingClientRect = () => rect(0, 600);
     fitTotals();
     expect(row()).toEqual(["label", "ec-fill", "ec-fill", "value"]);
+  });
+  it("leaves the last-page footer after the content when the layout is not paginated", () => {
+    // The PDF service switches to print media before it prints: forced breaks collapse, so a
+    // page edge cannot be measured and the footer must not be pushed onto a page of its own.
+    document.body.innerHTML =
+      '<div class="ec-doc"><p>Content</p><div class="ec-letterhead-footer">Footer</div></div>';
+    const footer = document.querySelector(
+      ".ec-letterhead-footer"
+    ) as HTMLElement;
+    footer.getClientRects = () => [{}] as unknown as DOMRectList;
+    footer.getBoundingClientRect = () =>
+      ({
+        top: 500,
+        bottom: 560,
+        height: 60,
+        left: 0,
+        right: 700,
+        width: 700,
+      } as DOMRect);
+    // The two collapsed breaks sit one flex gap apart.
+    let marker = 0;
+    const realCreate = document.createElement.bind(document);
+    jest.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const element = realCreate(tag);
+      const top = 480 + 20 * marker;
+      marker += 1;
+      element.getBoundingClientRect = () => ({ top } as DOMRect);
+      return element;
+    });
+    placeFootersOnPageEdge();
+    jest.restoreAllMocks();
+    expect(footer.style.breakBefore).toBe("");
+    expect(footer.style.marginTop).toBe("");
   });
 });

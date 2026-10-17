@@ -4714,6 +4714,8 @@ export interface FooterPlacement {
 
 // 2 px to spare, so rounding never pushes the footer onto a page of its own.
 const PAGE_EDGE_SLACK = 2;
+// Shorter than any printed page (A5 landscape at the smallest print size is about 400 px).
+const MIN_PAGE_HEIGHT = 200;
 
 /* The space to add above the footer so it ends on the page's bottom edge. */
 export const footerEdgeGap = ({
@@ -4772,6 +4774,10 @@ export const placeFootersOnPageEdge = (root: ParentNode = document): void => {
     const [pageEnd, nextPageEnd] = breaks.map(pageTop);
     breaks.forEach((marker) => marker.remove());
     const pageHeight = nextPageEnd - pageEnd;
+    // Not paginated yet (the PDF service switches to print media before it prints, so the
+    // forced breaks collapse to the document's 20 px gap): the page edge cannot be measured,
+    // and the footer stays after the content rather than be forced onto a page of its own.
+    if (pageHeight < MIN_PAGE_HEIGHT) return;
 
     let box = footer.getBoundingClientRect();
     const fits =
