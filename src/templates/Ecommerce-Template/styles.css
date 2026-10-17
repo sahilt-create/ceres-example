@@ -1,0 +1,1426 @@
+@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+
+/*
+ * Ecommerce template — Figma Document-Templates, node 18926:25865 ("Ecommerce-template").
+ *
+ * Design canvas 1000 px: 32 px page padding, then one frame ruled in neutral-800 with 8 px
+ * inside it and 20 px between its sections. Monochrome: neutral-800 text and rules, the item
+ * table's header in a light grey that follows the document's theme colour (helpers.ts sets
+ * --ec-theme; the host's live --primary-color wins); item descriptions and codes in the ink. Inter, or
+ * the business's Heading / Body fonts (--title-font / --subtitle-font) when set.
+ *
+ * Every rule is scoped to .ec-doc; the page box and margins belong to the browser or the PDF
+ * service (no @page: it would break Lydia's Pageless PDF). Headings, labels and table headers
+ * are the business's own editable text, so no rule changes their case. Text sizes follow the
+ * document's text scale (--ec-text-scale).
+ */
+
+
+.ec-doc {
+  --ec-ink: #282828; /* neutral-800: text, frame and table rules */
+  --ec-muted: #666670; /* neutral-500: the UPI limit note */
+  --ec-soft-rule: #d9d9d9; /* the payment strip */
+  --ec-head-fill: color-mix(
+    in srgb,
+    var(--primary-color, var(--ec-theme, #000)) 8%,
+    #fff
+  ); /* #ebebeb on the default black */
+
+  --ec-rule-width: 0.5px;
+
+  /*
+   * --ec-script-font is the Noto face for the document's Language/Script setting (set inline
+   * by the template, loaded from Google Fonts); it fills in the glyphs the main face lacks.
+   */
+  --ec-font: var(--subtitle-font, "Inter"), var(--ec-script-font, "Inter"), sans-serif;
+  --ec-title-font: var(--title-font, "Inter"), var(--ec-script-font, "Inter"), sans-serif;
+
+  /*
+   * Type scale (design-to-template §4a): 12 table headings, small print and the amount in
+   * words; 13 body, table and every label; 20 the title. Print compresses only the top step.
+   */
+  --ec-font-size-s: 12px;
+  --ec-font-size-base: 13px;
+  --ec-font-size-xl: 20px;
+
+  /* 32 px around the frame on screen; the letterhead and footer run to the edges. */
+  --ec-gutter: 32px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: min(100vw, 1000px);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--ec-gutter);
+  background: #fff;
+  color: var(--ec-ink);
+  font-family: var(--ec-font);
+  font-size: calc(var(--ec-font-size-base) * var(--ec-text-scale, 1));
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ec-doc,
+.ec-doc *,
+.ec-doc *::before,
+.ec-doc *::after {
+  box-sizing: border-box;
+}
+
+/* Flex children default to min-width:auto, which would let a wide table stretch the page. */
+.ec-doc > *,
+.ec-page-body > *,
+.ec-frame > * {
+  min-width: 0;
+}
+
+/* The print frame (template.hbs) is transparent on screen. */
+.ec-page-frame,
+.ec-page-frame > tbody,
+.ec-page-frame > tbody > tr,
+.ec-page-frame-cell,
+.ec-page-frame-header,
+.ec-page-frame-header > tr,
+.ec-page-frame-header > tr > td,
+.ec-page-body {
+  display: contents;
+}
+
+.ec-page-frame-footer {
+  display: none;
+}
+
+.ec-doc p,
+.ec-doc h1,
+.ec-doc h2,
+.ec-doc h3,
+.ec-doc ol,
+.ec-doc ul,
+.ec-doc figure {
+  margin: 0;
+}
+
+/* Figures, codes, dates, IDs and phone numbers never wrap. */
+.ec-num {
+  white-space: nowrap;
+}
+
+/* An email stays on one line while it fits and breaks only when its column is too narrow. */
+.ec-email {
+  overflow-wrap: anywhere;
+}
+
+/* One unbroken word (a GSTIN, an email) carries on from its label and breaks at the edge. */
+.ec-field .ec-field-value.ec-break:not(.ec-num) {
+  word-break: break-all;
+}
+
+/* ------------------------------------------------------------ letterhead */
+
+.ec-doc .invoice-letterhead,
+.ec-doc .invoice-letterhead-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.ec-doc .invoice-letterhead img,
+.ec-doc .invoice-letterhead-footer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ec-doc .invoice-letterhead.is-empty,
+.ec-doc .invoice-letterhead-footer.is-empty {
+  display: none;
+}
+
+.ec-doc .ec-letterhead,
+.ec-doc .ec-letterhead-footer {
+  width: auto;
+  margin-inline: calc(-1 * var(--ec-gutter));
+}
+
+/* Without a letterhead or footer, the page keeps its 32 px above and below the frame. */
+.ec-doc:has(.ec-letterhead.is-empty) {
+  padding-top: var(--ec-gutter);
+}
+
+.ec-doc:has(> .ec-letterhead-footer.is-empty),
+.ec-doc.is-footer-hidden {
+  padding-bottom: var(--ec-gutter);
+}
+
+/* ------------------------------------------------------------ frame */
+
+/* The design's ruled frame around the whole document: 8 px inside, 20 px between sections. */
+.ec-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px;
+  border: 1px solid var(--ec-ink);
+  box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* A label in bold, its value regular on the same line: "Order Number: 407-…". */
+.ec-field-label {
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ masthead */
+
+.ec-masthead {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/*
+ * The business logo, sized by its shape as the Apex Engineering template does (user request):
+ * a wide logo fits a 200 × 80 box (the design's 80 px height), kept whole and set on the start
+ * edge; a square or upright one takes a 100 px square. helpers.ts (registerEcommerceLogo)
+ * marks the shape once the image loads.
+ */
+.ec-logo {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  max-width: 200px;
+  min-height: 80px;
+}
+
+.ec-logo .ec-logo-image {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: 80px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.ec-doc[dir="rtl"] .ec-logo .ec-logo-image {
+  object-position: right center;
+}
+
+.ec-logo .ec-logo-image.is-square {
+  width: 100px;
+  max-width: 100px;
+  height: 100px;
+  max-height: 100px;
+}
+
+.ec-title-block {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+  text-align: end;
+}
+
+.ec-title {
+  font-family: var(--ec-title-font);
+  font-size: calc(var(--ec-font-size-xl) * var(--ec-text-scale, 1));
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.ec-subtitle,
+.ec-copy {
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+  line-height: 1.5;
+}
+
+/* The title's line: the status tag first, then the title, both on the end edge. */
+.ec-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ec-status {
+  flex: none;
+}
+
+/* ------------------------------------------------------------ parties */
+
+/*
+ * Two rows of two equal columns, 16 px apart: Sold By | Billing Address, then Shipped From |
+ * Shipping Address below them (user request). The seller's side reads from the start edge, the
+ * buyer's from the end; a row with one party keeps it on its own side.
+ */
+.ec-parties {
+  display: grid;
+  grid-template-columns: minmax(min-content, 1fr) minmax(min-content, 1fr);
+  gap: 16px;
+}
+
+.ec-party[data-role="seller"],
+.ec-party[data-role="shipped-from"] {
+  grid-column: 1;
+}
+
+.ec-party[data-role="billing"],
+.ec-party[data-role="shipping"] {
+  grid-column: 2;
+}
+
+/*
+ * Text wraps; a number never does (user rule), so a column is never narrower than its longest
+ * number or code (min-content): a long one widens its column rather than running out of it.
+ */
+.ec-party {
+  display: flex;
+  flex-direction: column;
+  min-width: min-content;
+  overflow-wrap: break-word;
+}
+
+.ec-party[data-role="billing"],
+.ec-party[data-role="shipping"] {
+  text-align: end;
+}
+
+.ec-party-title {
+  font-family: var(--ec-title-font);
+  font-weight: 700;
+}
+
+/* The design's 4 px between a party's address and its first field (GSTIN, Phone…). */
+.ec-party .ec-party-line + .ec-field,
+.ec-party .ec-party-name + .ec-field,
+.ec-party .ec-party-line + .ec-supply,
+.ec-party .ec-party-name + .ec-supply {
+  margin-top: 4px;
+}
+
+/* ------------------------------------------------------------ references */
+
+/* Order references on the start edge, the document's own number and dates on the end edge. */
+.ec-references {
+  display: grid;
+  grid-template-columns: minmax(min-content, 1fr) minmax(min-content, 1fr);
+  gap: 16px;
+}
+
+.ec-references-end {
+  text-align: end;
+}
+
+/* The page-closing rule under the item table (print only, see below). */
+.ec-items .ec-page-close {
+  display: none;
+}
+
+/* The stretch row (print only): empty, the column rules running through it. */
+.ec-items .ec-filler {
+  display: none;
+}
+
+/* The document QR under the document details, on their end edge. */
+.ec-references-end .ec-doc-qr {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.ec-references-end .ec-doc-qr.is-empty {
+  display: none;
+}
+
+/* Transport Details: the title 4 px above its lines, the lines set close like the parties'. */
+.ec-block.ec-transport {
+  gap: 0;
+}
+
+.ec-transport .ec-block-title {
+  margin-bottom: 4px;
+}
+
+.ec-references:not(:has(.ec-references-start > *)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ec-references-start:empty {
+  display: none;
+}
+
+/*
+ * The Saudi riyal sign (U+20C1, what the currency format prints for SAR) is in no font the
+ * renderer may load (its fonts come from Google Fonts or the renderer itself), so it showed
+ * as an empty box. helpers.ts (drawRiyalSigns) wraps each one in .ec-riyal, drawn here from
+ * refrens.com's own riyal glyph, in the text's colour and size, resting on the baseline.
+ */
+.ec-doc .ec-riyal {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.62em;
+  overflow: hidden;
+  background-color: currentcolor;
+  -webkit-text-fill-color: transparent;
+  mask: url("data:image/png;base64,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") center / contain no-repeat;
+  mask: url("data:image/png;base64,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") center / contain no-repeat;
+}
+
+/* ------------------------------------------------------------ compliance */
+
+.ec-compliance {
+  display: none;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+/* Shown once there is something to show: an IRN, a code, a QR (the host may post them live). */
+.ec-compliance:has(.ec-irn-value:not(:empty)),
+.ec-compliance:has(.ec-compliance-group .ec-num),
+.ec-compliance:has(.ec-qr:not(.is-empty)) {
+  display: flex;
+}
+
+/* E-Invoice | E-Way Bill, side by side, each a bold title over its lines. */
+.ec-compliance-groups {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  min-width: 0;
+}
+
+.ec-compliance-group {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* No IRN yet (the host may post one live): the E-Invoice group keeps out of sight. */
+.ec-compliance-group[data-role="einvoice"]:not(:has(.ec-irn-value:not(:empty), .ec-num)) {
+  display: none;
+}
+
+.ec-irn-value {
+  overflow-wrap: anywhere;
+}
+
+.ec-qr-list {
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
+.ec-qr img {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+
+.ec-qr.is-empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------ items */
+
+.ec-items-scroll {
+  overflow-x: auto;
+}
+
+/*
+ * The design's table: a 0.5 px neutral-800 outline and column rules, the header on the light
+ * fill, 6 px in every cell. Figures sit centred under their headings; Description reads from
+ * the start edge.
+ */
+.ec-items {
+  width: 100%;
+  border: var(--ec-rule-width) solid var(--ec-ink);
+  border-collapse: collapse;
+  font-size: calc(var(--ec-font-size-base) * var(--ec-text-scale, 1));
+  line-height: 1.5;
+}
+
+.ec-items th,
+.ec-items td {
+  padding: 6px;
+  border: 0;
+  border-inline-end: var(--ec-rule-width) solid var(--ec-ink);
+  text-align: center;
+  vertical-align: top;
+}
+
+.ec-items thead th {
+  border-bottom: var(--ec-rule-width) solid var(--ec-ink);
+  background: var(--ec-head-fill);
+  font-family: var(--ec-title-font);
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+  font-weight: 700;
+  vertical-align: top;
+  overflow-wrap: normal;
+}
+
+.ec-items .ec-col-serial {
+  white-space: nowrap;
+}
+
+/*
+ * Column widths: every column but Description hugs its own heading and items (width 1%), at
+ * least 52 px (a 40 px floor plus padding), so short values (1, 18%) never hold the table wider than its page; Description takes the rest, never
+ * under a readable 140 px on screen — a page too narrow for that scrolls the table.
+ */
+.ec-items thead th:not(.ec-col-name, .ec-col-serial) {
+  width: 1%;
+}
+
+/*
+ * Rows that run across the table (a group name, a full-width item name or description, an
+ * item's original images) never size its columns (user request): their content has no width
+ * of its own and fills whatever the item rows leave.
+ */
+.ec-items .ec-span {
+  width: 0;
+  min-width: 100%;
+}
+
+.ec-items .ec-desc-min,
+.ec-items .ec-col-min {
+  display: block;
+  height: 0;
+}
+
+.ec-items .ec-desc-min {
+  width: 140px;
+}
+
+.ec-items .ec-col-min {
+  width: 40px;
+}
+
+/*
+ * Under the TOTAL row the label and the empty cells after it read as one stretch (no rules of
+ * their own); the one vertical rule is the figure cell's, on an item column's edge (user
+ * request). A figure never widens its column: it has no width of its own, and when the widest
+ * one does not fit, every row's figure cell takes the same extra columns to its left in the
+ * browser (registerEcommerceTotalsFit), keeping the rule one straight line. Should even that
+ * not suffice, a figure spills towards the label on a white ground.
+ */
+.ec-items .ec-totals .ec-fill {
+  border-inline-end: 0;
+}
+
+.ec-items .ec-fig {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 0;
+  min-width: 100%;
+}
+
+.ec-items .ec-fig > * {
+  position: relative;
+  z-index: 1;
+  padding-inline-start: 6px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+/* Should a figure still spill, its white ground covers the cell's full height (into its 6 px
+   padding), so the rule is cleanly interrupted, never left as stubs above and below. */
+.ec-items .ec-fig > :first-child {
+  margin-top: -6px;
+  padding-top: 6px;
+}
+
+.ec-items .ec-fig > :last-child {
+  margin-bottom: -6px;
+  padding-bottom: 6px;
+}
+
+.ec-items .ec-col-name,
+.ec-items .ec-group-row td,
+.ec-items .ec-name-row td,
+.ec-items .ec-detail-row td {
+  text-align: start;
+}
+
+/* The last column (Amount) reads from the end edge, heading and figures, in line with the
+   totals under it (user request). */
+.ec-items thead th:last-child:not(.ec-col-name, .ec-col-serial),
+.ec-items .ec-item-row > td:last-child:not(.ec-col-name, .ec-col-serial) {
+  text-align: end;
+}
+
+/* Items are ruled from one another; a description row belongs to its item. */
+.ec-items tbody:first-of-type tr + tr:not(.ec-detail-row, .ec-image-row, .has-name-row) > * {
+  border-top: var(--ec-rule-width) solid var(--ec-ink);
+}
+
+/*
+ * Description full width: the item's figures end above its description, so a rule across the
+ * whole table, Sr.No included, closes them off (user request). An item's own row of original
+ * images across the whole table is ruled off the same way.
+ */
+.ec-items .ec-detail-row > td,
+.ec-items .ec-image-row > td {
+  border-top: var(--ec-rule-width) solid var(--ec-ink);
+}
+
+/* Description full width: the row reads as one band under its item, no rule between the
+   empty Sr.No cell and the description (user request). */
+.ec-items .ec-detail-row > td.ec-col-serial {
+  border-inline-end: 0;
+}
+
+.ec-items .is-word {
+  white-space: nowrap;
+}
+
+.ec-item-name {
+  display: block;
+  font-weight: 500;
+}
+
+.ec-item-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  color: var(--ec-ink); /* SKU, HSN/SAC, unit: in the item's own ink (user request) */
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+}
+
+.ec-item-detail {
+  margin-top: 4px;
+  color: var(--ec-ink); /* the description in the item's own ink (user request) */
+}
+
+.ec-detail-row .ec-item-detail {
+  margin-top: 0;
+}
+
+.ec-group-row td {
+  font-weight: 700;
+}
+
+.ec-group-total-row td {
+  font-weight: 600;
+}
+
+.ec-item-thumbnail {
+  float: inline-end;
+  margin-inline-start: 8px;
+}
+
+.ec-item-thumbnail img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+}
+
+.ec-image-row td {
+  text-align: start;
+}
+
+.ec-large-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* TOTAL: — across the leading columns, the summed figures under their own columns. */
+.ec-items .ec-total-row > * {
+  border-top: var(--ec-rule-width) solid var(--ec-ink);
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.ec-items .ec-total-label {
+  text-align: start;
+}
+
+.ec-items .ec-total-value {
+  border-inline-start: var(--ec-rule-width) solid var(--ec-ink);
+  text-align: end;
+}
+
+/* The further totals rows: the label across the row, the figure in the last column. */
+
+/* A label sits level with the middle of its figure, which may carry a converted line below. */
+.ec-items .ec-totals th,
+.ec-items .ec-totals td {
+  padding: 6px;
+  border-top: var(--ec-rule-width) solid var(--ec-ink);
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.ec-items .ec-totals .ceres-subtotal-label {
+  border-inline-end: 0;
+  text-align: start;
+}
+
+.ec-items .ec-totals .ceres-subtotal-value {
+  border-inline-start: var(--ec-rule-width) solid var(--ec-ink);
+  text-align: end;
+  white-space: nowrap;
+}
+
+.ec-items .ec-totals .ceres-subtotal-row-grand > *,
+.ec-items .ec-totals .ceres-subtotal-row-due > * {
+  font-weight: 700;
+}
+
+.ec-items .ec-totals .ceres-subtotal-note,
+.ec-items .ec-totals .ceres-subtotal-converted,
+.ec-items .ec-totals .ceres-subtotal-extra {
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+  font-weight: 400;
+}
+
+/* Amount In Words: the bold label, then the words in 12 px medium. */
+.ec-items .ec-words-row > td {
+  border-top: var(--ec-rule-width) solid var(--ec-ink);
+  border-inline-end: 0;
+  text-align: start;
+}
+
+.ec-words-label {
+  margin-inline-end: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ec-words-value {
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------ summaries (shared widgets) */
+
+.ec-summary .ceres-table-section {
+  margin: 0;
+  overflow-x: auto;
+}
+
+/* A summary whose widget drew no table (no rows) keeps its heading out of sight too. */
+.ec-summary[data-section="hsn"]:not(:has(table)),
+.ec-summary[data-section="tax-summary"]:not(:has(table)) {
+  display: none;
+}
+
+.ec-summary .ceres-table-heading,
+.ec-block-title {
+  margin: 0;
+  color: var(--ec-ink);
+  font-family: var(--ec-title-font);
+  font-size: calc(var(--ec-font-size-base) * var(--ec-text-scale, 1));
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.ec-summary .ceres-table-heading {
+  margin-bottom: 4px;
+}
+
+/*
+ * The summaries (HSN, tax, stock) read like the payment details strip (user request): light
+ * rules, no header fill, bold headings at the body size; equal columns (helpers.ts
+ * equalizeSummaries), their text centred; the words line reads from the start edge.
+ */
+.ec-summary .ceres-table {
+  width: 100%;
+  border: var(--ec-rule-width) solid var(--ec-soft-rule);
+  border-collapse: collapse;
+  color: var(--ec-ink);
+  font-family: var(--ec-font);
+  font-size: calc(var(--ec-font-size-base) * var(--ec-text-scale, 1));
+  line-height: 1.5;
+}
+
+.ec-summary .ceres-table th,
+.ec-summary .ceres-table td {
+  padding: 6px;
+  border: var(--ec-rule-width) solid var(--ec-soft-rule);
+  text-align: center; /* centred in their equal columns (user request) */
+  white-space: nowrap;
+}
+
+/*
+ * A long item name, date or heading wraps at its spaces instead of pushing the table past the
+ * frame (a narrow page: A5, a large print size).
+ */
+.ec-summary .ceres-table :is(th, td) {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/*
+ * The batch summary's columns hug their content (user request): no column is pinned, so each
+ * takes its own content's width and the spare width is shared in proportion — the item name no
+ * longer takes everything that is left.
+ */
+
+/* Headings and text wrap only when the page is too narrow for them (A4 print, A5); figures,
+   dates and codes never do (the td.ec-num rule below). */
+.ec-summary .ec-batch-table :is(th, td):not(:first-child, .ec-num) {
+  overflow-wrap: normal;
+}
+
+/* Figures, dates and codes never wrap (user rule): their column takes their width. */
+.ec-summary .ceres-table td.ec-num {
+  white-space: nowrap;
+}
+
+/* The first column (HSN, Tax Rate, Total) reads from the start edge (user request). */
+.ec-summary .ceres-table :is(th, td):first-child {
+  text-align: start;
+}
+
+.ec-summary .ceres-table thead th {
+  background: none;
+  color: var(--ec-ink);
+  font-family: var(--ec-title-font);
+  font-size: calc(var(--ec-font-size-base) * var(--ec-text-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.ec-summary .ceres-table tbody tr:nth-child(even) {
+  background: none;
+}
+
+.ec-summary .ceres-table tfoot td {
+  font-weight: 700;
+}
+
+.ec-summary .ceres-table .ceres-table-words {
+  background: #fff;
+  color: var(--ec-ink);
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+  font-weight: 500;
+  white-space: normal;
+}
+
+.ec-summary:not(:has(.ceres-table)) {
+  display: none;
+}
+
+/* Right-to-left: the widgets' words line, mirrored. */
+.ec-doc[dir="rtl"] .ec-summary .ceres-table .ceres-table-words {
+  text-align: right !important;
+}
+
+/* ------------------------------------------------------------ signature */
+
+/* "For <business>", the signature, "Authorized Signatory": on the end edge, 16 px apart. */
+.ec-signature {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-end;
+  text-align: end;
+}
+
+.ec-signature-for,
+.ec-signature-label {
+  font-weight: 700;
+}
+
+/*
+ * The signature's box follows its shape, as the logo's does (user request): a wide signature
+ * in the logo's 200 × 80 box, a square or upright one (is-square, helpers.ts) in 120 × 120.
+ * Whole and set on the end edge either way.
+ */
+.ec-signature-mark img {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: 80px;
+  object-fit: contain;
+  object-position: right center;
+}
+
+.ec-signature-mark img.is-square {
+  width: 120px;
+  height: 120px;
+}
+
+.ec-doc[dir="rtl"] .ec-signature-mark img {
+  object-position: left center;
+}
+
+.ec-signature-banner {
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+}
+
+/* ------------------------------------------------------------ text blocks */
+
+/* Terms, notes, bank details, additional info, attachments: bold title, 4 px, the text. */
+.ec-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ec-terms,
+.ec-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.ec-attachments li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ec-attachments a {
+  color: inherit;
+}
+
+.ec-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 48px; /* the QR stands well clear of the bank details (user request) */
+  align-items: flex-start; /* Scan to Pay level with the Bank Details title (user request) */
+}
+
+.ec-bank-details {
+  min-width: 0;
+}
+
+/* Scan to Pay heads the QR at the Bank Details title's size and weight. */
+
+/* Scan to Pay, the QR and the limit note centred under one another (user request). */
+.ec-upi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+  width: min-content;
+  min-width: 120px;
+}
+
+.ec-upi-caption {
+  font-family: var(--ec-title-font);
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.ec-upi-qr {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+/* The UPI QR is always 120 × 120 (user request), the document's "shrink" option included. */
+
+/* The UPI limit note under the QR, wrapping within a readable width. */
+.ec-upi-note {
+  width: max-content;
+  max-width: 200px;
+  color: var(--ec-muted);
+  font-size: calc(var(--ec-font-size-s) * var(--ec-text-scale, 1));
+}
+
+/* ------------------------------------------------------------ payments */
+
+/* Payment details: one ruled strip per payment, each field its label over its value. */
+
+/*
+ * Payments: one table styled as the summaries (soft rules, centred, equal columns), its first
+ * column centred too, as the payment strip was. The amount in the business's currency sits
+ * bold under the amount received (refrens.com).
+ */
+.ec-summary.ec-payments .ceres-table :is(th, td):first-child {
+  text-align: center;
+}
+
+.ec-payment-converted {
+  display: block;
+  font-weight: 700;
+}
+
+/* An account name wraps between its words; an email stays whole, its column widening for it. */
+.ec-payments .ceres-table td.is-text {
+  overflow-wrap: normal;
+}
+
+/* ------------------------------------------------------------ contact */
+
+/*
+ * The enquiry line is a box of its own at the foot of the frame (user request): its top rule
+ * runs the frame's full width, edge to edge (out through the frame's 8 px padding), and it
+ * shares the frame's sides and bottom; the line centred in it.
+ */
+.ec-contact {
+  margin: 0 -8px -8px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--ec-ink);
+  text-align: center;
+}
+
+.ec-contact strong {
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------ markdown (notes, descriptions) */
+
+/*
+ * The markdown viewer brings its own stylesheet, loaded after the template's; these selectors
+ * outrank it, so descriptions and notes read the same whichever loads first.
+ */
+.ec-doc .ec-item-desc .toastui-editor-contents,
+.ec-doc .ec-note-body .toastui-editor-contents {
+  max-width: 100%;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents *:not(table),
+.ec-doc .ec-note-body .toastui-editor-contents *:not(table) {
+  line-height: inherit;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents :is(p, ul, ol, li, h1, h2, h3, h4, h5, h6),
+.ec-doc .ec-note-body .toastui-editor-contents :is(p, ul, ol, li, h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/*
+ * Blocks follow one another 4 px apart, as list points do (user request: no extra space).
+ * Text saved with a blank line after every line makes each line a paragraph of its own, and
+ * a wider gap there read as double spacing; the viewer's own paragraph margins never apply.
+ */
+.ec-doc
+  .ec-item-desc
+  .toastui-editor-contents
+  > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div),
+.ec-doc
+  .ec-note-body
+  .toastui-editor-contents
+  > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div) {
+  margin-top: 4px !important;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents :is(p, ul, ol, h1, h2, h3, h4, h5, h6),
+.ec-doc .ec-note-body .toastui-editor-contents :is(p, ul, ol, h1, h2, h3, h4, h5, h6) {
+  margin-bottom: 0 !important;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents li + li,
+.ec-doc .ec-note-body .toastui-editor-contents li + li {
+  margin-top: 4px;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents :is(th, td),
+.ec-doc .ec-note-body .toastui-editor-contents :is(th, td) {
+  padding: 6px;
+  border-color: var(--ec-ink);
+  text-align: start;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents th,
+.ec-doc .ec-note-body .toastui-editor-contents th {
+  background: var(--ec-head-fill);
+  color: var(--ec-ink);
+  font-weight: 700;
+}
+
+/*
+ * An empty list item (the editor leaves one after the last point) has no height, and its
+ * marker, positioned on its own, would print below the cell over the next row ("3." on the
+ * TOTAL row, user report): it is not shown.
+ */
+.ec-doc .ec-item-desc .toastui-editor-contents li:empty,
+.ec-doc .ec-note-body .toastui-editor-contents li:empty {
+  display: none;
+}
+
+/* List markers in the text's own colour: the viewer greys both. */
+.ec-doc .ec-item-desc .toastui-editor-contents :is(ul, ol) > li::before,
+.ec-doc .ec-note-body .toastui-editor-contents :is(ul, ol) > li::before {
+  color: currentcolor;
+}
+
+.ec-doc .ec-item-desc .toastui-editor-contents ul > li::before,
+.ec-doc .ec-note-body .toastui-editor-contents ul > li::before {
+  background-color: currentcolor;
+}
+
+/* ------------------------------------------------------------ right-to-left */
+
+/*
+ * Change Script with right-to-left on: the layout mirrors (logical properties throughout),
+ * and every piece of the business's text is its own bidi island (plaintext on an inline box:
+ * isolated, direction from its first letter), so "Shipping Address :", "305, 3rd Floor" or
+ * "(1) Returns…" keep their punctuation in place while the column keeps its RTL alignment.
+ * Markdown paragraphs (notes, descriptions) take their own direction the same way.
+ */
+.ec-doc[dir="rtl"] :is(.ec-text, .ec-field-label, .ec-field-value, .ec-item-name, .ec-item-code),
+.ec-doc[dir="rtl"] .ec-items td:not(.ec-col-name),
+.ec-doc[dir="rtl"] .ec-payments td {
+  unicode-bidi: plaintext;
+}
+
+/* A markdown paragraph is a block: its own direction, still set on the RTL start edge. */
+.ec-doc[dir="rtl"] :is(.ec-item-desc, .ec-note-body) .toastui-editor-contents :is(p, li) {
+  unicode-bidi: plaintext;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------ narrow pages */
+
+/*
+ * Narrow pages answer to the layout's own width (a container query): a phone, an A5 page and
+ * A4 at a large print size (zoomSize, applied as html zoom) all fall under it. The container
+ * is .ec-doc on screen and the page body in print, so the footer fixed to each printed page
+ * is never inside it.
+ */
+.ec-doc {
+  container: ec-doc / inline-size;
+}
+
+@media screen and (width <= 720px) {
+  .ec-doc {
+    --ec-gutter: 16px;
+  }
+}
+
+/* Under 600 px the party columns stack, every one reading from the start edge. */
+@container ec-doc (width < 600px) {
+  .ec-parties,
+  .ec-references {
+    grid-auto-flow: row;
+    grid-template-columns: minmax(min-content, 1fr);
+  }
+
+  .ec-parties .ec-party[data-role] {
+    grid-column: 1;
+  }
+
+  .ec-party[data-role="billing"],
+  .ec-party[data-role="shipping"],
+  .ec-references-end {
+    text-align: start;
+  }
+
+  .ec-masthead {
+    flex-wrap: wrap;
+  }
+
+}
+
+/* ------------------------------------------------------------------ print / PDF */
+
+/*
+ * Print at true size (design-to-template §4a): 13 px body text prints at 13 px. The page fills
+ * the printable width with no gutter of its own (margins belong to Lydia, the browser or the
+ * PDF service); the renderer's print size setting (zoomSize) scales a printout.
+ */
+@media print {
+  .ec-doc {
+    --ec-font-size-xl: 18px;
+    --ec-gutter: 0px;
+
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .ec-status.no-print {
+    display: none;
+  }
+
+  /* On paper the table fits the page; Description gives up its screen floor. */
+  .ec-items .ec-desc-min {
+    display: none;
+  }
+
+  /*
+   * A table whose columns cannot fit the page with 6 px cell padding (helpers.ts decides from
+   * the minimum widths and the paper format) prints with 4 px side padding in every cell.
+   */
+  .ec-items.is-print-compact :is(th, td) {
+    padding-inline: 4px;
+  }
+
+  .ec-items.is-print-compact td.is-word {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ec-items.is-print-compact td.is-word .ec-num {
+    white-space: normal;
+  }
+
+  /* A page too narrow even then shrinks the table's text, never under 10 px. */
+  .ec-items.is-print-compact {
+    font-size: max(
+      10px,
+      calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-table-fit, 1))
+    );
+  }
+
+  /*
+   * Measured in print (helpers.ts fitPrintTable): a table still wider than its page takes the
+   * tight padding and scales its text by --ec-print-fit, never under 10 px.
+   */
+  .ec-items.is-print-fit :is(th, td) {
+    padding-inline: 4px;
+  }
+
+  /* The columns' floors shrink with the text, or a wide table's empty columns alone keep it
+     wider than the page and its last column (the amounts, the totals' figures) is cut off. */
+  .ec-items.is-print-fit .ec-col-min {
+    width: calc(40px * var(--ec-print-fit, 1));
+  }
+
+  .ec-items.is-print-fit .ec-desc-min {
+    width: calc(140px * var(--ec-print-fit, 1));
+  }
+
+  .ec-items.is-print-fit {
+    font-size: max(
+      10px,
+      calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
+    );
+  }
+
+  .ec-items.is-print-fit thead th,
+  .ec-items.is-print-fit .ec-item-codes,
+  .ec-items.is-print-fit .ec-words-value {
+    font-size: max(
+      10px,
+      calc(var(--ec-font-size-s) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
+    );
+  }
+
+  .ec-items-scroll,
+  .ec-summary {
+    overflow: clip;
+  }
+
+  /* Column headings repeat on every page a table spans; its totals print once, at the end. */
+  .ec-items thead,
+  .ec-summary .ceres-table thead {
+    display: table-header-group;
+  }
+
+  .ec-summary .ceres-table tfoot {
+    display: table-row-group;
+  }
+
+  .ec-items tr,
+  .ec-summary .ceres-table tr {
+    break-inside: avoid;
+  }
+
+  /* A row taller than a third of a page breaks rather than leaving its page blank (helpers.ts
+     markTallRows). */
+  .ec-items tr.is-tall {
+    break-inside: auto;
+  }
+
+  .ec-doc.is-stretch .ec-items .ec-filler {
+    display: table-row;
+  }
+
+  /*
+   * A row taller than the rest of its page breaks (markTallRows), and Chrome draws no rule
+   * where a table row is split. The item table's empty footer repeats at the foot of every
+   * page the table runs over, its top edge closing the table there (user report); at the
+   * table's real end it falls on the last row's own rule.
+   */
+  .ec-items .ec-page-close {
+    display: table-footer-group;
+  }
+
+  .ec-items .ec-page-close tr {
+    border-top: var(--ec-rule-width) solid var(--ec-ink);
+  }
+
+  /* The table's own bottom edge would be drawn again on this empty row — a dark double
+     rule (user report): "hidden" wins over it in the collapsed-border model. */
+  .ec-items .ec-page-close td {
+    height: 0;
+    padding: 0;
+    border: 0;
+    border-bottom: hidden;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .ec-doc.is-stretch .ec-items .ec-filler > td {
+    height: var(--ec-filler-height, 0);
+    padding-block: 0;
+    border-top: 0;
+  }
+
+  /* A group's name row stays with the group's first item, never alone at a page's foot. */
+  .ec-items .ec-group-row {
+    break-after: avoid;
+  }
+
+  /* An item's original images print whole on one page, never pushing a blank page before them:
+     at most 45% of a page tall (a landscape page keeps about half of itself between the
+     letterhead and the footer), in proportion. */
+  .ec-large-image {
+    width: auto;
+    max-width: 100%;
+    max-height: 45vh;
+    margin-inline: 0; /* from the start edge: centred, a table wider than its page (A5) pushed it past the page edge */
+    object-fit: contain;
+  }
+
+  .ec-items .ec-items-total,
+  .ec-items .ec-totals {
+    break-inside: avoid;
+  }
+
+  /*
+   * Each section prints as a unit (user request): a page break falls between sections, never
+   * through one (terms, notes, bank, the summaries, payments…). One taller than a page still
+   * splits. A heading stays with its content.
+   */
+  .ec-masthead,
+  .ec-parties,
+  .ec-references,
+  .ec-compliance,
+  .ec-signature,
+  .ec-block,
+  .ec-bank,
+  .ec-summary,
+  .ec-payments,
+  .ec-contact,
+  .ec-doc > .ec-letterhead-footer {
+    break-inside: avoid;
+  }
+
+  .ec-block-title {
+    break-after: avoid-page;
+  }
+
+  /*
+   * Footer on every page (pdfOptions.footerOnLastPage off): the real footer is fixed to the
+   * foot of each printed page and the frame's repeating <tfoot> holds an invisible copy of it.
+   * Last page only: it follows the content, and helpers.ts sets it on the page's bottom edge.
+   */
+  .ec-page-frame {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .ec-page-frame > tbody {
+    display: table-row-group;
+  }
+
+  .ec-page-frame-header {
+    display: table-header-group;
+  }
+
+  .ec-page-frame-header .ec-letterhead:not(.is-empty) {
+    margin-bottom: 20px;
+  }
+
+  /*
+   * Chrome stops repeating a table header taller than about a quarter of the page, so on a
+   * short page (landscape, A5) a full-width letterhead would print on the first page only. The
+   * repeated copy keeps its proportions within 22% of the page height (the most that still
+   * repeats on a landscape A4, tested), centred.
+   */
+  .ec-page-frame-header .ec-letterhead img {
+    width: auto;
+    max-width: 100%;
+    max-height: 22vh;
+    margin-inline: auto;
+  }
+
+  .ec-page-frame-footer {
+    display: table-footer-group;
+  }
+
+  .ec-page-frame > * > tr {
+    display: table-row;
+  }
+
+  .ec-page-frame > * > tr > td {
+    display: table-cell;
+    padding: 0;
+    vertical-align: top;
+  }
+
+  /* The page body is the narrow-page container in print (see the container queries). */
+  .ec-doc {
+    container-type: normal;
+  }
+
+  .ec-page-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    container: ec-doc / inline-size;
+  }
+
+  .ec-footer-spacer {
+    padding-top: 20px;
+    visibility: hidden;
+  }
+
+  .ec-doc .ec-footer-spacer.is-empty {
+    display: none;
+  }
+
+  .ec-letterhead-footer.ec-footer-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /*
+   * Chrome stops repeating a table footer taller than about a quarter of the page, and the
+   * fixed footer then prints over the content (a landscape page: a full-width footer is a
+   * third of it). Both copies keep their proportions within the letterhead's 22% of the page
+   * height (still repeating on a landscape A4, tested), so the two banners match, centred; on
+   * a portrait page a footer is well under it and stays full width.
+   */
+  .ec-page-frame-footer .ec-letterhead-footer img,
+  .ec-letterhead-footer.ec-footer-fixed img {
+    width: auto;
+    max-width: 100%;
+    max-height: 22vh;
+    margin-inline: auto;
+  }
+
+  /*
+   * The PDF service draws an every-page letterhead and footer in its own page margins (from
+   * data-ceres-page-header / -footer, policy "all"), so those copies hide there; a first-page
+   * letterhead and a last-page footer stay in the document.
+   */
+  body[class~="isDibella"]
+    .ec-doc
+    .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+    display: none;
+  }
+}

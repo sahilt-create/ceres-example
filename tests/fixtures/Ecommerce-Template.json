@@ -1,0 +1,159 @@
+{
+  "invoice": {
+    "_id": "fixture-ecommerce",
+    "billType": "INVOICE",
+    "invoiceType": "INVOICE",
+    "status": "PAID",
+    "invoiceTitle": "Tax Invoice/Bill of Supply/Cash Memo",
+    "copy": "Original for Recipient",
+    "invoiceNumber": "2024000001",
+    "invoiceDate": "2026-06-08",
+    "ownerOffset": "+05:30",
+    "currency": "INR",
+    "subUnitLength": 2,
+    "locale": "en-IN",
+    "taxType": "INDIA",
+    "igst": true,
+    "placeOfSupply": "29",
+    "logo": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzMiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAxMzMgODAiPjxyZWN0IHg9IjQiIHk9IjE2IiB3aWR0aD0iMTI1IiBoZWlnaHQ9IjQ4IiByeD0iMjQiIGZpbGw9IiMxZTg4ZTUiLz48dGV4dCB4PSI2Ni41IiB5PSI0NyIgZmlsbD0iI2ZmZiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TQU1QTEU8L3RleHQ+PC9zdmc+",
+    "signature": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDQiIGhlaWdodD0iNjYiIHZpZXdCb3g9IjAgMCAxMDQgNjYiPjxwYXRoIGQ9Ik04IDUwIEMyMCAxMCAzMCA2MCA0MiAyMCBTNjAgNTUgNzAgMTggUzg4IDUwIDk2IDE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxMTEiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==",
+    "billedBy": {
+      "name": "Sample Pharmacy",
+      "street": "12 Sample Road, Sample Town",
+      "city": "Mysuru",
+      "pincode": "570001",
+      "state": "Karnataka",
+      "country": "IN",
+      "gstin": "29AAAAA0000A1Z5",
+      "panNumber": "AAAAA0000A",
+      "email": "store@example.com"
+    },
+    "billedTo": {
+      "name": "Sample Studio",
+      "street": "305, 3rd Floor Sample Mall",
+      "city": "Bengaluru",
+      "pincode": "560055",
+      "state": "Karnataka",
+      "country": "IN"
+    },
+    "shippedTo": {
+      "name": "Sample Studio",
+      "street": "305, 3rd Floor Sample Mall",
+      "city": "Bengaluru",
+      "pincode": "560055",
+      "state": "Karnataka",
+      "country": "IN"
+    },
+    "customHeaders": [
+      {
+        "label": "Order Number",
+        "value": "400-0000000-0000000"
+      },
+      {
+        "label": "Order Date",
+        "value": "05-06-2026"
+      }
+    ],
+    "columns": [
+      {
+        "key": "name",
+        "label": "Description",
+        "dataType": "text"
+      },
+      {
+        "key": "rate",
+        "label": "Unit Price",
+        "dataType": "number"
+      },
+      {
+        "key": "quantity",
+        "label": "Qty",
+        "dataType": "number"
+      },
+      {
+        "key": "amount",
+        "label": "Net Amount",
+        "dataType": "number"
+      },
+      {
+        "key": "gstRate",
+        "label": "Tax Rate",
+        "dataType": "number"
+      },
+      {
+        "key": "taxType",
+        "label": "Tax Type",
+        "dataType": "text"
+      },
+      {
+        "key": "igst",
+        "label": "Tax Amount",
+        "dataType": "number"
+      },
+      {
+        "key": "total",
+        "label": "Total Amount",
+        "dataType": "number"
+      }
+    ],
+    "items": [
+      {
+        "_id": "i1",
+        "name": "Smooth revolving chair with seat and back of black colour PU leather",
+        "description": "Sample description text for the item, long enough to wrap across a few lines in the description column.",
+        "quantity": 2,
+        "rate": 2499,
+        "amount": 4998,
+        "subTotal": 4998,
+        "gstRate": 12,
+        "igst": 599.76,
+        "total": 5597.76,
+        "custom": {
+          "taxType": "IGST"
+        }
+      }
+    ],
+    "subTotal": 4998,
+    "finalTotal": {
+      "subTotal": 4998,
+      "amount": 4998,
+      "igst": 599.76,
+      "cgst": 0,
+      "sgst": 0,
+      "total": 5597.76
+    },
+    "customLabels": {},
+    "terms": [
+      {
+        "label": "Terms & Conditions",
+        "terms": [
+          "Service Accounting Code: 998339"
+        ]
+      }
+    ],
+    "notes": "Whether tax is payable under reverse charge - No",
+    "allPayments": [
+      {
+        "paymentDate": "2026-06-08",
+        "paymentMethod": "ACCOUNT_TRANSFER",
+        "amount": 5597.76,
+        "tds": 138.42,
+        "transactionCharge": 100,
+        "status": "PAID",
+        "paymentAccount": {
+          "name": "payments@example.com"
+        }
+      }
+    ],
+    "advanceOptions": {
+      "taxSummaryView": "DEFAULT"
+    },
+    "owner": {
+      "_id": "fixture-owner",
+      "country": "IN",
+      "currency": "INR",
+      "locale": "en-IN"
+    },
+    "taxName": "GST"
+  }
+}

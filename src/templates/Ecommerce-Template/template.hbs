@@ -1,0 +1,550 @@
+{{!--
+  Ecommerce template (Figma Document-Templates, node 18926:25865 "Ecommerce-template"): a
+  marketplace-style tax invoice inside one ruled frame.
+
+  Root is normalizeInvoiceTemplateState's output. Every block reads the view model built once
+  by `ecView` (helpers.ts): labels, visibility and table columns all come from the payload.
+  The design's two images are the business's own: the logo (invoice.logo) and the signature.
+
+  Order, inside the frame: masthead (logo | title); Sold By | Billing Address; Shipped From |
+  Shipping Address; Transport Details; document details; E-Invoice / E-Way Bill (or below
+  the items, irnPosition); items with the TOTAL row, any further totals and the amount in
+  words; signature, terms, notes, bank details (QR beside), additional info, attachments; then
+  the summaries last: HSN, tax, batch and the payment details.
+  data-testid / data-section / data-col are test hooks; data-ceres-* are the host's live
+  update targets.
+--}}
+{{#with (ecView @root) as |view|}}
+<div class="ec-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.hideFooter}} is-footer-hidden{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-testid="invoice-root" data-ec-currency="{{@root.invoice.currency}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--ec-text-scale: {{view.print.textScale}};{{#if view.theme}} --ec-theme: {{view.theme.accent}};{{/if}}{{#if view.script.font}} --ec-script-font: '{{view.script.font}}';{{/if}}">
+  {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
+  {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
+  {{#unless view.letterheadEveryPage}}
+    {{!-- Letterhead on the first page only (pdfOptions.letterHeadOnFirstPage): in the flow. --}}
+    <div class="invoice-letterhead ec-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="first">
+      {{#if @root.invoice.letterHead}}
+        <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+      {{else}}
+        <img alt="Letterhead" data-ceres-height="letterhead" />
+      {{/if}}
+    </div>
+  {{/unless}}
+
+  {{!--
+    Print frame: transparent on screen (display: contents). In print, the letterhead repeats
+    at the top of every page in the <thead> unless it is for the first page only; when the
+    footer repeats on every page (pdfOptions.footerOnLastPage off), the real footer is fixed
+    to the foot of each page and the repeating <tfoot> holds an invisible copy of it, so
+    content never runs under it.
+  --}}
+  <table class="ec-page-frame" role="presentation">
+    {{#if view.letterheadEveryPage}}
+      <thead class="ec-page-frame-header">
+        <tr>
+          <td>
+            <div class="no-dibella invoice-letterhead ec-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="all">
+              {{#if @root.invoice.letterHead}}
+                <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+              {{else}}
+                <img alt="Letterhead" data-ceres-height="letterhead" />
+              {{/if}}
+            </div>
+          </td>
+        </tr>
+      </thead>
+    {{/if}}
+    {{#if view.footerEveryPage}}{{#unless view.hideFooter}}
+      <tfoot class="ec-page-frame-footer">
+        <tr>
+          <td>
+            <div class="no-dibella invoice-letterhead-footer ec-letterhead-footer ec-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+              {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    {{/unless}}{{/if}}
+    <tbody>
+      <tr>
+        <td class="ec-page-frame-cell">
+          <div class="ec-page-body">
+          <div class="ec-frame" data-testid="frame">
+            <header class="ec-masthead" data-testid="section" data-section="header">
+              {{!-- The business's own logo; without one the title keeps the row. --}}
+              {{#if view.logo}}
+                <div class="ec-logo">
+                  {{> CeresImage src=view.logo alt=view.sellerName class="ec-logo-image"}}
+                </div>
+              {{/if}}
+              <div class="ec-title-block">
+                {{!-- The status tag (Paid, Unpaid…) on the title's line, just before it (user request). --}}
+                <div class="ec-title-row">
+                  {{#if view.status}}
+                    <span class="ec-status{{#unless view.status.inPrint}} no-print{{/unless}}"><span class="invoice-tag {{view.status.color}}">{{view.status.text}}</span></span>
+                  {{/if}}
+                  {{#if view.title}}<h1 class="ec-title" data-role="title"><span class="ec-text">{{view.title}}</span></h1>{{/if}}
+                </div>
+                {{#if view.subtitle}}<p class="ec-subtitle"><span class="ec-text">{{view.subtitle}}</span></p>{{/if}}
+                {{#if view.copy}}<p class="ec-copy" data-role="tag"><span class="ec-text">{{view.copy}}</span></p>{{/if}}
+              </div>
+            </header>
+
+            {{!-- Seller | buyer, then Shipped From | Shipped To on the row below. --}}
+            {{#each view.partyRows}}
+              <section class="ec-parties" data-testid="section" data-section="{{section}}">
+                {{#each parties}}
+                  <div class="ec-party" data-role="{{role}}">
+                    {{#if title}}<p class="ec-party-title"><span class="ec-text">{{title}} :</span></p>{{/if}}
+                    <p class="ec-party-name"><span class="ec-text">{{name}}</span></p>
+                    {{#if street}}<p class="ec-party-line" data-role="address"><span class="ec-text">{{street}}</span></p>{{/if}}
+                    {{#if region}}<p class="ec-party-line" data-role="address"><span class="ec-text">{{region}}</span></p>{{/if}}
+                    {{#each lines}}
+                      <p class="ec-field"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value{{#if isNum}} ec-num{{else if isEmail}} ec-email{{/if}}{{#if isToken}} ec-break{{/if}}">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                    {{#if supply}}
+                      {{#if supply.lines.length}}
+                        <div class="ec-supply" data-ceres-country-of-supply{{#if supply.hidden}} style="display:none"{{/if}}>
+                          {{#each supply.lines}}
+                            <p class="ec-field"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value">{{value}}</span></p>
+                          {{/each}}
+                        </div>
+                      {{/if}}
+                    {{/if}}
+                  </div>
+                {{/each}}
+              </section>
+            {{/each}}
+
+
+
+
+            {{!-- Transport Details: a section of its own, in the form's order. --}}
+            {{#if view.references.transport}}
+              <section class="ec-block ec-transport" data-testid="transport" data-section="transport">
+                {{#if view.references.transport.title}}<h3 class="ec-block-title"><span class="ec-text">{{view.references.transport.title}}</span></h3>{{/if}}
+                {{#each view.references.transport.rows}}
+                  <p class="ec-field ec-ref-{{key}}"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value{{#if isNum}} ec-num{{/if}}">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></p>
+                {{/each}}
+              </section>
+            {{/if}}
+
+            {{!-- Document details (number, dates, PO, the document's own header fields): the
+                  last section before the items (user request). --}}
+            {{#if view.references.showDetails}}
+              <section class="ec-references" data-testid="section" data-section="details">
+                <div class="ec-references-start">
+                  {{#each view.references.start}}
+                    <p class="ec-field ec-ref-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value{{#if isNum}} ec-num{{/if}}">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ecDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                  {{/each}}
+                </div>
+                <div class="ec-references-end">
+                  {{#each view.references.end}}
+                    <p class="ec-field ec-ref-{{key}}"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value{{#if isNum}} ec-num{{/if}}">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></p>
+                  {{/each}}
+                  {{!-- The document QR, just below the document details (user request). --}}
+                  <div class="ec-qr ec-doc-qr{{#unless view.compliance.qr.document}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.compliance.qr.document}} src="{{view.compliance.qr.document}}"{{/if}} alt="{{view.compliance.qr.documentAlt}}" /></div>
+                </div>
+              </section>
+            {{/if}}
+
+            {{!--
+              E-Invoice (IRN, Ack No., Ack Date) and E-Way Bill lines, untitled (user request), then the IRN / ZATCA /
+              LHDN / document QR codes: after the document details, just above the items (user
+              request), or below the items when the business places them there (irnPosition). The containers
+              stay in the DOM so the host can post values in live; the block shows once one has a
+              value.
+            --}}
+            {{#unless view.compliance.isBelowItems}}
+              <section class="ec-compliance" data-testid="section" data-section="compliance">
+                <div class="ec-compliance-groups">
+                  <div class="ec-compliance-group" data-role="einvoice">
+                    {{#if view.compliance.showIrn}}
+                      <p class="ec-field ec-irn-row"><span class="ec-field-label">{{view.compliance.irnLabel}}:</span> <span class="ec-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+                    {{/if}}
+                    {{#each view.compliance.irnRows}}
+                      <p class="ec-field"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value ec-num">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ecDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                  {{#if view.compliance.eway.length}}
+                    <div class="ec-compliance-group" data-role="eway" data-testid="eway">
+                      {{#each view.compliance.eway}}
+                        <p class="ec-field"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value ec-num">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ecDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                </div>
+                <div class="ec-qr-list">
+                  <div class="ec-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                  <div class="ec-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                  <div class="ec-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                </div>
+              </section>
+            {{/unless}}
+
+            <section class="ec-items-section" data-testid="section" data-section="items">
+              <div class="ec-items-scroll" data-testid="items-scroll">
+                <table class="ec-items{{#if view.print.compactTable}} is-print-compact{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}" data-testid="items-table"{{#if view.print.tableFit}} style="--ec-table-fit: {{view.print.tableFit}};"{{/if}}>
+                  <thead>
+                    <tr data-testid="items-header">
+                      <th class="ec-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px">{{view.table.serialLabel}}</th>
+                      {{#each view.table.header}}
+                        <th class="{{className}}" data-col="{{col}}" >{{#if isName}}<span class="ec-desc-min" aria-hidden="true"></span>{{else}}<span class="ec-col-min" aria-hidden="true"></span>{{/if}}{{#each labelParts}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}</th>
+                      {{/each}}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#each view.table.rows}}
+                      {{#if isGroupHeader}}
+                        <tr class="ec-group-row" data-testid="group-row">
+                          <td colspan="{{colspan}}"><div class="ec-span">
+                            <span class="ec-group-name">{{name}}</span>
+                            {{#if images.length}}<div class="ec-group-images">{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}</div>{{/if}}
+                          </div></td>
+                        </tr>
+                        {{#if originalImages.length}}
+                          <tr class="ec-image-row" data-testid="group-image-row">
+                            <td colspan="{{colspan}}"><div class="ec-span">
+                              {{#each originalImages}}<img class="ec-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                            </div></td>
+                          </tr>
+                        {{/if}}
+                      {{else}}
+                        {{#if nameRow}}
+                          <tr class="ec-name-row" data-testid="item-name-row" data-item-index="{{itemIndex}}">
+                            <td class="ec-col-serial" data-col="sr" rowspan="2">{{#if serial}}<span class="ec-num" data-testid="num">{{serial}}</span>{{/if}}</td>
+                            <td colspan="{{detailColspan}}">
+                              <div class="ec-span">
+                                <span class="ec-item-name">{{name}}</span>
+                                {{#if inlineCodes.length}}<span class="ec-item-codes">{{#each inlineCodes}}<span class="ec-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                              </div>
+                            </td>
+                          </tr>
+                        {{/if}}
+                        <tr class="ec-item-row{{#if isGroupTotal}} ec-group-total-row{{/if}}{{#if nameRow}} has-name-row{{/if}}" data-testid="item-row" data-item-index="{{itemIndex}}">
+                          {{#unless nameRow}}<td class="ec-col-serial" data-col="sr">{{#if serial}}<span class="ec-num" data-testid="num">{{serial}}</span>{{/if}}</td>{{/unless}}
+                          {{#each cells}}
+                            {{#if isName}}
+                              <td class="{{className}}" data-col="{{col}}">
+                                {{#if ../thumbnail}}
+                                  <div class="ec-item-thumbnail">{{> CeresImage src=../thumbnail alt=../name class="ec-thumbnail" href=../thumbnail}}</div>
+                                {{/if}}
+                                {{#unless ../nameRow}}
+                                  <span class="ec-item-name">{{../name}}</span>
+                                  {{#if ../inlineCodes.length}}<span class="ec-item-codes">{{#each ../inlineCodes}}<span class="ec-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                                {{/unless}}
+                                {{#if ../hasDetail}}
+                                  <div class="ec-item-detail" data-ceres-description-inline{{#if ../detailRow}} style="display: none;"{{/if}}>
+                                    {{#unless ../detailRow}}
+                                      <div data-ceres-description-content>
+                                        {{#if ../description}}<div class="ec-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData ../description) }}</div>{{/if}}
+                                        {{#if ../images.length}}{{> CeresImageGallery (prepareImageGallery ../images variant="thumbnail" alt=../name) }}{{/if}}
+                                      </div>
+                                    {{/unless}}
+                                  </div>
+                                {{/if}}
+                              </td>
+                            {{else}}
+                              <td class="{{className}}" data-col="{{col}}">{{#if isNum}}<span class="ec-num" data-testid="num">{{value}}</span>{{else}}{{value}}{{/if}}</td>
+                            {{/if}}
+                          {{/each}}
+                        </tr>
+                        {{#if hasDetail}}
+                          {{!-- Full-width description row (isDescriptionFullWidth), kept for the live toggle. --}}
+                          <tr class="ec-detail-row" data-testid="item-detail-row" data-item-index="{{itemIndex}}" data-ceres-description-row{{#unless detailRow}} style="display: none;"{{/unless}}>
+                            <td class="ec-col-serial"></td>
+                            <td colspan="{{detailColspan}}">
+                              <div class="ec-item-detail ec-span" data-ceres-description-full-width>
+                                {{#if detailRow}}
+                                  <div data-ceres-description-content>
+                                    {{#if description}}<div class="ec-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData description) }}</div>{{/if}}
+                                    {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                                  </div>
+                                {{/if}}
+                              </div>
+                            </td>
+                          </tr>
+                        {{/if}}
+                        {{#if imageRow}}
+                          {{!-- Original images: their own row under the item, across the whole table. --}}
+                          <tr class="ec-image-row" data-testid="item-detail-row" data-item-index="{{itemIndex}}">
+                            <td colspan="{{colspan}}"><div class="ec-span">
+                              {{#each originalImages}}<img class="ec-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                            </div></td>
+                          </tr>
+                        {{/if}}
+                      {{/if}}
+                    {{/each}}
+                    {{#if view.print.stretchTable}}
+                      {{!-- Takes the page's spare height in print (stretchItemTable); empty otherwise. --}}
+                      <tr class="ec-filler" aria-hidden="true"><td class="ec-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                    {{/if}}
+                  </tbody>
+                  {{#if view.table.footer.show}}
+                    {{!-- TOTAL: under Sr.No and Description, then a cell per column, so the item columns'
+                         rules run on through it (user request), each summed column's figure under it.
+                         Hidden with the other totals when the document hides its totals (hideTotals). --}}
+                    <tbody class="ec-items-total">
+                      <tr class="ceres-subtotal-row ec-total-row{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}" data-testid="items-total">
+                        <th class="ec-total-label" colspan="{{view.table.nameSpan}}" scope="row"><span class="ec-text">{{view.table.footer.label}}:</span></th>
+                        {{#each view.table.footer.gridCells}}
+                          <td class="ec-total-value {{className}}" data-col="{{col}}">{{#if isNum}}<span class="ec-num" data-testid="num">{{value}}</span>{{/if}}</td>
+                        {{/each}}
+                      </tr>
+                    </tbody>
+                  {{/if}}
+                  {{!--
+                    The rest of the totals, only where they add to the TOTAL row (helpers.ts
+                    mapTotalRows): the label across the row, the figure in the last column. The
+                    rows are the shared Subtotal widget's (computeSubtotalRows) and keep its classes
+                    and data-ceres-* hooks, so the live hideTotals / hideTaxes toggles still apply.
+                    The amount in words closes the table, as the design draws it.
+                  --}}
+                  <tbody class="ec-totals ceres-subtotal" data-ceres-subtotal data-testid="section" data-section="totals">
+                    {{#each view.totals.main}}
+                      <tr
+                        class="ceres-subtotal-row ceres-subtotal-row-{{emphasis}}{{#if isGrand}} is-grand{{/if}}{{#if view.totals.hidden}}{{#unless survivesHideTotals}} is-hidden-by-totals{{/unless}}{{/if}}{{#if isTaxRow}}{{#if view.totals.hideTaxes}} is-hidden-by-taxes{{/if}}{{/if}}"
+                        data-ceres-subtotal-row="{{key}}"
+                        {{#if isTaxRow}}data-ceres-subtotal-taxes{{/if}}
+                        {{#if survivesHideTotals}}data-ceres-subtotal-keep{{/if}}
+                      >
+                        <th class="ceres-subtotal-label" colspan="{{view.table.nameSpan}}" scope="row">
+                          <span class="ec-text">{{label}}</span>
+                          {{#if note}}<div class="ceres-subtotal-note">{{note}}</div>{{/if}}
+                        </th>
+                        {{#each view.table.fillers}}<td class="ec-fill" aria-hidden="true"></td>{{/each}}
+                        <td class="ceres-subtotal-value" data-ec-fit>
+                          <div class="ec-fig">
+                            <span class="ec-num"{{#if isNum}} data-testid="num"{{/if}}{{#if isGrand}} data-role="grand-total-row"{{/if}}>{{value}}</span>
+                            {{#if converted}}<span class="ceres-subtotal-converted">{{converted}}</span>{{/if}}
+                            {{#if extra}}<span class="ceres-subtotal-extra">{{extra.value}}</span>{{/if}}
+                            {{#if extra.converted}}<span class="ceres-subtotal-converted">{{extra.converted}}</span>{{/if}}
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                    {{#each view.totals.extra}}
+                      <tr class="ceres-subtotal-row ec-extra-row{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}" data-ceres-subtotal-row="{{key}}">
+                        <th class="ceres-subtotal-label" colspan="{{view.table.nameSpan}}" scope="row"><span class="ec-text">{{label}}</span></th>
+                        {{#each view.table.fillers}}<td class="ec-fill" aria-hidden="true"></td>{{/each}}
+                        <td class="ceres-subtotal-value" data-ec-fit>
+                          <div class="ec-fig">
+                            <span class="ec-num">{{value}}</span>
+                            {{#if converted}}<span class="ceres-subtotal-converted">{{converted}}</span>{{/if}}
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                    {{#each view.totals.due}}
+                      <tr class="ceres-subtotal-row ceres-subtotal-row-{{emphasis}}{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}" data-ceres-subtotal-row="{{key}}">
+                        <th class="ceres-subtotal-label" colspan="{{view.table.nameSpan}}" scope="row"><span class="ec-text">{{label}}</span></th>
+                        {{#each view.table.fillers}}<td class="ec-fill" aria-hidden="true"></td>{{/each}}
+                        <td class="ceres-subtotal-value" data-ec-fit>
+                          <div class="ec-fig">
+                            <span class="ec-num"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
+                            {{#if converted}}<span class="ceres-subtotal-converted">{{converted}}</span>{{/if}}
+                          </div>
+                        </td>
+                      </tr>
+                    {{/each}}
+                    {{#if view.words}}
+                      <tr class="ec-words-row ceres-subtotal-words{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}{{#if view.words.hiddenBySetting}} is-hidden-by-words-setting{{/if}}" data-ceres-total-in-words>
+                        <td colspan="{{view.table.colspan}}"><span class="ec-words-label ec-text">{{view.words.label}} :</span> <span class="ec-words-value ec-text">{{view.words.value}}</span></td>
+                      </tr>
+                    {{/if}}
+                  </tbody>
+                  {{!-- Print only: an empty footer row Chrome repeats at the foot of every page the
+                       table runs over, so a row split across pages is closed by a rule. --}}
+                  <tfoot class="ec-page-close" aria-hidden="true"><tr><td colspan="{{view.table.colspan}}"></td></tr></tfoot>
+                </table>
+              </div>
+            </section>
+
+            {{#if view.compliance.isBelowItems}}
+              <section class="ec-compliance" data-testid="section" data-section="compliance">
+                <div class="ec-compliance-groups">
+                  <div class="ec-compliance-group" data-role="einvoice">
+                    {{#if view.compliance.showIrn}}
+                      <p class="ec-field ec-irn-row"><span class="ec-field-label">{{view.compliance.irnLabel}}:</span> <span class="ec-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+                    {{/if}}
+                    {{#each view.compliance.irnRows}}
+                      <p class="ec-field"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value ec-num">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ecDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                  {{#if view.compliance.eway.length}}
+                    <div class="ec-compliance-group" data-role="eway" data-testid="eway">
+                      {{#each view.compliance.eway}}
+                        <p class="ec-field"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value ec-num">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ecDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                </div>
+                <div class="ec-qr-list">
+                  <div class="ec-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                  <div class="ec-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                  <div class="ec-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                </div>
+              </section>
+            {{/if}}
+
+
+            {{!-- For <business> / signature / Authorized Signatory, on the right; only when the
+                  document has a signature. --}}
+            {{#if view.signature.show}}
+              <section class="ec-signature" data-testid="signature">
+                {{#if view.signature.forLabel}}<p class="ec-signature-for"><span class="ec-text">{{view.signature.forLabel}}</span></p>{{/if}}
+                <div class="ec-signature-mark">
+                  {{#if view.signature.image}}
+                    {{> CeresImage src=view.signature.image alt=view.signature.label class="ec-signature-image"}}
+                  {{else if view.signature.awaitingDigital}}
+                    <p class="ec-signature-banner">Awaiting Digital Signature</p>
+                  {{else if view.signature.signedDigital}}
+                    <p class="ec-signature-banner">
+                      Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+                      {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+                    </p>
+                  {{/if}}
+                </div>
+                {{#if view.signature.label}}<p class="ec-signature-label"><span class="ec-text">{{view.signature.label}}</span></p>{{/if}}
+              </section>
+            {{/if}}
+
+            {{#each view.terms}}
+              <section class="ec-block" data-testid="section" data-section="terms">
+                {{#if title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{title}}</span></h3>{{/if}}
+                <ol class="ec-terms">
+                  {{#each items}}<li><span class="ec-text"><span class="ec-term-number">{{number}}</span> {{text}}</span></li>{{/each}}
+                </ol>
+              </section>
+            {{/each}}
+
+            {{#if view.notes}}
+              <section class="ec-block" data-testid="section" data-section="notes">
+                {{#if view.notes.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.notes.title}}</span></h3>{{/if}}
+                <div class="ec-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
+              </section>
+            {{/if}}
+
+            {{#if view.bank.show}}
+              {{!-- Bank Details on the start side; Scan to Pay, the QR and the UPI limit note in a
+                    column of their own beside it, their tops level with the title. --}}
+              <section class="ec-bank" data-testid="section" data-section="bank">
+                <div class="ec-block ec-bank-details">
+                  {{#if view.bank.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.bank.title}}</span></h3>{{/if}}
+                  <div class="ec-bank-rows">
+                      {{#each view.bank.rows}}
+                        <p class="ec-field ec-bank-{{key}}"><span class="ec-field-label">{{label}}:</span> <span class="ec-field-value{{#if isNum}} ec-num{{/if}}">{{value}}</span></p>
+                      {{/each}}
+                      {{#if view.bank.upi}}
+                        <p class="ec-field ec-bank-upi"><span class="ec-field-label">{{view.bank.upi.label}}:</span> <span class="ec-field-value ec-num">{{view.bank.upi.id}}</span></p>
+                      {{/if}}
+                  </div>
+                  {{#unless view.bank.upi.qr}}{{#if view.bank.upi.note}}<p class="ec-upi-note">{{view.bank.upi.note}}</p>{{/if}}{{/unless}}
+                </div>
+                {{#if view.bank.upi.qr}}
+                  <figure class="ec-upi{{#if view.bank.upiSmall}} is-small{{/if}}">
+                    <figcaption class="ec-upi-caption"><span class="ec-text">{{view.bank.upi.scanLabel}}</span></figcaption>
+                    <img class="ec-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
+                    {{#if view.bank.upi.note}}<p class="ec-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                  </figure>
+                {{/if}}
+              </section>
+            {{/if}}
+
+            {{#if view.additional}}
+              <section class="ec-block" data-testid="section" data-section="additional">
+                {{#if view.additional.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.additional.title}}</span></h3>{{/if}}
+                {{#each view.additional.rows}}
+                  <p class="ec-field"><span class="ec-field-label" data-role="ai-label">{{label}}:</span> <span class="ec-field-value" data-role="ai-value">{{#if isDate}}{{ecDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></p>
+                {{/each}}
+              </section>
+            {{/if}}
+
+            {{#if view.attachments}}
+              <section class="ec-block" data-testid="section" data-section="attachments">
+                {{#if view.attachments.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.attachments.title}}</span></h3>{{/if}}
+                <ol class="ec-attachments">
+                  {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
+                </ol>
+              </section>
+            {{/if}}
+
+            {{!-- Summaries last (user request): HSN, tax, batch, then the payment details. Each
+                  renders with its data, hidden while switched off (live toggles). --}}
+            <section class="ec-summary" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+              {{#if view.hsn.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.hsn.title}}</span></h3>{{/if}}
+              {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+            </section>
+
+            <section class="ec-summary" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
+              {{#if view.taxSummary.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.taxSummary.title}}</span></h3>{{/if}}
+              {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+            </section>
+
+            {{#if view.batch}}
+              <section class="ec-summary" data-testid="section" data-section="batch-summary" data-ceres-batch-summary{{#if view.batch.hidden}} style="display: none;"{{/if}}>
+                {{#if view.batch.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.batch.title}}</span></h3>{{/if}}
+                <div class="ceres-table-section">
+                  <table class="ceres-table ec-batch-table">
+                    <thead><tr>{{#each view.batch.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
+                    <tbody>
+                      {{#each view.batch.rows}}
+                        <tr>{{#each this}}<td{{#if isNum}} class="ec-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
+                      {{/each}}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            {{/if}}
+
+            {{#if view.payments.show}}
+              {{!-- Payment details: one table like the summaries above it — the headings once, a row
+                    per payment, a Total row with more than one (the payment widget's layout). --}}
+              <section class="ec-summary ec-payments" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
+                {{#if view.payments.title}}<h3 class="ec-block-title" data-role="title"><span class="ec-text">{{view.payments.title}}</span></h3>{{/if}}
+                <div class="ceres-table-section">
+                  <table class="ceres-table ec-payments-table">
+                    <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
+                    <tbody>
+                      {{#each view.payments.rows}}
+                        <tr data-testid="payment">
+                          {{#each this}}
+                            <td class="{{#if isText}}is-text{{else}}ec-num{{/if}}">{{#if isDate}}{{ecShortDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="ec-payment-converted">{{converted}}</span>{{/if}}</td>
+                          {{/each}}
+                        </tr>
+                      {{/each}}
+                    </tbody>
+                    {{#if view.payments.total}}
+                      <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="ec-num">{{value}}</td>{{/each}}</tr></tfoot>
+                    {{/if}}
+                  </table>
+                </div>
+              </section>
+            {{/if}}
+
+            {{!-- Contact details close the document (user request): Refrens' enquiry line. --}}
+            {{#if view.contact}}
+              <section class="ec-contact" data-testid="section" data-section="contact">
+                <p><span class="ec-text">{{view.contact.lead}}</span>
+                  {{#if view.contact.email}}<span class="ec-text">{{view.contact.emailLabel}}</span> <strong class="ec-email">{{view.contact.email}}</strong>{{/if}}{{#if view.contact.phone}}{{#if view.contact.email}}, {{/if}}<span class="ec-text">{{view.contact.phoneLabel}}</span> <strong class="ec-num">{{formatPhoneNumber view.contact.phone}}</strong>{{/if}}
+                </p>
+              </section>
+            {{/if}}
+          </div>
+
+          {{> RefrensBranding @root.invoice}}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  {{#unless view.hideFooter}}
+    <div class="{{#if view.footerEveryPage}}no-dibella {{/if}}invoice-letterhead-footer ec-letterhead-footer{{#if view.footerEveryPage}} ec-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+      {{#if @root.invoice.letterHeadFooter}}
+        <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+      {{else}}
+        <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+      {{/if}}
+    </div>
+  {{/unless}}
+</div>
+{{/with}}
