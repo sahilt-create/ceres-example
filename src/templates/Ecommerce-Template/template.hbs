@@ -15,7 +15,7 @@
   update targets.
 --}}
 {{#with (ecView @root) as |view|}}
-<div class="ec-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.hideFooter}} is-footer-hidden{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-testid="invoice-root" data-ec-currency="{{@root.invoice.currency}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--ec-text-scale: {{view.print.textScale}}; --ec-print-width: {{view.print.printWidth}}px;{{#if view.theme}} --ec-theme: {{view.theme.accent}};{{/if}}{{#if view.script.font}} --ec-script-font: '{{view.script.font}}';{{/if}}">
+<div class="ec-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.hideFooter}} is-footer-hidden{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-testid="invoice-root" data-ec-currency="{{@root.invoice.currency}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--ec-text-scale: {{view.print.textScale}}; --ec-print-width: {{view.print.printWidth}}px; --ec-print-zoom: {{view.print.printZoom}};{{#if view.theme}} --ec-theme: {{view.theme.accent}};{{/if}}{{#if view.script.font}} --ec-script-font: '{{view.script.font}}';{{/if}}">
   {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
   {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
   {{#unless view.letterheadEveryPage}}

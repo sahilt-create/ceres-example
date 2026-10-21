@@ -1244,6 +1244,57 @@ describe("Ecommerce template — files and CSS", () => {
     expect(render()).toContain("--ec-print-width: 714px;");
   });
 
+  it("keeps the print table's 10 px text floor at 10 px on paper, whatever the print zoom", () => {
+    const zoom = (pdfOptions: Record<string, unknown>) =>
+      mapPrint({ pdfOptions }).printZoom;
+    expect(zoom({})).toBe("1");
+    expect(zoom({ zoomSize: "1.2" })).toBe("1.2");
+    // The renderer applies no zoom for 0.8.
+    expect(zoom({ zoomSize: "0.8" })).toBe("1");
+    expect(render()).toContain("--ec-print-zoom: 1;");
+    const print = css.slice(css.indexOf("@media print"));
+    expect(print).not.toMatch(/font-size: max\(\s*10px,/);
+    expect(
+      print.match(
+        /font-size: max\(\s*calc\(10px \/ var\(--ec-print-zoom, 1\)\),/g
+      )
+    ).toHaveLength(4);
+  });
+
+  it("leaves the batch columns out when the document switches them off", () => {
+    const heads = (on: boolean | undefined) => {
+      const html = render((invoice) => {
+        invoice.columns = [
+          ...(invoice.columns || []),
+          { key: "batchCode", label: "Batch Code", isHidden: false },
+          { key: "expiryDate", label: "Expiry Date", isHidden: false },
+        ];
+        invoice.advanceOptions = {
+          ...(invoice.advanceOptions || {}),
+          showBatchColumnsInInvoice: on,
+        };
+      });
+      const table = html.slice(html.indexOf('<table class="ec-items'));
+      return plain(table.slice(0, table.indexOf("</thead>")));
+    };
+    expect(heads(true)).toContain("Batch Code");
+    expect(heads(undefined)).toContain("Batch Code");
+    expect(heads(false)).not.toContain("Batch Code");
+    expect(heads(false)).not.toContain("Expiry Date");
+  });
+
+  it("caps a Long PDF's original images at a fixed height, not one read off the window", () => {
+    expect(css).toMatch(
+      /\.ec-doc\.is-pageless \.ec-large-image \{\s*max-height: 490px;/
+    );
+  });
+
+  it("puts the item table and the totals under it on one rule in print", () => {
+    expect(css).toMatch(
+      /\.ec-items\[data-ec-totals-split\] \{\s*margin-top: -1px;/
+    );
+  });
+
   it("keeps a clear type hierarchy: section titles 14 px bold, names and labels semibold", () => {
     expect(css).toMatch(/--ec-font-size-m: 14px;/);
     [".ec-party-title {", ".ec-block-title {", ".ec-upi-caption {"].forEach(
@@ -1756,6 +1807,28 @@ describe("Ecommerce template — as refrens.com prints real documents", () => {
     expect(stretch(true, true)).toContain("ec-doc is-stretch");
     expect(stretch(false, true)).not.toContain('class="ec-filler"');
     expect(stretch(true, false)).not.toContain('class="ec-filler"');
+    // A Long PDF has no page to fill.
+    expect(
+      render((invoice, root) => {
+        invoice.owner = {
+          ...(invoice.owner || {}),
+          configuration: { experimental: { stretchInvoiceTable: true } },
+        };
+        root.pdfOptions = {
+          ...(root.pdfOptions || {}),
+          fullHeightTable: true,
+          longPdf: true,
+        };
+        invoice.template = {
+          ...(invoice.template || {}),
+          pdfOptions: {
+            ...(invoice.template?.pdfOptions || {}),
+            fullHeightTable: true,
+            longPdf: true,
+          },
+        };
+      })
+    ).not.toContain("ec-doc is-stretch");
     // Every document type (user request), a delivery challan too.
     expect(
       render((invoice, root) => {

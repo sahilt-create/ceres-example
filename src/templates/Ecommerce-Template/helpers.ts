@@ -2317,6 +2317,17 @@ const resolveColumns = (state: UnknownRecord) => {
         ...column,
       })
     );
+  // "Show batch columns in invoice" switched off: the batch columns are left out.
+  if (
+    optionalFlag(asRecord(invoice.advanceOptions).showBatchColumnsInInvoice) ===
+    false
+  ) {
+    columns.splice(
+      0,
+      columns.length,
+      ...columns.filter((column) => !BATCH_FIELD_KEYS.includes(column.key))
+    );
+  }
   const has = (key: string) => columns.some((column) => column.key === key);
 
   // Unit is not an account column: it comes from the item itself. Batch columns are the
@@ -3663,6 +3674,8 @@ export const mapPrint = (
   return {
     textScale: compactDecimal(textScale),
     printWidth,
+    // The renderer's print zoom: the print table's 10 px text floor is 10 px on paper.
+    printZoom: compactDecimal(rendererZoom),
     compactTable,
     tableFit:
       tableFit < 1 ? compactDecimal(Math.floor(tableFit * 100) / 100) : "",
@@ -4272,7 +4285,8 @@ export const buildEcommerceView = (root: unknown) => {
     letterheadEveryPage: !visibility.letterHeadOnFirstPage,
     pageless: options.pageless,
     hideFooter: print.hideFooter,
-    print,
+    // A Long PDF is one page as tall as its content: there is no page to stretch the table to.
+    print: options.pageless ? { ...print, stretchTable: false } : print,
     script: mapScript(state),
   };
 };
@@ -4491,9 +4505,12 @@ export const fitTotals = (root: ParentNode = document): void => {
  * columns size to their content, so the table is measured once laid out for print rather than
  * estimated: a table wider than its page takes the tight print padding (is-print-fit), then
  * its text shrinks just enough to fit (--ec-print-fit), never under the 10 px floor (CSS).
- * Back on screen, it reads as before.
+ * Back on screen, it reads as before. The text stops at its floor first; the factor goes on
+ * down to 0.5 for the empty columns' floors (A5 at print size 1.2 still cut its last column).
  */
-const MIN_PRINT_FIT = 0.6;
+const MIN_PRINT_FIT = 0.5;
+// The last resort's limit: a table needing more than this is cut at the page edge instead.
+const MIN_PRINT_ZOOM = 0.85;
 // Sub-pixel rounding is not an overflow.
 const PRINT_SLACK = 0.5;
 
@@ -4779,6 +4796,7 @@ export const fitPrintTable = (root: ParentNode = document): void => {
   root.querySelectorAll<HTMLElement>(".ec-items").forEach((table) => {
     table.classList.remove("is-print-fit");
     table.style.removeProperty("--ec-print-fit");
+    table.style.removeProperty("--ec-table-zoom");
     const box = table.parentElement;
     if (!printing || !box) return;
     const overflow = () =>
@@ -4797,6 +4815,18 @@ export const fitPrintTable = (root: ParentNode = document): void => {
       );
       table.style.setProperty("--ec-print-fit", String(fit));
       if (fit === MIN_PRINT_FIT) break;
+    }
+    // Text and columns at their floors and the table still a little too wide (ten columns on
+    // A5 at print size 1.2): the whole table is scaled down rather than its last column cut.
+    // A table far wider than the page (thirty columns) is cut at the page edge, as refrens.com
+    // cuts it, rather than shrunk to unreadable type.
+    const ratio =
+      box.getBoundingClientRect().width / table.getBoundingClientRect().width;
+    if (ratio < 1 && ratio >= MIN_PRINT_ZOOM) {
+      table.style.setProperty(
+        "--ec-table-zoom",
+        String(Math.floor(ratio * 1000) / 1000)
+      );
     }
   });
 };

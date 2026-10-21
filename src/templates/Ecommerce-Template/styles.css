@@ -1251,10 +1251,11 @@
     white-space: normal;
   }
 
-  /* A page too narrow even then shrinks the table's text, never under 10 px. */
+  /* A page too narrow even then shrinks the table's text, never under 10 px on paper (the
+     renderer's print zoom scales it: 10 px / zoom). */
   .ec-items.is-print-compact {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-table-fit, 1))
     );
   }
@@ -1268,18 +1269,25 @@
   }
 
   /* The columns' floors shrink with the text, or a wide table's empty columns alone keep it
-     wider than the page and its last column (the amounts, the totals' figures) is cut off. */
+     wider than the page and its last column (the amounts, the totals' figures) is cut off.
+     Like the text floor, they hold on paper whatever the print zoom (A5 at 1.2 cut Total). */
   .ec-items.is-print-fit .ec-col-min {
-    width: calc(40px * var(--ec-print-fit, 1));
+    width: calc(40px * var(--ec-print-fit, 1) / var(--ec-print-zoom, 1));
   }
 
   .ec-items.is-print-fit .ec-desc-min {
-    width: calc(140px * var(--ec-print-fit, 1));
+    width: calc(140px * var(--ec-print-fit, 1) / var(--ec-print-zoom, 1));
+  }
+
+  /* Last resort (helpers.ts fitPrintTable): a table a little too wide even at its floors is
+     scaled down whole; the split-off totals carry the same class and style, so they follow. */
+  .ec-items.is-print-fit {
+    zoom: var(--ec-table-zoom, 1);
   }
 
   .ec-items.is-print-fit {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
     );
   }
@@ -1287,14 +1295,14 @@
   .ec-items.is-print-fit thead th,
   .ec-items.is-print-fit .ec-words-value {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-s) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
     );
   }
 
   .ec-items.is-print-fit .ec-item-codes {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-xs) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
     );
   }
@@ -1413,6 +1421,13 @@
     max-height: min(45vh, 490px); /* px cap: on a Pageless PDF's one tall page vh is the whole document */
     margin-inline: 0; /* from the start edge: centred, a table wider than its page (A5) pushed it past the page edge */
     object-fit: contain;
+  }
+
+  /* Long PDF: no page to keep it within, and a vh cap read off the PDF service's window while
+     it lays out (270 px) grew to 490 px on the tall page it prints on, past the height it had
+     measured. A fixed cap prints as it was measured. */
+  .ec-doc.is-pageless .ec-large-image {
+    max-height: 490px;
   }
 
   .ec-items .ec-items-total,
@@ -1568,8 +1583,9 @@
  * the two meet on a single line.
  */
 @media print {
+  /* Chrome prints the 0.5 px rule as a whole pixel: a 1 px overlap puts both on one line. */
   .ec-items[data-ec-totals-split] {
-    margin-top: calc(-1 * var(--ec-rule-width));
+    margin-top: -1px;
   }
 
   /* One solid ground under the totals: painted cell by cell, the hairline seams between their
