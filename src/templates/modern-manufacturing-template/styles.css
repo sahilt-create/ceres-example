@@ -775,6 +775,12 @@
   vertical-align: top;
 }
 
+/* A stretched last row (helpers.ts: the print stretch, and the preview's A4 sheet) keeps its
+   text at the top; its cells' column rules and tint run down to the Total row. */
+.mm-items > tbody > tr[data-mm-stretched] > td {
+  vertical-align: top;
+}
+
 .mm-items th[data-col="desc"],
 .mm-items td[data-col="desc"] {
   text-align: start;
@@ -2310,11 +2316,6 @@
   /* The status tag prints only when the document asks for it (showStatusTagInPrint). */
   .mm-status.no-print {
     display: none;
-  }
-
-  /* A stretched last row (fullHeightTable, helpers.ts) keeps its text at the top. */
-  .mm-items > tbody > tr[data-mm-stretched] > td {
-    vertical-align: top;
   }
 
   .mm-signature-section {

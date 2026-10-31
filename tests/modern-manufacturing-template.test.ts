@@ -293,18 +293,33 @@ describe("Modern Manufacturing template — render", () => {
     );
   });
 
-  it("marks the page for the stretched table only when the toggle is on", () => {
-    const on = render((invoice) => {
-      invoice.template = { pdfOptions: { fullHeightTable: true } };
-      invoice.owner.configuration = {
-        ...invoice.owner.configuration,
-        experimental: { stretchInvoiceTable: true },
-      };
-    });
-    expect(on).toContain(
-      'data-testid="invoice-root" data-mm-stretch-allowed data-mm-stretch-table data-mm-paper-height="1122" dir="ltr"'
+  it("marks the page for the stretched table when the business allows it, whatever the document says", () => {
+    const business = (fullHeightTable: unknown) =>
+      render((invoice) => {
+        invoice.template = { pdfOptions: { fullHeightTable } };
+        invoice.owner.configuration = {
+          ...invoice.owner.configuration,
+          experimental: { stretchInvoiceTable: true },
+        };
+      });
+    [true, false, undefined].forEach((toggle) =>
+      expect(business(toggle)).toContain(
+        'data-testid="invoice-root" data-mm-stretch-table data-mm-paper-height="1122" dir="ltr"'
+      )
     );
     expect(render()).not.toContain("data-mm-stretch-table");
+    expect(
+      render((invoice) => {
+        invoice.template = { pdfOptions: { fullHeightTable: true } };
+      })
+    ).not.toContain("data-mm-stretch-table");
+    // A Pageless document is marked, so the preview leaves its table as it is.
+    expect(render()).not.toContain("data-mm-pageless");
+    expect(
+      render((invoice) => {
+        invoice.template = { pdfOptions: { pageless: true } };
+      })
+    ).toContain("data-mm-pageless");
   });
 
   it("shows the signatory block once a signature is added", () => {
@@ -3275,7 +3290,7 @@ describe("Modern Manufacturing template — view model", () => {
     ).toBe(true);
   });
 
-  it("prints at true size, stretching the table where the business and document ask", () => {
+  it("prints at true size, stretching the table where the business asks", () => {
     // No zoom of its own: the text scale, the printable width and the stretch flags only.
     expect(mapPrint({})).toEqual({
       textScale: "1",
@@ -3284,8 +3299,8 @@ describe("Modern Manufacturing template — view model", () => {
       paperHeight: 1122,
       photoCap: 596,
       bandCap: 241,
-      stretchAllowed: false,
       stretchTable: false,
+      pageless: false,
     });
     // The printable width caps the page in print (Refrens' PDF service lays the page out in
     // a wider window): paper less the side margins, under the print zoom, 4 px kept back.
@@ -3315,8 +3330,8 @@ describe("Modern Manufacturing template — view model", () => {
     expect(repeatedBandCap({ format: "a5", landscape: true })).toBe(100);
     expect(repeatedBandCap({ zoomSize: "1.2" })).toBe(198);
     expect(repeatedBandCap({ zoomSize: "0.8" })).toBe(241);
-    // "Stretch invoice & quotation tables to fill the page": the business allows it
-    // (experimental.stretchInvoiceTable), the document's own toggle asks for it.
+    // "Stretch invoice & quotation tables to fill the page": the business's setting
+    // (experimental.stretchInvoiceTable) alone; the document's own toggle is ignored.
     const allowed = {
       invoice: {
         owner: {
@@ -3324,23 +3339,22 @@ describe("Modern Manufacturing template — view model", () => {
         },
       },
     };
-    expect(
-      mapPrint({ ...allowed, pdfOptions: { fullHeightTable: true } })
-    ).toMatchObject({
-      stretchAllowed: true,
-      stretchTable: true,
+    [true, "true", false, "false", undefined].forEach((fullHeightTable) => {
+      expect(
+        mapPrint({ ...allowed, pdfOptions: { fullHeightTable } }).stretchTable
+      ).toBe(true);
+      expect(mapPrint({ pdfOptions: { fullHeightTable } }).stretchTable).toBe(
+        false
+      );
     });
-    expect(
-      mapPrint({ ...allowed, pdfOptions: { fullHeightTable: "true" } })
-        .stretchTable
-    ).toBe(true);
-    expect(
-      mapPrint({ ...allowed, pdfOptions: { fullHeightTable: "false" } })
-        .stretchTable
-    ).toBe(false);
-    expect(
-      mapPrint({ pdfOptions: { fullHeightTable: true } }).stretchTable
-    ).toBe(false);
+    expect(mapPrint(allowed).stretchTable).toBe(true);
+    // Lydia's Pageless PDF, by any of its names.
+    expect(mapPrint({ pdfOptions: { pageless: true } }).pageless).toBe(true);
+    expect(mapPrint({ pdfOptions: { isPageless: "true" } }).pageless).toBe(
+      true
+    );
+    expect(mapPrint({ pdfOptions: { longPdf: 1 } }).pageless).toBe(true);
+    expect(mapPrint({ pdfOptions: { pageless: false } }).pageless).toBe(false);
     // Text scale as a ratio or a percentage, kept within 0.3–2.
     expect(mapPrint({ pdfOptions: { textScale: 1.1 } }).textScale).toBe("1.1");
     expect(mapPrint({ pdfOptions: { scale: "120" } }).textScale).toBe("1.2");

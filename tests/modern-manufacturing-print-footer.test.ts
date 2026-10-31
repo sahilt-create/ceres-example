@@ -8,6 +8,7 @@ import {
   loadScriptFont,
   resetItemsTableStretch,
   stretchItemsTable,
+  stretchItemsToSheet,
   footerEdgeGap,
   placeFootersOnPageEdge,
   registerModernManufacturingPrint,
@@ -334,12 +335,10 @@ const mockStretchLayout = (layout: StretchLayout) => {
     );
 };
 
-const page = (stretch = true, allowed = true) => {
+const page = (stretch = true, extra = "") => {
   document.body.innerHTML = `<div class="mm-doc"${
-    allowed ? " data-mm-stretch-allowed" : ""
-  }${
     stretch ? " data-mm-stretch-table" : ""
-  }><table class="mm-items"><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table></div>`;
+  }${extra}><table class="mm-items"><tbody><tr><td>1</td></tr><tr><td>2</td></tr></tbody></table></div>`;
 };
 
 const lastRow = () =>
@@ -464,8 +463,7 @@ describe("Modern Manufacturing — table stretched to fill the page", () => {
     expect(lastRow().hasAttribute("data-mm-stretched")).toBe(false);
   });
 
-  it("follows Lydia's live toggle", () => {
-    page(false);
+  it("ignores Lydia's live document toggle: the business's setting decides", () => {
     const doc = () => document.querySelector(".mm-doc") as HTMLElement;
     const update = (pdfOptions: unknown) =>
       applyTemplateUpdate({
@@ -473,20 +471,15 @@ describe("Modern Manufacturing — table stretched to fill the page", () => {
         template: { pdfOptions },
       });
 
+    page(true);
+    update({ fullHeightTable: false });
+    update({ fullHeightTable: "false" });
+    expect(doc().hasAttribute("data-mm-stretch-table")).toBe(true);
+
+    page(false);
     update({ fullHeightTable: true });
-    expect(doc().hasAttribute("data-mm-stretch-table")).toBe(true);
-    // Other print options leave it as it is.
-    update({ zoomSize: "1.1" });
-    expect(doc().hasAttribute("data-mm-stretch-table")).toBe(true);
     applyTemplateUpdate({ type: "lydia:print" });
     applyTemplateUpdate(null);
-    expect(doc().hasAttribute("data-mm-stretch-table")).toBe(true);
-    update({ fullHeightTable: "false" });
-    expect(doc().hasAttribute("data-mm-stretch-table")).toBe(false);
-
-    // A business without the stretch (experimental.stretchInvoiceTable) never turns it on.
-    page(false, false);
-    update({ fullHeightTable: true });
     expect(doc().hasAttribute("data-mm-stretch-table")).toBe(false);
   });
 
@@ -511,7 +504,7 @@ describe("Modern Manufacturing — table stretched to fill the page", () => {
     expect(doc().style.getPropertyValue("--mm-theme-tint")).toBe("");
   });
 
-  it("stretches before placing the footer when printing, and listens for the toggle", () => {
+  it("stretches before placing the footer when printing, whatever Lydia's toggle says", () => {
     type Listener = (event: { matches: boolean }) => void;
     const listeners: Listener[] = [];
     const state = window as typeof window & { mmPrintRegistered?: boolean };
@@ -521,7 +514,7 @@ describe("Modern Manufacturing — table stretched to fill the page", () => {
         listeners.push(listener),
     });
     window.history.replaceState(null, "", "/");
-    page(false);
+    page(true);
     mockStretchLayout({ ...onePage, rowHeight: 40 });
     registerModernManufacturingPrint();
 
@@ -529,7 +522,7 @@ describe("Modern Manufacturing — table stretched to fill the page", () => {
       new MessageEvent("message", {
         data: {
           type: "lydia:template-update",
-          template: { pdfOptions: { fullHeightTable: true } },
+          template: { pdfOptions: { fullHeightTable: false } },
         },
       })
     );
@@ -542,6 +535,151 @@ describe("Modern Manufacturing — table stretched to fill the page", () => {
     lastRow().setAttribute("data-mm-stretched", "");
     window.dispatchEvent(new Event("afterprint"));
     expect(lastRow().style.height).toBe("");
+  });
+});
+
+describe("Modern Manufacturing — the preview's table stretched to an A4 sheet", () => {
+  // jsdom lays nothing out: the sheet is `width` wide and `height` tall before the stretch
+  // (the stretched row's own extra counted in), its last row `rowHeight`.
+  const mockSheet = (width: number, height: number, rowHeight = 40) => {
+    const row = () =>
+      document.querySelector<HTMLElement>(
+        ".mm-items > tbody > tr:last-child"
+      ) as HTMLElement;
+    jest
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function measure(this: HTMLElement) {
+        const added = (parseFloat(row().style.height) || rowHeight) - rowHeight;
+        if (this.classList.contains("mm-doc")) {
+          return { ...rect(0, height + added), width } as DOMRect;
+        }
+        if (this === row()) return rect(0, rowHeight + added);
+        return rect(0, 0);
+      });
+    jest
+      .spyOn(HTMLElement.prototype, "getClientRects")
+      .mockImplementation(() => [rect(0, 1)] as unknown as DOMRectList);
+  };
+  const media = (print: boolean) => {
+    window.matchMedia = ((query: string) => ({
+      matches: print && query === "print",
+      media: query,
+      addEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+  };
+
+  beforeEach(() => media(false));
+  // A desktop window, so the table stays a table (fitItemsToScreen) when printing ends.
+  beforeAll(() =>
+    Object.defineProperty(document.documentElement, "clientWidth", {
+      configurable: true,
+      get: () => 1200,
+    })
+  );
+  afterAll(() => {
+    delete (document.documentElement as { clientWidth?: number }).clientWidth;
+  });
+
+  it("fills a short document to one A4 sheet, whatever either toggle says", () => {
+    [true, false].forEach((business) => {
+      page(business);
+      mockSheet(840, 700);
+      stretchItemsToSheet();
+      // 840 × 297 / 210 = 1188 px tall: 488 px more on the last row.
+      expect(lastRow().style.height).toBe("528px");
+      expect(lastRow().hasAttribute("data-mm-stretched")).toBe(true);
+      // Measured again, without its own extra height: the same, never growing.
+      stretchItemsToSheet();
+      expect(lastRow().style.height).toBe("528px");
+      jest.restoreAllMocks();
+    });
+  });
+
+  it("leaves a document taller than the sheet, a Pageless one and the phone layouts as they are", () => {
+    page(false);
+    mockSheet(840, 1300);
+    stretchItemsToSheet();
+    expect(lastRow().style.height).toBe("");
+    expect(lastRow().hasAttribute("data-mm-stretched")).toBe(false);
+
+    page(false, " data-mm-pageless");
+    stretchItemsToSheet();
+    expect(lastRow().style.height).toBe("");
+
+    ["is-cards", "is-grid"].forEach((layout) => {
+      page(false);
+      document.querySelector(".mm-items")?.classList.add(layout);
+      jest.restoreAllMocks();
+      mockSheet(840, 700);
+      stretchItemsToSheet();
+      expect(lastRow().style.height).toBe("");
+    });
+  });
+
+  it("drops a stretch the sheet no longer needs", () => {
+    page(false);
+    mockSheet(840, 1300);
+    lastRow().style.height = "300px";
+    lastRow().setAttribute("data-mm-stretched", "");
+    stretchItemsToSheet();
+    expect(lastRow().style.height).toBe("");
+  });
+
+  it("leaves printing to the print stretch, and comes back after printing", () => {
+    type Listener = (event: { matches: boolean }) => void;
+    const listeners: Listener[] = [];
+    const state = window as typeof window & { mmPrintRegistered?: boolean };
+    delete state.mmPrintRegistered;
+    let printing = false;
+    window.matchMedia = ((query: string) => ({
+      matches: printing && query === "print",
+      media: query,
+      addEventListener: (_: string, listener: Listener) =>
+        listeners.push(listener),
+    })) as unknown as typeof window.matchMedia;
+    window.history.replaceState(null, "", "/");
+    // The business without the stretch: nothing in print, the sheet filled on screen.
+    page(false);
+    mockSheet(840, 700);
+    registerModernManufacturingPrint();
+    stretchItemsToSheet();
+    expect(lastRow().style.height).toBe("528px");
+
+    // A print stretch already in place (the PDF service) is never undone by the preview's.
+    printing = true;
+    listeners[0]({ matches: true });
+    expect(lastRow().style.height).toBe("");
+    lastRow().style.height = "77px";
+    lastRow().setAttribute("data-mm-stretched", "");
+    stretchItemsToSheet();
+    expect(lastRow().style.height).toBe("77px");
+
+    // Back on screen: the sheet is filled again; not between beforeprint and afterprint.
+    printing = false;
+    listeners[0]({ matches: false });
+    expect(lastRow().style.height).toBe("528px");
+    jest.spyOn(document, "querySelector").mockReturnValueOnce(null);
+    window.dispatchEvent(new Event("beforeprint"));
+    lastRow().style.removeProperty("height");
+    lastRow().removeAttribute("data-mm-stretched");
+    listeners[0]({ matches: false });
+    expect(lastRow().style.height).toBe("");
+    window.dispatchEvent(new Event("afterprint"));
+    expect(lastRow().style.height).toBe("528px");
+  });
+
+  it("measures the sheet again after Lydia's live updates", () => {
+    jest.useFakeTimers();
+    page(false);
+    mockSheet(840, 700);
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: { type: "lydia:template-update", template: {} },
+      })
+    );
+    jest.runOnlyPendingTimers();
+    expect(lastRow().style.height).toBe("528px");
+    jest.useRealTimers();
   });
 });
 

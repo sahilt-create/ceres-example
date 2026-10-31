@@ -3312,12 +3312,13 @@ export const mapPrint = (state: UnknownRecord) => {
     rawScale !== undefined && rawScale > 2 ? rawScale / 100 : rawScale;
   const textScale = Math.min(2, Math.max(0.3, ratio ?? 1));
   /*
-   * "Stretch invoice & quotation tables to fill the page": the business's setting (Settings >
-   * Experimental, stretchInvoiceTable) allows it, the document's own toggle
-   * (pdfOptions.fullHeightTable) asks for it, as on refrens.com; every document type (user
-   * decision), one-page documents only (stretchItemsTable).
+   * "Stretch invoice & quotation tables to fill the page": in print the business's setting
+   * (Settings > Experimental, stretchInvoiceTable) alone decides; the document's own toggle
+   * (pdfOptions.fullHeightTable) is ignored (user rule, 2026-10-31). Every document type,
+   * one-page documents only (stretchItemsTable). The preview always fills an A4 sheet
+   * (stretchItemsToSheet), except a Pageless document's.
    */
-  const stretchAllowed =
+  const stretchTable =
     asRecord(ownerConfiguration(invoice).experimental).stretchInvoiceTable ===
     true;
   return {
@@ -3329,9 +3330,12 @@ export const mapPrint = (state: UnknownRecord) => {
     paperHeight: paperHeight(pdfOptions),
     photoCap: photoCap(pdfOptions),
     bandCap: repeatedBandCap(pdfOptions),
-    stretchAllowed,
-    stretchTable:
-      stretchAllowed && flagSetting(pdfOptions.fullHeightTable) === true,
+    stretchTable,
+    // Lydia's Pageless PDF: one page as tall as the content, no sheet to fill.
+    pageless:
+      [pdfOptions.pageless, pdfOptions.isPageless, pdfOptions.longPdf]
+        .map(flagSetting)
+        .find((value) => value !== undefined) ?? false,
   };
 };
 
@@ -4075,13 +4079,13 @@ export const prepareBrowserPrint = (
 /* ------------------------------------------------------------------ print: stretch the items table */
 
 /*
- * pdfOptions.fullHeightTable (Refrens' "Stretch invoice & quotation tables to fill the page",
- * a per-document toggle): on a one-page printout the items table takes the page's spare
- * height, so the totals, notes and footer below it end at the page's foot (user request).
- * The spare height goes to the last item row, whose cells and column rules run down to the
- * table's Total row. Print and PDF only: the preview is one continuous sheet. A document
- * longer than a page prints as it is. The page carries the toggle as data-mm-stretch-table,
- * set from the document and switched by Lydia's live template updates.
+ * Refrens' "Stretch invoice & quotation tables to fill the page" (the business's
+ * experimental.stretchInvoiceTable; the document's own fullHeightTable is ignored, user rule
+ * 2026-10-31): on a one-page printout the items table takes the page's spare height, so the
+ * totals, notes and footer below it end at the page's foot (user request). The spare height
+ * goes to the last item row, whose cells and column rules run down to the table's Total row.
+ * A document longer than a page prints as it is. The page carries the setting as
+ * data-mm-stretch-table. The preview has a stretch of its own (stretchItemsToSheet).
  */
 const STRETCH_ATTR = "data-mm-stretch-table";
 const STRETCH_ROW = ".mm-items > tbody > tr:last-child";
@@ -4161,10 +4165,52 @@ export const stretchItemsTable = (root: ParentNode = document): void => {
 };
 
 /*
+ * The preview (screen) always fills one A4 sheet, whatever either toggle says (user rule,
+ * 2026-10-31): on a document shorter than an A4 page at the sheet's drawn width (width ×
+ * 297 / 210) the last item row takes the spare height, as the print stretch does (same
+ * attribute, same look). A taller document, a Pageless one (data-mm-pageless) and the phone
+ * and tablet layouts (cards, grid) are left as they are. The row is reset before the sheet is
+ * measured, so the height Lydia syncs (ceres:content-height) never feeds back into it; the
+ * measurement adds nothing to the page, so the page watches never set it off again. In print
+ * (and from beforeprint to afterprint) the print stretch decides and this leaves the page be.
+ */
+const A4_RATIO = 297 / 210;
+let browserPrinting = false;
+
+export const stretchItemsToSheet = (root: ParentNode = document): void => {
+  const printing =
+    browserPrinting ||
+    (typeof window.matchMedia === "function" &&
+      window.matchMedia("print").matches);
+  if (printing) return;
+  resetItemsTableStretch(root);
+  root.querySelectorAll<HTMLElement>(".mm-doc").forEach((doc) => {
+    const row = doc.querySelector<HTMLElement>(STRETCH_ROW);
+    if (
+      !row ||
+      !row.getClientRects().length ||
+      doc.hasAttribute("data-mm-pageless") ||
+      doc.querySelector(".mm-items:is(.is-cards, .is-grid)")
+    ) {
+      return;
+    }
+    const { width, height } = doc.getBoundingClientRect();
+    const spare = width * A4_RATIO - height;
+    if (!(width > 0) || spare < 1) return;
+    // Drawn pixels per CSS pixel (a zoomed or scaled preview).
+    const scale = doc.offsetWidth > 0 ? width / doc.offsetWidth : 1;
+    row.style.height = `${
+      (row.getBoundingClientRect().height + spare) / scale
+    }px`;
+    row.setAttribute("data-mm-stretched", "");
+  });
+};
+
+/*
  * Lydia's live template update ("lydia:template-update"): the renderer applies the colours
- * and fonts as root variables; the template follows two settings of its own here — the
- * theme colour's accent and tint (the page carries the render-time ones inline) and the
- * stretched-table toggle.
+ * and fonts as root variables; the template follows the theme colour's accent and tint here
+ * (the page carries the render-time ones inline). The document's stretched-table toggle
+ * (pdfOptions.fullHeightTable) changes nothing: the business's setting decides (mapPrint).
  */
 export const applyTemplateUpdate = (data: unknown): void => {
   const message = asRecord(data);
@@ -4188,18 +4234,6 @@ export const applyTemplateUpdate = (data: unknown): void => {
         doc.style.setProperty("--mm-theme-tint", themeTint(color));
       }
     });
-  }
-
-  const pdfOptions = asRecord(template.pdfOptions);
-  if ("fullHeightTable" in pdfOptions) {
-    const on = flagSetting(pdfOptions.fullHeightTable) === true;
-    // Only where the business allows the stretch (data-mm-stretch-allowed).
-    docs.forEach((doc) =>
-      doc.toggleAttribute(
-        STRETCH_ATTR,
-        on && doc.hasAttribute("data-mm-stretch-allowed")
-      )
-    );
   }
 };
 
@@ -4330,6 +4364,7 @@ const refitSoon = (): void => {
     labelSummaryCells();
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     stackCrampedFields();
+    stretchItemsToSheet();
   }, 0);
 };
 
@@ -4456,6 +4491,8 @@ export const registerModernManufacturingPrint = (): void => {
     fitSummaryTables();
     fitItemsToScreen();
     stackCrampedFields();
+    // The preview's own stretch back (none until afterprint after a browser print).
+    stretchItemsToSheet();
   };
   // The table first (its width sets its height), then the stretch, then the footer.
   const printLayout = () => {
@@ -4478,18 +4515,30 @@ export const registerModernManufacturingPrint = (): void => {
   // Refrens' PDF service is already in print media when it prints (the listener above laid
   // the page out) and its PDF call fires beforeprint too: refitting then would fit the table
   // to a browser's 1 cm margins instead of the document's own.
+  // From beforeprint to afterprint the preview's stretch stays off (stretchItemsToSheet).
   window.addEventListener("beforeprint", () => {
+    browserPrinting = true;
     if (window.matchMedia("print").matches) return;
     prepareBrowserPrint(printLayout);
   });
-  window.addEventListener("afterprint", reset);
+  window.addEventListener("afterprint", () => {
+    browserPrinting = false;
+    reset();
+  });
   window.addEventListener("message", (event) => {
     applyTemplateUpdate(event.data);
     applyInvoiceUpdate(event.data);
+    // A live colour, font or text change moves the sheet's content: measured again.
+    if (
+      /^lydia:(template|invoice)-update$/.test(text(asRecord(event.data).type))
+    ) {
+      refitSoon();
+    }
   });
   // Each render into the page: the tax summary's words in the document's currency, the
   // riyal sign drawn, the item table fitted to a phone or tablet screen, the summary tables'
-  // cells labelled for their phone cards, and a party line too tight for its fields stacked.
+  // cells labelled for their phone cards, a party line too tight for its fields stacked, and
+  // a short document's table stretched to fill the preview's A4 sheet.
   const output = document.getElementById("documentOutput");
   if (output && typeof MutationObserver === "function") {
     new MutationObserver(() => {
@@ -4498,11 +4547,13 @@ export const registerModernManufacturingPrint = (): void => {
       fitItemsToScreen(output);
       labelSummaryCells(output);
       stackCrampedFields(output);
+      stretchItemsToSheet(output);
     }).observe(output, { childList: true });
     drawRiyalSigns(output);
     fitItemsToScreen(output);
     labelSummaryCells(output);
     stackCrampedFields(output);
+    stretchItemsToSheet(output);
   }
   // A window resized, an image or a font arriving, or a description drawn after the render
   // (the Markdown viewer) changes the table's width. The whole page is watched: the renderer
@@ -4523,6 +4574,8 @@ export const registerModernManufacturingPrint = (): void => {
     true
   );
   document.fonts?.ready.then(refitSoon);
+  // A font that arrives later (Lydia's live font change) as well.
+  document.fonts?.addEventListener?.("loadingdone", refitSoon);
   if (typeof MutationObserver === "function") {
     new MutationObserver(refitSoon).observe(document.documentElement, {
       childList: true,
