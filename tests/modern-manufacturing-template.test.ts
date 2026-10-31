@@ -1384,10 +1384,13 @@ describe("Modern Manufacturing template — view model", () => {
     expect(fieldsBox).toContain(
       '<div class="mm-field"><span class="mm-label">Note</span><span class="mm-value">Gate 2 after noon</span></div>'
     );
-    // The header: Phone | Email on one line, each name just before its value.
+    // The header: one field a line, its name in a column, as in the party boxes.
     const header = fields.slice(0, fields.indexOf("</header>"));
     expect(header).toContain(
-      '<p class="mm-id-line"><span class="mm-id"><span class="mm-id-label">Phone</span><span class="mm-num" data-testid="num">\u2066+91 831 298 7000\u2069</span></span><span class="mm-id"><span class="mm-id-label">Email</span><span class="mm-email">sales@vertexfoundry.com</span></span></p>'
+      '<div class="mm-field"><span class="mm-label">Phone</span><span class="mm-value mm-num" data-testid="num">\u2066+91 831 298 7000\u2069</span></div>'
+    );
+    expect(header).toContain(
+      '<div class="mm-field"><span class="mm-label">Email</span><span class="mm-value mm-email">sales@vertexfoundry.com</span></div>'
     );
   });
 
@@ -3847,10 +3850,8 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     );
     expect(css).not.toMatch(/\.mm-party:only-child \.mm-party-fields/);
     expect(rule(".mm-field")).toMatch(/display: contents;/);
-    // The name column is at least 100 px and widens to its longest name while the values fit.
-    expect(rule(".mm-field > .mm-label::before")).toMatch(
-      /width: min\(100px, 30cqi\);\s*height: 0;/
-    );
+    // The name column is as wide as the longest name: no 100 px floor, no empty gap.
+    expect(css).not.toMatch(/30cqi/);
     // Party boxes: title 4 px above the name, name / address / fields 4 px apart.
     expect(rule(".mm-party-head")).toMatch(/gap: 4px;/);
     expect(rule(".mm-parties > .mm-party,\n.mm-dispatch > .mm-party")).toMatch(
@@ -3862,16 +3863,9 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       /color: var\(--mm-muted\);\s*font-weight: 400;/
     );
     expect(rule(".mm-id-line")).toMatch(/color: var\(--mm-ink\);/);
-    // The header's seller fields: two a line, each name 12 px before its value.
-    expect(rule(".mm-seller-ids,\n.mm-seller-ids > .mm-id-line")).toMatch(
-      /gap: 4px 24px;/
-    );
-    expect(rule(".mm-seller-ids .mm-id-label")).toMatch(
-      /margin-inline-end: 12px;/
-    );
-    expect(css).toMatch(
-      /\.mm-seller-ids > \.mm-id-line \{\s*font-weight: 600;/
-    );
+    // The header's seller fields: the party rows, across the seller column's width.
+    expect(rule(".mm-seller-fields")).toMatch(/align-self: stretch;/);
+    expect(css).not.toMatch(/mm-seller-ids/);
   });
 
   it("sets the logo and the seller details side by side on the left", () => {

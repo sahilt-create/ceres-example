@@ -452,7 +452,7 @@
   display: flex;
 }
 
-/* It fills the room beside the QR: its own width does not count (container-type). */
+/* It fills the room beside the QR. */
 .mm-compliance-fields {
   flex: 1 1 0;
   min-width: 0;
@@ -593,28 +593,18 @@
 }
 
 /*
- * Party boxes (Billed To, Shipped To, Shipped From): one field a line, in order, the names in a
- * column at least 100 px wide, the values 16 px after it. The name column widens to its longest
- * name ("Responsible Person" on one line) while the values still fit the box; once they reach
- * the box edge, names and values both wrap, sharing the room (user, 2026-10-28). A narrow box
- * (A5) lowers the 100 px floor, so a number never runs into the next box.
+ * Party boxes (Billed To, Shipped To, Shipped From), the header and the e-invoice box: one field
+ * a line, in order. The name column is as wide as the box's longest name, the values 16 px after
+ * it, so a short name (GSTIN, PAN) leaves no empty gap (user, 2026-10-31). Once the values reach
+ * the box edge, names and values both wrap, sharing the room.
  */
 .mm-party-fields {
   display: grid;
   grid-template-columns: auto auto;
   justify-content: start;
   gap: 4px 16px; /* rows 4 px apart (user, 2026-10-28) */
-  container-type: inline-size;
   font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
-}
-
-/* The 100 px floor as a spacer, so a word of the name (Responsible) never breaks below it. */
-.mm-field > .mm-label::before {
-  content: "";
-  display: block;
-  width: min(100px, 30cqi);
-  height: 0;
 }
 
 .mm-field {
@@ -1015,27 +1005,10 @@
   display: contents;
 }
 
-/* The seller's GSTIN | PAN, Phone | Email… in the header: two fields a line, each name 12 px
-   before its value, the second field of every line at the same place, lines 4 px apart
-   (user, 2026-10-28). */
-.mm-seller-ids,
-.mm-seller-ids > .mm-id-line {
-  gap: 4px 24px; /* the line's own gap would win over the grid's */
-  min-width: 0;
-}
-
-.mm-seller-ids .mm-id-label {
-  margin-inline-end: 12px;
-}
-
-/* Values at 600, as in the other boxes (user, 2026-10-28); the names stay 400. */
-.mm-seller-ids > .mm-id-line {
-  font-weight: 600;
-}
-
-/* Too narrow two across (stackCrampedFields): one field a line. */
-.mm-seller-ids.is-stacked {
-  grid-template-columns: minmax(0, 1fr);
+/* The seller's GSTIN, PAN, phone, email… in the header: the party boxes' rows, across the
+   seller column (user, 2026-10-31). */
+.mm-seller-fields {
+  align-self: stretch;
 }
 
 .mm-upi-qr {

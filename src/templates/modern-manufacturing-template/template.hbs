@@ -82,12 +82,12 @@
                     </div>
                   {{/if}}
                   {{#if view.brand.seller.hasIdLines}}
-                    {{!-- Two fields a line, left to right, each name 12 px before its value; the second
-                         field of every line starts at the same place (user, 2026-10-28). --}}
-                    <div class="mm-id-grid mm-seller-ids">
-                      {{#each view.brand.seller.lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id"><span class="mm-id-label">{{label}}</span><span class="{{#if noWrap}}mm-num{{else if isEmail}}mm-email{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
-                      {{/each}}
+                    {{!-- One field a line, its name in a column, as in Billed To / Shipped To
+                         (user, 2026-10-31). --}}
+                    <div class="mm-party-fields mm-seller-fields">
+                      {{#each view.brand.seller.lines}}{{#each this}}
+                        <div class="mm-field"><span class="mm-label">{{label}}</span><span class="mm-value{{#if noWrap}} mm-num{{else if isEmail}} mm-email{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></div>
+                      {{/each}}{{/each}}
                     </div>
                   {{/if}}
                 </div>
