@@ -831,7 +831,7 @@
   font-weight: 600;
 }
 
-/* The stretch row (print only): empty, the side rules running through it. */
+/* The stretch row (shown by .pt-doc.is-filled, below): empty, the side rules running through it. */
 .pt-items .pt-filler {
   display: none;
 }
@@ -873,8 +873,9 @@
   display: none;
 }
 
-/* Terms, notes, additional information and attachments: after the summary tables, across the
-   page, 16 px apart (user request, 2026-10-24). Nothing to show, no gap. */
+/* Terms, notes, additional information and attachments: after the bank and totals row, across
+   the page, 16 px apart (user request, 2026-10-24); the summary tables follow them, last
+   (2026-10-27). Nothing to show, no gap. */
 .pt-after {
   display: flex;
   flex-direction: column;
@@ -1473,15 +1474,29 @@
     /* Every text size prints as on screen, headings too (user, 2026-10-21: print 1:1). */
     --pt-gutter: 0px;
 
-    width: 100%;
+    /*
+     * A table too wide for the paper scales the whole document (--pt-doc-fit, helpers.ts
+     * fitPrintTable), as refrens.com's own PDF does, so print keeps the screen's proportions;
+     * it is laid out that much wider, so it still fills the page.
+     */
+    zoom: var(--pt-doc-fit, 1);
+    width: calc(100% / var(--pt-doc-fit, 1));
 
     /* Never wider than the paper's printable width (helpers.ts mapPrint): Refrens' PDF
        service lays the page out in a window wider than the paper before it prints. */
-    max-width: var(--pt-print-width, none);
+    max-width: calc(var(--pt-print-width, 100000px) / var(--pt-doc-fit, 1));
 
     /* Centred: a browser's own print keeps 1 cm margins, so a document set to wider ones
        (xMargins 2) sits in the middle of the page rather than against its left edge. */
     margin: 0 auto;
+  }
+
+  /* Refrens' PDF service (body.isDibella) lays the page out in its own window before it
+     prints, narrower than a landscape or A3 page: the document takes the paper's printable
+     width there, so the table is fitted to the paper and not to the window. */
+  [class~="isDibella"] .pt-doc {
+    width: calc(var(--pt-print-width, 100%) / var(--pt-doc-fit, 1));
+    max-width: none;
   }
 
   .pt-status.no-print {
@@ -1496,38 +1511,6 @@
   /* The screen's Description floor (.pt-items .pt-desc-min) gives way to the page width. */
   .pt-items .pt-desc-min {
     display: none;
-  }
-
-  /*
-   * A table whose columns cannot fit the page with 6 px cell padding (helpers.ts decides from
-   * the planner's minimum widths and the paper format) prints with 4 px side padding in every
-   * cell, header included. The text stays at 13 px (user request).
-   */
-  .pt-items.is-print-compact :is(th, td) {
-    padding-inline: 4px;
-  }
-
-  /* On a page too narrow for the table, a short text value wraps between its words; a code,
-     a figure or a date (anything with a digit: "Dec 26, 2025") never breaks, as on screen
-     (user rules: numbers never wrap; screen and print 1:1, 2026-10-24). */
-  .pt-items.is-print-compact td.is-word:not(.has-digits) {
-    white-space: normal;
-  }
-
-  .pt-items.is-print-compact td.is-word:not(.has-digits) .pt-num {
-    white-space: normal;
-  }
-
-  /*
-   * A page too narrow even then (A5, a large print size) shrinks the table's text just enough
-   * to fit (--pt-table-fit, helpers.ts mapPrint), never under the preset's 10 px floor, instead of clipping its last
-   * columns. A4 at the normal print size never sets it.
-   */
-  .pt-items.is-print-compact {
-    font-size: max(
-      10px,
-      calc(var(--pt-font-size-s) * var(--pt-text-scale, 1) * var(--pt-table-fit, 1))
-    );
   }
 
   .pt-items-scroll,
@@ -1564,7 +1547,13 @@
   /* An item's original images never taller than 55 % of a page, in proportion, so an item
      and its images print together on one page (user, 2026-10-19; as the Viraj template). */
   .pt-large-image {
-    max-height: min(55vh, 600px); /* px cap: on a Pageless PDF's one tall page vh is the whole document */
+    /* px cap: on a Pageless PDF's one tall page vh is the whole document. --pt-vh is the
+       page's vh while a browser's print is measured beforehand (prepareBrowserPrint). */
+    max-height: min(calc(55 * var(--pt-vh, 1vh)), 600px);
+
+    /* Never wider than its row: at the 600 px cap a wide photo ran 730 px on a 736 px Legal
+       page, past the table's room, and the whole table printed at 98 % to make way for it. */
+    max-width: 100%;
     object-fit: contain;
   }
 
@@ -1618,43 +1607,6 @@
     break-inside: avoid;
   }
 
-  .pt-doc.is-stretch .pt-items .pt-filler {
-    display: table-row;
-  }
-
-  /* Stretched, the empty row closes the table: the corners move to it, and the last item's
-     rule goes so the space reads as the table running on, not an empty box under it (user,
-     2026-10-26). */
-  .pt-doc.is-stretch .pt-items > tbody:last-of-type > tr:is(:has(+ .pt-filler), :has(+ tr[style*="none"] + .pt-filler)) > td {
-    border-bottom: 0;
-    border-radius: 0;
-  }
-
-  .pt-doc.is-stretch .pt-items:not(:has(+ [data-pt-totals-split])) > tbody:last-of-type > tr.pt-filler:last-child > td:first-child {
-    border-end-start-radius: 8px;
-  }
-
-  .pt-doc.is-stretch .pt-items:not(:has(+ [data-pt-totals-split])) > tbody:last-of-type > tr.pt-filler:last-child > td:last-child {
-    border-end-end-radius: 8px;
-  }
-
-  .pt-doc.is-stretch .pt-items .pt-filler > td {
-    height: var(--pt-filler-height, 0);
-    padding-block: 0;
-  }
-
-  /* The space carries on the last item's zebra colour, so it reads as that row running on
-     (user, 2026-10-26). */
-  .pt-doc.is-stretch .pt-items > tbody > tr.is-stripe + .pt-filler > td,
-  .pt-doc.is-stretch .pt-items > tbody > tr.is-stripe + tr[style*="none"] + .pt-filler > td {
-    background: var(--pt-zebra);
-  }
-
-  .pt-doc.is-stretch .pt-items > tbody > tr.is-stripe + .pt-filler > td:not(:last-child),
-  .pt-doc.is-stretch .pt-items > tbody > tr.is-stripe + tr[style*="none"] + .pt-filler > td:not(:last-child) {
-    box-shadow: 1px 0 0 var(--pt-zebra);
-  }
-
   /* The totals stay together. */
   .pt-totals-table {
     break-inside: avoid;
@@ -1669,7 +1621,7 @@
   }
 
   /* Boxes and short sections never split across pages; a heading stays with its content. The
-     bank | totals row too, now that terms and notes follow the summaries: the totals never
+     bank | totals row too, now that terms, notes and the summaries follow it: the totals never
      drop to the next page beside an empty column (2026-10-24). */
   .pt-header,
   .pt-bottom,
@@ -1748,7 +1700,7 @@
   .pt-footer-spacer img {
     width: auto;
     max-width: 100%;
-    max-height: 20vh;
+    max-height: calc(20 * var(--pt-vh, 1vh));
   }
 
   .pt-page-frame-footer {
@@ -1803,6 +1755,50 @@
     .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
     display: none;
   }
+}
+
+/*
+ * The filler row (helpers.ts stretchItemTable), on screen and in print alike: in print when the
+ * business stretches its tables (.is-stretch), on screen whenever the preview's A4 sheet has
+ * room to fill (user, 2026-10-31). Stretched, the empty row closes the table: the corners move
+ * to it, and the last item's rule goes so the space reads as the table running on, not an empty
+ * box under it (user, 2026-10-26). On screen the Total row stays in the table under it.
+ */
+.pt-doc.is-filled .pt-items .pt-filler {
+  display: table-row;
+}
+
+.pt-doc.is-filled .pt-items > tbody > tr:is(:has(+ .pt-filler), :has(+ tr[style*="none"] + .pt-filler)) > td {
+  border-bottom: 0;
+}
+
+.pt-doc.is-filled .pt-items > tbody:last-of-type > tr:is(:has(+ .pt-filler), :has(+ tr[style*="none"] + .pt-filler)) > td {
+  border-radius: 0;
+}
+
+.pt-doc.is-filled .pt-items:not(:has(+ [data-pt-totals-split])) > tbody:last-of-type > tr.pt-filler:last-child > td:first-child {
+  border-end-start-radius: 8px;
+}
+
+.pt-doc.is-filled .pt-items:not(:has(+ [data-pt-totals-split])) > tbody:last-of-type > tr.pt-filler:last-child > td:last-child {
+  border-end-end-radius: 8px;
+}
+
+.pt-doc.is-filled .pt-items .pt-filler > td {
+  height: var(--pt-filler-height, 0);
+  padding-block: 0;
+}
+
+/* The space carries on the last item's zebra colour, so it reads as that row running on
+   (user, 2026-10-26). */
+.pt-doc.is-filled .pt-items > tbody > tr.is-stripe + .pt-filler > td,
+.pt-doc.is-filled .pt-items > tbody > tr.is-stripe + tr[style*="none"] + .pt-filler > td {
+  background: var(--pt-zebra);
+}
+
+.pt-doc.is-filled .pt-items > tbody > tr.is-stripe + .pt-filler > td:not(:last-child),
+.pt-doc.is-filled .pt-items > tbody > tr.is-stripe + tr[style*="none"] + .pt-filler > td:not(:last-child) {
+  box-shadow: 1px 0 0 var(--pt-zebra);
 }
 
 /*

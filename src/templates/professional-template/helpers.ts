@@ -3833,11 +3833,9 @@ export const mapDocumentContact = (state: UnknownRecord) => {
  * zoomSize is the print size picked in Lydia (0.8 smaller … 1.2 larger). The renderer zooms
  * <html> by it (except at 0.8), which narrows the page in CSS px. textScale scales text only.
  *
- * compactTable: when the items table's other columns, shrunk to content, would leave
- * Description less than its 22% share of that page, the table prints at the small step
- * with tight padding (styles.css, .is-print-compact), as Solvin's compact print table does.
+ * A table too wide for the page is fitted in print by scaling the whole document
+ * (fitPrintTable), not here.
  */
-const PRINT_MARGINS_PX = (2 * 96) / 2.54;
 const PAPER_WIDTH_MM: Record<string, number> = {
   a3: 297,
   a4: 210,
@@ -3863,20 +3861,7 @@ const PAPER_HEIGHT_MM: Record<string, number> = {
   legal: 355.6,
 };
 
-/*
- * The Description cell's floor on a page too narrow for the table (A5, a large print size):
- * a readable column of about 12 characters with its padding.
- */
-const PRINT_DESCRIPTION_FLOOR = 120;
-/* 13 px × 0.77 = 10 px: the repo preset's floor (design-to-template §4a); below it, wrap. */
-const MIN_TABLE_FIT = 0.77;
-const COMPACT_PADDING_SAVING = 4; // 6 → 4 px each side
-
-export const mapPrint = (
-  state: UnknownRecord,
-  tableFixedWidth = 0,
-  fixedColumns = 0
-) => {
+export const mapPrint = (state: UnknownRecord) => {
   const pdfOptions = asRecord(state.pdfOptions);
   const invoice = asRecord(state.invoice);
   const format = text(pdfOptions.format).toLowerCase();
@@ -3886,7 +3871,6 @@ export const mapPrint = (
     : PAPER_WIDTH_MM[format] ?? PAPER_WIDTH_MM.a4;
   const pageZoom = positiveNumber(pdfOptions.zoomSize) ?? 1;
   const rendererZoom = pageZoom === 0.8 ? 1 : pageZoom;
-  const pageWidth = ((paperMm / 25.4) * 96 - PRINT_MARGINS_PX) / rendererZoom;
   /*
    * The printable width in the document's own pixels, which caps the page in print
    * (styles.css): Refrens' PDF service lays the page out in a window wider than the paper
@@ -3902,11 +3886,20 @@ export const mapPrint = (
     : NaN;
   const sideMarginCm =
     Number.isFinite(marginSetting) && marginSetting >= 0 ? marginSetting : 1;
+  // The printable width at zoom 1 (syncPrintWidths divides it by a print zoom set later).
+  const printableBase = (marginCm: number) =>
+    (paperMm / 25.4) * 96 - (2 * marginCm * 96) / 2.54;
   const printableWidth = (marginCm: number) =>
-    Math.floor(
-      ((paperMm / 25.4) * 96 - (2 * marginCm * 96) / 2.54) / rendererZoom - 4
-    );
+    Math.floor(printableBase(marginCm) / rendererZoom - 4);
   const printWidth = printableWidth(sideMarginCm);
+  // The page's height in a browser's own print (its 1 cm margins), for the measurement made
+  // before it prints, in the window's height otherwise (prepareBrowserPrint).
+  const paperHeightMm = landscape
+    ? PAPER_WIDTH_MM[format] ?? PAPER_WIDTH_MM.a4
+    : PAPER_HEIGHT_MM[format] ?? PAPER_HEIGHT_MM.a4;
+  const browserPrintHeight = Math.floor(
+    ((paperHeightMm / 25.4) * 96 - (2 * 96) / 2.54) / rendererZoom
+  );
   // A browser's own print (Lydia's print button, Ctrl+P) keeps its own 1 cm margins, whatever
   // xMargins says: the page is fitted for the narrower of the two (prepareBrowserPrint).
   const browserPrintWidth = printableWidth(1);
@@ -3916,40 +3909,24 @@ export const mapPrint = (
   const ratio =
     rawScale !== undefined && rawScale > 2 ? rawScale / 100 : rawScale;
   const textScale = Math.min(2, Math.max(0.3, ratio ?? 1));
-  const compactTable =
-    tableFixedWidth * textScale > pageWidth * (1 - MIN_DESCRIPTION_SHARE);
-  // Last resort, only when even compact padding leaves Description under its floor: the
-  // table's text shrinks just enough to fit the page (never below MIN_TABLE_FIT), rather than
-  // the page clipping its last columns. A4 at the normal print size never gets here.
-  const compactWidth =
-    (tableFixedWidth - fixedColumns * COMPACT_PADDING_SAVING) * textScale;
-  const tableFit =
-    compactTable && compactWidth > 0
-      ? Math.min(
-          1,
-          Math.max(
-            MIN_TABLE_FIT,
-            (pageWidth - PRINT_DESCRIPTION_FLOOR) / compactWidth
-          )
-        )
-      : 1;
   return {
     textScale: compactDecimal(textScale),
     printWidth,
     browserPrintWidth,
-    compactTable,
-    tableFit:
-      tableFit < 1 ? compactDecimal(Math.floor(tableFit * 100) / 100) : "",
+    browserPrintHeight,
+    printBase: compactDecimal(printableBase(sideMarginCm)),
+    browserPrintBase: compactDecimal(printableBase(1)),
     /*
      * "Stretch invoice & quotation tables to fill the page" (Settings > Experimental,
-     * owner.configuration.experimental.stretchInvoiceTable) with the document's own toggle
-     * (pdfOptions.fullHeightTable): on a one-page printout the item table runs down to the
-     * footer (stretchItemTable). Every document type (standing decision).
+     * owner.configuration.experimental.stretchInvoiceTable): on a one-page printout the item
+     * table runs down to the footer (stretchItemTable). The business's toggle alone decides;
+     * the document's own (pdfOptions.fullHeightTable) is ignored, on, off or unset (user,
+     * 2026-10-31). Every document type (standing decision). On screen the table always fills
+     * the A4 sheet, whatever either toggle says (stretchItemTable).
      */
     stretchTable:
       asRecord(asRecord(asRecord(invoice.owner).configuration).experimental)
-        .stretchInvoiceTable === true &&
-      optionalFlag(pdfOptions.fullHeightTable) === true,
+        .stretchInvoiceTable === true,
   };
 };
 
@@ -4280,11 +4257,7 @@ export const buildProfessionalView = (root: unknown) => {
       compliance.qr.lhdn
   );
   const status = statusTag(invoice);
-  const print = mapPrint(
-    state,
-    table.printFixedWidth,
-    table.columns.filter((column) => column.kind !== "name").length
-  );
+  const print = mapPrint(state);
 
   return {
     brand: { name: seller ? seller.name : "", logo },
@@ -4361,6 +4334,17 @@ export const buildProfessionalView = (root: unknown) => {
     // asks for it on the last page only (pdfOptions.footerOnLastPage).
     // Pageless PDF is one page as tall as the content: letterhead and footer once each.
     footerEveryPage: !visibility.footerOnLastPage && !options.pageless,
+    // Refrens' PDF service draws that every-page footer itself, unless "Hide footer" turns
+    // its footer off (only the "electronically generated" line is meant): the template then
+    // draws the letterhead footer in the PDF too.
+    serviceFooter:
+      !visibility.footerOnLastPage &&
+      !options.pageless &&
+      ![
+        asRecord(state.pdfOptions).hideFooter,
+        asRecord(state.template).hideFooter,
+        invoice.hideFooter,
+      ].some((value) => optionalFlag(value) === true),
     // The letterhead repeats at the top of every printed page unless the document asks for
     // it on the first page only (pdfOptions.letterHeadOnFirstPage).
     letterheadEveryPage: !visibility.letterHeadOnFirstPage && !options.pageless,
@@ -4440,10 +4424,15 @@ export interface FooterPlacement {
   footerHeight: number;
 }
 
-// 2 px to spare, so rounding never pushes the footer onto a page of its own.
-const PAGE_EDGE_SLACK = 2;
+// A few px to spare, so rounding never pushes the footer onto a page of its own: 2 was too
+// few once a wide table scales the whole document (fitPrintTable), and the footer slipped onto a
+// page the print had not counted (lost, a blank last page; 2026-10-31).
+const PAGE_EDGE_SLACK = 6;
 
 /* The space to add above the footer so it ends on the page's bottom edge. */
+// Per page, how much earlier a scaled document's page ends are taken (placeFootersOnPageEdge).
+const SCALED_PAGE_DRIFT = 4;
+
 /* Below this a "page" is a collapsed forced break, not a printed page (Dibella path). */
 const MIN_PAGE_HEIGHT = 200;
 
@@ -4500,8 +4489,24 @@ export const placeFootersOnPageEdge = (root: ParentNode = document): void => {
       parent.insertBefore(marker, footer);
       return marker;
     });
-    const [pageEnd, nextPageEnd] = breaks.map(pageTop);
+    const [rawPageEnd, rawNextPageEnd] = breaks.map(pageTop);
     breaks.forEach((marker) => marker.remove());
+    // Inside a document scaled to fit a wide table (fitPrintTable), page ends read off forced
+    // breaks run late by about 2.4 px a page (measured 2026-10-31: 17 px by page 7 of a 0.735
+    // invoice), and a footer set on them slipped onto a page the print had not counted (lost, a
+    // blank last page). They are taken 4 px a page earlier there.
+    const fit =
+      parseFloat(
+        (
+          footer.closest(".pt-doc") as HTMLElement | null
+        )?.style.getPropertyValue("--pt-doc-fit") || ""
+      ) || 1;
+    const drift = (end: number) =>
+      fit < 1 && rawNextPageEnd > rawPageEnd
+        ? SCALED_PAGE_DRIFT * Math.round(end / (rawNextPageEnd - rawPageEnd))
+        : 0;
+    const pageEnd = rawPageEnd - drift(rawPageEnd);
+    const nextPageEnd = rawNextPageEnd - drift(rawNextPageEnd);
     const pageHeight = nextPageEnd - pageEnd;
     // Not paginated yet (the PDF service switches to print media before it prints, so the
     // forced breaks collapse to a few pixels): the page edge cannot be measured, and the
@@ -4537,14 +4542,6 @@ export const placeFootersOnPageEdge = (root: ParentNode = document): void => {
     }
   });
 };
-
-/*
- * Last resort in print: an item table still wider than its page at the 10 px text floor
- * (many columns of figures that never wrap) is scaled as a whole to the page's width, text,
- * padding and rules alike, rather than its last columns (the amounts) being cut off at the
- * page edge. Rules and rounding keep a pixel or two, so it settles in steps.
- */
-const PRINT_SLACK = 0.5;
 
 /*
  * Chrome before 128 (Refrens' PDF service runs 122) reports the size and place of anything inside
@@ -4591,6 +4588,44 @@ export const drawnRect = (element: Element): Box => {
 };
 // The share of the page's width a fitted table may take (see fitPrintTable).
 const PRINT_ROOM = 0.99;
+
+/*
+ * A browser's own print counts its pages from the layout prepareBrowserPrint leaves, measured
+ * before printing in screen media, where Chrome sets text narrower than it prints it: 703 px of
+ * a 13-column table's narrowest width came out 738 px on paper (2026-10-28). The print listener
+ * then shrank the table that "fit", the document got shorter than the count and Legal printed a
+ * blank last page (longer would have lost its end). So the measurement allows for print's wider
+ * text, and in that print the listener never makes a table larger than it was prepared: what
+ * prints is what was counted. Refrens' PDF service, in print media already, does neither.
+ */
+const PRINT_TEXT_GROWTH = 1.06;
+let preparingPrint = false;
+// Between beforeprint and afterprint: the screen's filler stays off, or a re-measure on the
+// restored width put it back before Chrome counted the pages (a blank page 2, 2026-10-31).
+let browserPrinting = false;
+
+const preparedScale = (
+  table: HTMLElement,
+  printing: boolean,
+  scale: number
+): number => {
+  if (preparingPrint) {
+    // eslint-disable-next-line no-param-reassign
+    table.dataset.ptPreparedZoom = String(scale);
+    return scale;
+  }
+  const prepared = Number(table.dataset.ptPreparedZoom);
+  return printing && prepared > 0 ? Math.min(prepared, scale) : scale;
+};
+
+/* After a browser's print, or on screen: the next print fits afresh. */
+export const clearPreparedPrint = (root: ParentNode = document): void => {
+  root
+    .querySelectorAll<HTMLElement>("[data-pt-prepared-zoom]")
+    .forEach((table) => {
+      delete table.dataset.ptPreparedZoom;
+    });
+};
 
 /*
  * The totals carry on without the item headings (user, 2026-10-19): in print, the rows after
@@ -4734,6 +4769,18 @@ export const splitTotals = (root: ParentNode = document): void => {
   });
 };
 
+/*
+ * A table too wide for the paper (13 columns on A4, fewer on A5, a large print size): the whole
+ * document scales down together, text, spacing, rules and images alike, as refrens.com's own PDF
+ * does, so the page keeps the screen's proportions (user, 2026-10-31, replacing the table-only fit
+ * of 4 px padding, text down to 10 px and a zoom on the table, which left the table smaller than
+ * the rest). The scale is the largest at which every table (the items and the summaries) fits its
+ * box at its narrowest; .pt-doc draws it as a zoom (--pt-doc-fit, styles.css) and is laid out
+ * that much wider, so it still fills the page. A table's room and its narrowest width are read
+ * inside the same zoomed document, so their ratio holds whichever way Chrome reports zoomed sizes.
+ */
+const DOC_FIT_TABLES = ".pt-items, .pt-widget-table .ceres-table";
+
 export const fitPrintTable = (
   root: ParentNode = document,
   force = false
@@ -4742,38 +4789,78 @@ export const fitPrintTable = (
     force ||
     (typeof window.matchMedia === "function" &&
       window.matchMedia("print").matches);
-  // The summaries too (payments, batch, HSN, tax): on A5 the payments table's last column was
-  // cut at the page edge (2026-10-23).
-  root
-    .querySelectorAll<HTMLElement>(".pt-items, .pt-widget-table .ceres-table")
-    .forEach((table) => {
-      table.style.removeProperty("zoom");
-      const box = table.parentElement;
-      if (!printing || !box) return;
-      // 1 % kept back: Chrome sets the PDF's text a little wider than the layout measured it, and a
-      // word on the table's edge ("Expiry", "Date") was cut there.
-      const room = () => box.getBoundingClientRect().width * PRINT_ROOM;
-      // The table fills its box (width 100 %), so its own width always exceeds 99 % of it: what
-      // counts is how narrow its columns can go, measured at width 0 (a table is never narrower
-      // than its content). Read as it stood, a table that fit was zoomed down to 0.9.
-      const need = () => {
+  const doc = root.querySelector<HTMLElement>(".pt-doc");
+  if (!doc) return;
+  doc.style.removeProperty("--pt-doc-fit");
+  if (!printing) return;
+  const tables = Array.from(
+    root.querySelectorAll<HTMLElement>(DOC_FIT_TABLES)
+  ).filter((table) => table.parentElement && table.getClientRects().length);
+  // Measured in screen media before a browser's print, text comes out narrower than it prints.
+  const growth = preparingPrint ? PRINT_TEXT_GROWTH : 1;
+  const ratio = () =>
+    Math.min(
+      1,
+      ...tables.map((table) => {
+        // 1 % kept back: Chrome sets the PDF's text a little wider than the layout measured it.
+        const room =
+          (table.parentElement as HTMLElement).getBoundingClientRect().width *
+          PRINT_ROOM;
+        // A table fills its box, so what counts is how narrow its columns can go: its width
+        // at width 0 (a table is never narrower than its content).
         const { width } = table.style;
+        // eslint-disable-next-line no-param-reassign
         table.style.width = "0px";
-        const narrowest = drawnRect(table).width;
+        const need = table.getBoundingClientRect().width * growth;
+        // eslint-disable-next-line no-param-reassign
         table.style.width = width;
-        return narrowest;
-      };
-      const overflow = () => need() - room();
-      let scale = 1;
-      for (let step = 0; step < 10 && overflow() > PRINT_SLACK; step += 1) {
-        const ratio = room() / need();
-        scale = Math.min(
-          scale - 0.005,
-          Math.floor(scale * ratio * 1000) / 1000
-        );
-        table.style.setProperty("zoom", String(scale));
+        return need > 0 ? room / need : 1;
+      })
+    );
+  let scale = 1;
+  for (let step = 0; step < 6; step += 1) {
+    const fit = ratio();
+    if (fit >= 0.999) break;
+    scale = Math.min(scale - 0.005, Math.floor(scale * fit * 1000) / 1000);
+    doc.style.setProperty("--pt-doc-fit", String(scale));
+  }
+  const kept = preparedScale(doc, printing, scale);
+  if (kept < 1) doc.style.setProperty("--pt-doc-fit", String(kept));
+};
+
+/* ------------------------------------------------------------------ print: a zoom set live */
+
+/*
+ * The print size (zoomSize) is drawn by the renderer as `@media print { html { zoom } }` in
+ * a <style id="ceres-template-zoom"> (none at 0.8), and Lydia changes it live without a new
+ * render: the page's print widths, worked out for the zoom at render time, then no longer
+ * fitted the paper (zoom 1 → 1.2 printed 857 px on a 718 px page, cut off at the right). Once
+ * that style has been seen, the widths follow it, from the zoom-free printable widths the
+ * template carries (--pt-print-base, --pt-browser-print-base).
+ */
+const ZOOM_STYLE_ID = "ceres-template-zoom";
+let zoomStyleSeen = false;
+
+export const syncPrintWidths = (root: ParentNode = document): void => {
+  const style = document.getElementById(ZOOM_STYLE_ID);
+  if (style) zoomStyleSeen = true;
+  if (!zoomStyleSeen) return;
+  const match = /zoom:\s*([\d.]+)/.exec(style?.textContent || "");
+  const value = match ? Number(match[1]) : 1;
+  const zoom = Number.isFinite(value) && value > 0 ? value : 1;
+  root.querySelectorAll<HTMLElement>(".pt-doc").forEach((doc) => {
+    [
+      ["--pt-print-base", "--pt-print-width"],
+      ["--pt-browser-print-base", "--pt-browser-print-width"],
+    ].forEach(([base, width]) => {
+      const printable = parseFloat(doc.style.getPropertyValue(base));
+      if (!(printable > 0)) return;
+      const next = `${Math.floor(printable / zoom - 4)}px`;
+      if (doc.style.getPropertyValue(width) !== next) {
+        doc.style.setProperty(width, next);
       }
     });
+  });
 };
 
 /* ------------------------------------------------------------------ print: a browser's own print */
@@ -4876,10 +4963,84 @@ export const withPrintMedia = <T>(measure: () => T): T => {
 };
 
 /*
+ * The template's stylesheet comes from another origin than the renderer (GitHub Pages under
+ * lstatic.refrens.com), so its rules cannot be read and withPrintRules switched none of them:
+ * a browser's own print counted its pages from the screen layout. The bundle carries the same
+ * CSS as text (index.ts): put in the page as a <style> right after the stylesheet once the
+ * document is drawn, switched off, and for a measurement switched on in the stylesheet's
+ * place (the sheet's own disabled flag, which requests nothing; toggling the link's attribute
+ * reloads it, and a fetched copy made Refrens' PDF service answer with an error page, as the
+ * Viraj template found, 2026-10-26). The copy keeps the font import: the stylesheet switched
+ * off takes its imported Inter with it, and a measurement in the fallback font came out 80 px
+ * short, so a stretched table ran onto a blank second page. Not in the PDF service
+ * (body.isDibella), which prints in print media and needs no measurement.
+ */
+const TEMPLATE_STYLESHEET =
+  /\/professional-template\/[^/]+\/bundle\.css(?:[?#]|$)/;
+
+let stylesheetText = "";
+let measureStyle: HTMLStyleElement | null = null;
+
+export const setProfessionalStylesheetText = (css: string): void => {
+  stylesheetText = css;
+};
+
+const readable = (sheet: CSSStyleSheet | null): boolean => {
+  try {
+    return Boolean(sheet && sheet.cssRules);
+  } catch {
+    return false;
+  }
+};
+
+const unreadableStylesheet = (): HTMLLinkElement | undefined =>
+  Array.from(
+    document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
+  ).find(
+    (candidate) =>
+      TEMPLATE_STYLESHEET.test(candidate.href) && !readable(candidate.sheet)
+  );
+
+/* The switched-off copy, put in once the document is drawn (registerProfessionalWords). */
+export const prepareReadableStylesheet = (): void => {
+  if (measureStyle?.isConnected || !stylesheetText) return;
+  if (document.body?.classList.contains("isDibella")) return;
+  const link = unreadableStylesheet();
+  if (!link) return;
+  measureStyle = document.createElement("style");
+  measureStyle.setAttribute("data-pt-measure", "");
+  measureStyle.textContent = stylesheetText;
+  link.after(measureStyle);
+  if (measureStyle.sheet) measureStyle.sheet.disabled = true;
+};
+
+export const withReadableStylesheet = <T>(measure: () => T): T => {
+  const link = unreadableStylesheet();
+  const original = link?.sheet;
+  if (!link || !original || !stylesheetText) return measure();
+  prepareReadableStylesheet();
+  const sheet = measureStyle?.sheet;
+  if (!sheet) return measure();
+  sheet.disabled = false;
+  original.disabled = true;
+  try {
+    return measure();
+  } finally {
+    original.disabled = false;
+    sheet.disabled = true;
+  }
+};
+
+/*
  * `layout` is the print media listener's own work (the totals split and all), so the page
  * count is taken from the layout that prints: splitting the totals off after the count left a
  * blank page at the end of an A5 printout. Only the steps that need the pages themselves (the
  * footer on the last page's edge) wait for the listener.
+ *
+ * Refrens' PDF service is in print already when it makes the PDF, and making it fires
+ * beforeprint too: the print listener has laid the document out for the document's own
+ * margins, which a fit for the browser's 1 cm would undo (a 0.5 cm document printed its
+ * table narrower than the page). Nothing to prepare then.
  */
 export const prepareBrowserPrint = (
   layout?: () => void,
@@ -4887,6 +5048,12 @@ export const prepareBrowserPrint = (
 ): void => {
   const doc = root.querySelector<HTMLElement>(".pt-doc");
   if (!doc) return;
+  if (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("print").matches
+  ) {
+    return;
+  }
   const style = getComputedStyle(doc);
   // The document's printable width, or the browser's own (1 cm margins) where narrower.
   const width = Math.min(
@@ -4900,17 +5067,34 @@ export const prepareBrowserPrint = (
   ).map((table) => [table, table.className] as const);
   fitted.forEach(([table]) => table.classList.remove("is-cards", "is-grid"));
   const docWidth = doc.style.width;
-  withPrintRules(width, () => {
-    doc.style.width = `${width}px`;
-    withPrintMedia(() => {
-      if (layout) {
-        layout();
-        return;
-      }
-      fitPrintTable(root, true);
-    });
-  });
+  // The page's vh, not the window's: a print rule sized by the page's height (the item photos'
+  // cap) measured in a short window left the table unfitted, and the page count one too many
+  // (a blank last page on Legal, 2026-10-28).
+  const pageHeight = parseFloat(
+    style.getPropertyValue("--pt-browser-print-height")
+  );
+  withReadableStylesheet(() =>
+    withPrintRules(width, () => {
+      // At the browser's width, laid out wider by the document's own fit (fitPrintTable).
+      doc.style.width = `calc(${width}px / var(--pt-doc-fit, 1))`;
+      if (pageHeight > 0)
+        doc.style.setProperty("--pt-vh", `${pageHeight / 100}px`);
+      withPrintMedia(() => {
+        preparingPrint = true;
+        try {
+          if (layout) {
+            layout();
+            return;
+          }
+          fitPrintTable(root, true);
+        } finally {
+          preparingPrint = false;
+        }
+      });
+    })
+  );
   doc.style.width = docWidth;
+  doc.style.removeProperty("--pt-vh");
   fitted.forEach(([table, className]) => {
     // eslint-disable-next-line no-param-reassign
     table.className = `${className}${
@@ -4985,12 +5169,46 @@ const columnRules = (
   return { layers, color };
 };
 
+/*
+ * The preview always fills one A4 sheet (user, 2026-10-31), whatever the business's and the
+ * document's toggles say: on screen, a document shorter than an A4 page at the sheet's drawn
+ * width (its width × 297 / 210) gives the spare height to the filler row, as print does on a
+ * page; a longer one gets none (0). Not for a Pageless document, nor where the table reads as
+ * cards or a grid (fitItemsToScreen; the filler is hidden there). The document is measured
+ * without the filler, so a height reported to Lydia (ceres:content-height) never feeds back.
+ * In layout pixels (offsetWidth / offsetHeight), so a scale the host draws the frame at
+ * changes nothing.
+ */
+const A4_ASPECT = 297 / 210;
+
+const stretchOnScreen = (doc: HTMLElement, filler: HTMLElement): void => {
+  const table = filler.closest<HTMLElement>(".pt-items");
+  if (
+    doc.classList.contains("is-pageless") ||
+    table?.classList.contains("is-cards") ||
+    table?.classList.contains("is-grid")
+  ) {
+    return;
+  }
+  const sheet = doc.offsetWidth;
+  if (sheet <= 0 || browserPrinting) return;
+  const spare = Math.floor(sheet * A4_ASPECT - doc.offsetHeight);
+  filler.style.setProperty("--pt-filler-height", `${Math.max(0, spare)}px`);
+  if (spare > 0) doc.classList.add("is-filled");
+};
+
+/*
+ * The filler row shows (styles.css, .pt-doc.is-filled) in print when the business stretches
+ * its tables, and on screen while the sheet has room to fill. Each run starts from no filler:
+ * when print starts the print rule decides, and when it ends the screen's comes back.
+ */
 export const stretchItemTable = (root: ParentNode = document): void => {
-  const doc = root.querySelector<HTMLElement>(".pt-doc.is-stretch");
+  const doc = root.querySelector<HTMLElement>(".pt-doc");
   const filler = doc?.querySelector<HTMLElement>(".pt-items .pt-filler");
   const frame = doc?.querySelector<HTMLElement>(".pt-page-frame");
   if (!doc || !filler || !frame) return;
   filler.style.removeProperty("--pt-filler-height");
+  doc.classList.remove("is-filled");
   const wrap = doc.querySelector<HTMLElement>(".pt-items-scroll");
   const table = doc.querySelector<HTMLTableElement>(".pt-items");
   wrap?.style.removeProperty("--pt-column-rules");
@@ -4998,7 +5216,12 @@ export const stretchItemTable = (root: ParentNode = document): void => {
   const printing =
     typeof window.matchMedia === "function" &&
     window.matchMedia("print").matches;
-  if (!printing || !frame.parentElement) return;
+  if (!printing) {
+    stretchOnScreen(doc, filler);
+    return;
+  }
+  if (!doc.classList.contains("is-stretch") || !frame.parentElement) return;
+  doc.classList.add("is-filled");
   const rules = wrap && table ? columnRules(wrap, table) : undefined;
   if (wrap && rules) {
     wrap.style.setProperty("--pt-column-rules", rules.layers);
@@ -5006,6 +5229,9 @@ export const stretchItemTable = (root: ParentNode = document): void => {
   }
   const zoom =
     parseFloat(getComputedStyle(document.documentElement).zoom || "1") || 1;
+  // The filler sits inside the document's own fit scale too (fitPrintTable): the page's height
+  // in its pixels is 100vh over both.
+  const fit = parseFloat(doc.style.getPropertyValue("--pt-doc-fit")) || 1;
   // The whole document: the frame, and the letterhead footer after it when it prints on the
   // last page only.
   const content =
@@ -5015,7 +5241,7 @@ export const stretchItemTable = (root: ParentNode = document): void => {
     STRETCH_SLACK + (zoom > 1 ? STRETCH_ZOOM_SLACK * (1 - 1 / zoom) : 0);
   filler.style.setProperty(
     "--pt-filler-height",
-    `max(0px, calc(100vh / ${compactDecimal(zoom)} - ${Math.ceil(
+    `max(0px, calc(100vh / ${compactDecimal(zoom * fit)} - ${Math.ceil(
       content + slack
     )}px))`
   );
@@ -5138,6 +5364,9 @@ export const fitItemsToScreen = (root: ParentNode = document): void => {
       table.classList.toggle(name, name === layout)
     );
   });
+  // The preview's A4 sheet, on the layout just chosen (print sets its own stretch). Measured
+  // without the filler and set to the same height again, so the table's resize does not loop.
+  if (!printing) stretchItemTable(root);
   root.querySelectorAll<HTMLElement>(".pt-widget-table").forEach((section) => {
     const table = section.querySelector<HTMLTableElement>(".ceres-table");
     if (!table) return;
@@ -5187,6 +5416,8 @@ export const registerProfessionalWords = (): void => {
   const schedule = () => {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
+      prepareReadableStylesheet();
+      syncPrintWidths();
       respellTaxWords();
       evenSummaryColumns();
       fitItemsToScreen();
@@ -5201,6 +5432,14 @@ export const registerProfessionalWords = (): void => {
     window.addEventListener("resize", schedule);
     document.addEventListener("load", schedule, true);
     document.fonts?.ready.then(schedule);
+    // Lydia's live updates change the colours, fonts, text scale and letterhead in place,
+    // without drawing the document again: laid out again once the renderer has applied them.
+    window.addEventListener("message", (event) => {
+      const { type } = asRecord(event.data);
+      if (type === "lydia:template-update" || type === "lydia:invoice-update") {
+        schedule();
+      }
+    });
     schedule();
   };
   if (document.readyState === "loading") {
@@ -5229,6 +5468,14 @@ export const registerProfessionalPrint = (): void => {
     return;
   }
   state.ptPrintRegistered = true;
+  // Lydia's print size, changed live (syncPrintWidths).
+  if (typeof MutationObserver === "function") {
+    new MutationObserver(() => syncPrintWidths()).observe(document.head, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
 
   const pageless = () => Boolean(document.querySelector(".pt-doc.is-pageless"));
   // A Pageless PDF (one page as tall as the content) places nothing on pages, but its table is
@@ -5236,8 +5483,10 @@ export const registerProfessionalPrint = (): void => {
   const pagelessLayout = () => {
     fitPrintTable();
   };
-  // The totals are lined up last, on the fitted and split item columns.
+  // The totals are lined up last, on the fitted and split item columns. The preview's filler
+  // goes first (stretchOnScreen), so the print steps measure the document as it prints.
   const printLayout = () => {
+    document.querySelector(".pt-doc")?.classList.remove("is-filled");
     joinTotals();
     fitPrintTable();
     splitTotals();
@@ -5261,8 +5510,14 @@ export const registerProfessionalPrint = (): void => {
   });
   // A browser's own print counts its pages before the listener above runs: the same layout is
   // prepared first (prepareBrowserPrint), so the count is the printed one.
-  window.addEventListener("beforeprint", () =>
-    prepareBrowserPrint(pageless() ? pagelessLayout : printLayout)
-  );
-  window.addEventListener("afterprint", () => resetFootersOnPageEdge());
+  window.addEventListener("beforeprint", () => {
+    browserPrinting = true;
+    prepareBrowserPrint(pageless() ? pagelessLayout : printLayout);
+  });
+  window.addEventListener("afterprint", () => {
+    browserPrinting = false;
+    resetFootersOnPageEdge();
+    clearPreparedPrint();
+    stretchItemTable();
+  });
 };

@@ -14,7 +14,7 @@
   update targets.
 --}}
 {{#with (ptView @root) as |view|}}
-<div class="pt-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-pt-currency="{{@root.invoice.currency}}" data-testid="invoice-root" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--pt-text-scale: {{view.print.textScale}}; --pt-print-width: {{view.print.printWidth}}px; --pt-browser-print-width: {{view.print.browserPrintWidth}}px;{{#if view.theme}} --pt-theme: {{view.theme.accent}}; --pt-on-accent: {{view.theme.onAccent}};{{/if}}{{#if view.script.font}} --pt-script-font: '{{view.script.font}}';{{/if}}">
+<div class="pt-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-pt-currency="{{@root.invoice.currency}}" data-testid="invoice-root" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--pt-text-scale: {{view.print.textScale}}; --pt-print-width: {{view.print.printWidth}}px; --pt-browser-print-width: {{view.print.browserPrintWidth}}px; --pt-print-base: {{view.print.printBase}}px; --pt-browser-print-height: {{view.print.browserPrintHeight}}px; --pt-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --pt-theme: {{view.theme.accent}}; --pt-on-accent: {{view.theme.onAccent}};{{/if}}{{#if view.script.font}} --pt-script-font: '{{view.script.font}}';{{/if}}">
   {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
   {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
   {{#unless view.letterheadEveryPage}}
@@ -55,7 +55,7 @@
       <tfoot class="pt-page-frame-footer">
         <tr>
           <td>
-            <div class="no-dibella invoice-letterhead-footer pt-letterhead-footer pt-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+            <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer pt-letterhead-footer pt-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
               {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
             </div>
           </td>
@@ -208,7 +208,7 @@
 
           <section class="pt-items-section" data-testid="section" data-section="items">
             <div class="pt-items-scroll" data-testid="items-scroll">
-              <table class="pt-items{{#if view.print.compactTable}} is-print-compact{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--pt-figures: {{view.table.figureCount}}; --pt-serial-width: {{view.table.serialWidth}}px;{{#if view.print.tableFit}} --pt-table-fit: {{view.print.tableFit}};{{/if}}">
+              <table class="pt-items{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--pt-figures: {{view.table.figureCount}}; --pt-serial-width: {{view.table.serialWidth}}px;">
                 <thead>
                   <tr data-testid="items-header">
                     {{!-- No "Sr." text over the serial numbers (user request, 2026-10-23); kept for screen readers. --}}
@@ -291,7 +291,7 @@
                       {{/if}}
                     {{/if}}
                   {{/each}}
-                  {{!-- Print-only stretch row: takes the page's spare height on a one-page printout. --}}
+                  {{!-- Stretch row: takes the spare height of a one-page printout, or of the preview's A4 sheet. --}}
                   <tr class="pt-filler" aria-hidden="true"><td class="pt-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
                 </tbody>
                 {{#if view.table.footer.show}}
@@ -433,7 +433,49 @@
               {{/if}}
             </div>
           </div>
-          {{!-- Summaries: rendered with their data, hidden while switched off (live toggles). --}}
+          {{!-- Terms, notes, additional information and attachments across the page, straight
+                after the bank and totals row. --}}
+          <div class="pt-after">
+            {{#each view.terms}}
+              <section class="pt-card pt-terms" data-testid="section" data-section="terms">
+                <h2 class="pt-card-title" data-role="title">{{title}}</h2>
+                <ol class="pt-terms-list">
+                  {{#each items}}<li>{{this}}</li>{{/each}}
+                </ol>
+              </section>
+            {{/each}}
+
+            {{#if view.notes}}
+              <section class="pt-card pt-notes" data-testid="section" data-section="notes">
+                {{#if view.notes.title}}<h2 class="pt-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
+                <div class="pt-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
+              </section>
+            {{/if}}
+
+            {{#if view.additional}}
+              <section class="pt-card" data-testid="section" data-section="additional">
+                {{#if view.additional.title}}<h2 class="pt-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
+                <div class="pt-kv">
+                  {{#each view.additional.rows}}
+                    <span class="pt-kv-label" data-role="ai-label">{{label}}</span>
+                    <span class="pt-kv-value{{#if isDate}} pt-num{{/if}}" data-role="ai-value">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
+                  {{/each}}
+                </div>
+              </section>
+            {{/if}}
+
+            {{#if view.attachments}}
+              <section class="pt-card" data-testid="section" data-section="attachments">
+                {{#if view.attachments.title}}<h2 class="pt-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}
+                <ol class="pt-attachments">
+                  {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
+                </ol>
+              </section>
+            {{/if}}
+          </div>
+
+          {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered
+                with their data, hidden while switched off (live toggles). --}}
           <section class="pt-card pt-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
             {{#if view.hsn.title}}<h3 class="pt-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
             {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
@@ -483,47 +525,6 @@
             </section>
           {{/if}}
 
-          {{!-- Terms, notes, additional information and attachments after the summaries, across the
-                page (user request, 2026-10-24: the summary tables come straight after Bank Details). --}}
-          <div class="pt-after">
-            {{#each view.terms}}
-              <section class="pt-card pt-terms" data-testid="section" data-section="terms">
-                <h2 class="pt-card-title" data-role="title">{{title}}</h2>
-                <ol class="pt-terms-list">
-                  {{#each items}}<li>{{this}}</li>{{/each}}
-                </ol>
-              </section>
-            {{/each}}
-
-            {{#if view.notes}}
-              <section class="pt-card pt-notes" data-testid="section" data-section="notes">
-                {{#if view.notes.title}}<h2 class="pt-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
-                <div class="pt-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
-              </section>
-            {{/if}}
-
-            {{#if view.additional}}
-              <section class="pt-card" data-testid="section" data-section="additional">
-                {{#if view.additional.title}}<h2 class="pt-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
-                <div class="pt-kv">
-                  {{#each view.additional.rows}}
-                    <span class="pt-kv-label" data-role="ai-label">{{label}}</span>
-                    <span class="pt-kv-value{{#if isDate}} pt-num{{/if}}" data-role="ai-value">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
-                  {{/each}}
-                </div>
-              </section>
-            {{/if}}
-
-            {{#if view.attachments}}
-              <section class="pt-card" data-testid="section" data-section="attachments">
-                {{#if view.attachments.title}}<h2 class="pt-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}
-                <ol class="pt-attachments">
-                  {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
-                </ol>
-              </section>
-            {{/if}}
-          </div>
-
           {{#if view.enquiry}}
             <p class="pt-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="pt-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="pt-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
           {{/if}}
@@ -535,7 +536,7 @@
     </tbody>
   </table>
 
-  <div class="{{#if view.footerEveryPage}}no-dibella {{/if}}invoice-letterhead-footer pt-letterhead-footer{{#if view.footerEveryPage}} pt-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+  <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer pt-letterhead-footer{{#if view.footerEveryPage}} pt-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
     {{#if @root.invoice.letterHeadFooter}}
       <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
     {{else}}

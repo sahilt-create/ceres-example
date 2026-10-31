@@ -5,12 +5,17 @@ import {
   registerProfessionalImages,
   registerProfessionalPrint,
   registerProfessionalWords,
+  setProfessionalStylesheetText,
   withGstColumnLabels,
   withMoneyDefaults,
   withRefrensDefaults,
   withTemplateSettings,
 } from "./helpers";
+// eslint-disable-next-line import/no-duplicates
 import "./styles.css";
+// The same CSS as text, for print measurements (helpers withReadableStylesheet).
+// eslint-disable-next-line import/no-duplicates
+import professionalCss from "./styles.css?raw";
 // Register only the widgets template.hbs uses.
 import "../../widgets/date-time";
 import "../../widgets/markdown-viewer";
@@ -25,6 +30,7 @@ import "../../widgets/phone-number";
 import "../../widgets/refrens-branding";
 import "../../widgets/watermark";
 
+setProfessionalStylesheetText(professionalCss);
 registerProfessionalHelpers(window.Handlebars);
 registerProfessionalPrint();
 registerProfessionalImages();

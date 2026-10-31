@@ -538,20 +538,45 @@ describe("Professional Template — boolean settings", () => {
     expect(html).not.toContain("is-footer-hidden");
   });
 
-  it("fits the print table to the paper: format and landscape", () => {
-    const wide = 600; // fixed columns, px
-    const at = (pdfOptions: Json) =>
-      mapPrint(
-        state((invoice) => {
-          invoice.template = { pdfOptions };
-        }),
-        wide
-      ).compactTable;
-    expect(at({ format: "a4" })).toBe(true);
-    expect(at({ format: "a4", landscape: true })).toBe(false);
-    expect(at({ format: "a3" })).toBe(false);
-    expect(at({ format: "a5", landscape: true })).toBe(true);
+  // User (2026-10-31): a table too wide for the paper scales the whole document, as refrens.com
+  // does, never the table alone (no compact padding, no table-only text shrink).
+  it("fits a wide table by scaling the whole document in print", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    const print = css.slice(css.indexOf("@media print {"));
+    expect(print).toMatch(
+      /\.pt-doc \{[^}]*zoom: var\(--pt-doc-fit, 1\);\s*width: calc\(100% \/ var\(--pt-doc-fit, 1\)\);/
+    );
+    expect(css).not.toMatch(/is-print-compact|--pt-table-fit/);
+    expect(render()).not.toMatch(/is-print-compact|--pt-table-fit/);
+    const print4 = mapPrint(state()) as Record<string, unknown>;
+    expect(print4.compactTable).toBeUndefined();
+    expect(print4.tableFit).toBeUndefined();
   });
+
+  // The business's toggle alone stretches the printed table; the document's own is ignored
+  // (user, 2026-10-31).
+  it.each([
+    [true, undefined, true],
+    [true, true, true],
+    [true, false, true],
+    [false, true, false],
+    [undefined, true, false],
+    [undefined, undefined, false],
+  ])(
+    "stretches in print with the business toggle %s and the document toggle %s: %s",
+    (business, document, stretched) => {
+      const edit = (invoice: Json) => {
+        invoice.owner.configuration.experimental = {
+          stretchInvoiceTable: business,
+        };
+        invoice.template = { pdfOptions: { fullHeightTable: document } };
+      };
+      expect(mapPrint(state(edit)).stretchTable).toBe(stretched);
+      expect(tagWith(render(edit), 'data-testid="invoice-root"')).toMatch(
+        stretched ? /class="pt-doc is-stretch/ : /class="pt-doc(?! is-stretch)/
+      );
+    }
+  );
 
   it("caps the printed page at the width between the margins, at any print size", () => {
     const width = (pdfOptions: Json) =>
@@ -669,7 +694,7 @@ describe("Professional Template — boolean settings", () => {
     expect(noParties).toMatch(/pt-transport-vehicleNumber[\s\S]*?WB01AB1234/);
   });
 
-  it("bank on the left beside the totals; the summaries, then terms, notes, additional info and attachments across the page", () => {
+  it("bank on the left beside the totals; terms, notes, additional info and attachments across the page, the summaries last", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
       invoice.attachments = ["https://example.com/drawing.pdf"];
@@ -680,20 +705,22 @@ describe("Professional Template — boolean settings", () => {
       html.indexOf('class="pt-bottom-side"')
     );
     expect(main).toContain('data-section="bank"');
-    // User request (2026-10-24): every summary table straight after Bank Details, then the rest.
+    // User request (2026-10-27): every summary table at the end, after terms, notes,
+    // additional info and attachments; only the enquiry line follows them.
     const order = [
       "bank",
-      "hsn",
-      "tax-summary",
       "terms",
       "notes",
       "additional",
       "attachments",
+      "hsn",
+      "tax-summary",
+      "enquiry",
     ].map((section) => html.indexOf(`data-section="${section}"`));
     expect(order.every((at) => at > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(html.indexOf('class="pt-after"')).toBeGreaterThan(
-      html.indexOf('data-section="tax-summary"')
+    expect(html.indexOf('data-section="hsn"')).toBeGreaterThan(
+      html.indexOf('class="pt-after"')
     );
     expect(html.indexOf('data-section="totals"')).toBeGreaterThan(
       html.indexOf('class="pt-bottom-side"')
@@ -1032,20 +1059,8 @@ describe("Professional Template — files and CSS", () => {
     });
     // Print keeps every size, headings too (user, 2026-10-21: print 1:1).
     expect(steps(source.slice(source.indexOf("@media print")))).toEqual({});
-    // Shrinking table text (crowded figures, a narrow page) stops at the 10 px floor.
     // Crowded tables keep 13 px figures on screen (user, 2026-10-23: all text 13 px).
     expect(source).not.toMatch(/has-small-numbers td\.is-num \{/);
-    expect(source).toMatch(
-      /\.pt-items\.is-print-compact \{\s*font-size: max\(\s*10px,/
-    );
-    const a5 = mapPrint(
-      state((invoice) => {
-        invoice.template = { pdfOptions: { format: "A5" } };
-      }),
-      900,
-      9
-    );
-    expect(Number(a5.tableFit)).toBeGreaterThanOrEqual(0.77);
     const all = Array.from(
       source.matchAll(/(?:font-size|--pt-font-size-\w+):\s*(\d+(?:\.\d+)?)px/g),
       (m) => Number(m[1])
@@ -1092,7 +1107,10 @@ describe("Professional Template — files and CSS", () => {
       "text-transform: uppercase",
     ]);
     expect(source).not.toMatch(/@page\s*\{/);
-    expect(source).not.toMatch(/zoom:/);
+    // The one zoom: the whole document's print fit for a too-wide table (2026-10-31).
+    expect(source.match(/zoom:[^;]+;/g)).toEqual([
+      "zoom: var(--pt-doc-fit, 1);",
+    ]);
     const sizes = Array.from(
       source.matchAll(/font-size:\s*([^;]+);/g),
       (m) => m[1]
@@ -1401,6 +1419,32 @@ describe("Professional Template — PDF service page hooks", () => {
     const footer = tag(once, "data-ceres-page-footer");
     expect(footer).toContain('data-ceres-page-policy="last"');
     expect(footer).not.toContain("no-dibella");
+  });
+
+  // "Hide footer" turns the PDF service's own footer off, the letterhead footer with it.
+  it("draws the every-page footer itself when Hide footer is on", () => {
+    const hidden = render((invoice) => {
+      invoice.letterHeadFooter = "https://example.com/ft.png";
+      invoice.template = {
+        pdfOptions: { footerOnLastPage: false, hideFooter: true },
+      };
+    });
+    const footer = tag(hidden, "data-ceres-page-footer");
+    expect(footer).toContain('data-ceres-page-policy="all"');
+    expect(footer).toContain("pt-footer-fixed");
+    expect(footer).not.toContain("no-dibella");
+    expect(hidden).not.toMatch(/no-dibella[^"]*pt-footer-spacer/);
+  });
+});
+
+describe("Professional Template — PDF service window", () => {
+  const source = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+  it("lays the document out at the paper's printable width in the PDF service", () => {
+    // The service's window is narrower than a landscape page: the fit must see the paper.
+    const print = source.slice(source.indexOf("@media print {"));
+    expect(print).toMatch(
+      /\[class~="isDibella"\] \.pt-doc \{\s*width: calc\(var\(--pt-print-width, 100%\) \/ var\(--pt-doc-fit, 1\)\);\s*max-width: none;/
+    );
   });
 });
 
@@ -1993,10 +2037,8 @@ describe("Professional Template — review round 6 (2026-10-24)", () => {
     );
   });
 
-  it("never wraps a value with a digit in a cramped print table", () => {
-    expect(css()).toMatch(
-      /\.pt-items\.is-print-compact td\.is-word:not\(\.has-digits\) \{\s*white-space: normal;/
-    );
+  it("never wraps a value with a digit; print wraps cells as the screen does", () => {
+    expect(css()).not.toMatch(/is-print-compact/);
     expect(
       fs.readFileSync(path.join(TEMPLATE_DIR, "helpers.ts"), "utf8")
     ).toMatch(/\/\\d\/\.test\(value\)\s*\?\s*" has-digits"/);
