@@ -9,8 +9,13 @@ import {
   registerEcommercePrint,
   withMoneyDefaults,
   withTemplateSettings,
+  setEcommerceStylesheetText,
 } from "./helpers";
+// eslint-disable-next-line import/no-duplicates
 import "./styles.css";
+// The same CSS as text, for print measurements (helpers withReadableStylesheet).
+// eslint-disable-next-line import/no-duplicates
+import ecCss from "./styles.css?raw";
 // Register only the widgets template.hbs uses.
 import "../../widgets/date-time";
 import "../../widgets/markdown-viewer";
@@ -24,6 +29,7 @@ import "../../widgets/phone-number";
 import "../../widgets/refrens-branding";
 import "../../widgets/watermark";
 
+setEcommerceStylesheetText(ecCss);
 registerEcommerceHelpers(window.Handlebars);
 registerEcommercePrint();
 registerEcommerceLogo();

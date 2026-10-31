@@ -9,6 +9,7 @@ import {
   placeFootersOnPageEdge,
   registerEcommerceLogo,
   respellTaxWords,
+  stretchItemTable,
 } from "../src/templates/Ecommerce-Template/helpers";
 
 const css = fs.readFileSync(
@@ -128,5 +129,107 @@ describe("Ecommerce template — after the render, in the browser", () => {
     jest.restoreAllMocks();
     expect(footer.style.breakBefore).toBe("");
     expect(footer.style.marginTop).toBe("");
+  });
+
+  describe("the item table's stretch", () => {
+    const realMatchMedia = window.matchMedia;
+    const media = (print: boolean) => {
+      window.matchMedia = ((query: string) =>
+        ({
+          matches: print && /print/.test(query),
+          media: query,
+        } as MediaQueryList)) as typeof window.matchMedia;
+    };
+    const sheet = (className: string, width: number, height: number) => {
+      document.body.innerHTML =
+        `<div class="${className}"><table class="ec-page-frame"><tbody><tr><td>` +
+        '<div class="ec-items-scroll"><table class="ec-items"><tbody>' +
+        '<tr class="ec-item-row"><td>1</td></tr>' +
+        '<tr class="ec-filler"><td class="ec-col-serial"></td></tr>' +
+        "</tbody></table></div></td></tr></tbody></table></div>";
+      const doc = document.querySelector(".ec-doc") as HTMLElement;
+      // The sheet's height without the filler: the filler's own height never counts.
+      doc.getBoundingClientRect = () =>
+        ({
+          width,
+          height: doc.classList.contains("is-screen-stretch") ? 9999 : height,
+        } as DOMRect);
+      return {
+        doc,
+        filler: document.querySelector(".ec-filler") as HTMLElement,
+      };
+    };
+    afterEach(() => {
+      window.matchMedia = realMatchMedia;
+    });
+
+    it("fills a short document's preview to one A4 sheet, whatever the toggles", () => {
+      media(false);
+      // No is-stretch: the business toggle is off, the preview stretches all the same.
+      const { doc, filler } = sheet("ec-doc", 1000, 900);
+      stretchItemTable();
+      expect(doc.classList.contains("is-screen-stretch")).toBe(true);
+      expect(filler.style.getPropertyValue("--ec-screen-filler-height")).toBe(
+        "514px"
+      );
+      // Measured again (resize, fonts, live update): the same height, never growing on itself.
+      stretchItemTable();
+      expect(filler.style.getPropertyValue("--ec-screen-filler-height")).toBe(
+        "514px"
+      );
+      expect(filler.style.getPropertyValue("--ec-filler-height")).toBe("");
+    });
+
+    it("leaves a long, narrow or pageless preview as it is", () => {
+      media(false);
+      const cases: Array<[string, number, number]> = [
+        ["ec-doc is-stretch", 1000, 1500],
+        ["ec-doc", 500, 300],
+        ["ec-doc is-pageless", 1000, 300],
+      ];
+      cases.forEach(([className, width, height]) => {
+        const { doc, filler } = sheet(className, width, height);
+        stretchItemTable();
+        expect(doc.classList.contains("is-screen-stretch")).toBe(false);
+        expect(filler.style.getPropertyValue("--ec-screen-filler-height")).toBe(
+          ""
+        );
+      });
+    });
+
+    it("stretches the printout by the business toggle alone, the preview's stretch off", () => {
+      media(false);
+      const off = sheet("ec-doc", 1000, 900);
+      stretchItemTable();
+      media(true);
+      stretchItemTable();
+      expect(off.doc.classList.contains("is-screen-stretch")).toBe(false);
+      expect(off.filler.style.getPropertyValue("--ec-filler-height")).toBe("");
+      const on = sheet("ec-doc is-stretch", 714, 900);
+      stretchItemTable();
+      expect(on.filler.style.getPropertyValue("--ec-filler-height")).toMatch(
+        /^max\(0px, calc\(100vh \/ 1 - \d+px\)\)$/
+      );
+      // Back on screen, the preview's stretch returns.
+      media(false);
+      stretchItemTable();
+      expect(on.doc.classList.contains("is-screen-stretch")).toBe(true);
+      expect(on.filler.style.getPropertyValue("--ec-filler-height")).toBe("");
+    });
+
+    it("prints a document longer than a page as with the stretch off: no empty box under the last row", () => {
+      // The filler's rules are as wide as it is tall, so at 0 px it draws nothing.
+      expect(css).toMatch(
+        /\.ec-doc\.is-stretch \.ec-items-scroll \.ec-items \.ec-filler > td \{\s*height: var\(--ec-filler-height, 0(?:px)?\);\s*border-inline-end-width: min\(\s*var\(--ec-rule-width\),\s*var\(--ec-filler-height, 0px\)\s*\);/
+      );
+      // No rule above it, either medium.
+      expect(css).toMatch(
+        /\.ec-doc \.ec-items-scroll \.ec-items \.ec-filler > td \{\s*padding-block: 0;\s*border-top: 0;/
+      );
+      // The column rules once drawn under a page's last row are gone.
+      expect(css).not.toMatch(
+        /--ec-column-rules|\.is-stretch \.ec-items-scroll \{/
+      );
+    });
   });
 });

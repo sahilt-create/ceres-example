@@ -15,7 +15,7 @@
   update targets.
 --}}
 {{#with (ecView @root) as |view|}}
-<div class="ec-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.hideFooter}} is-footer-hidden{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-testid="invoice-root" data-ec-currency="{{@root.invoice.currency}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--ec-text-scale: {{view.print.textScale}}; --ec-print-width: {{view.print.printWidth}}px;{{#if view.theme}} --ec-theme: {{view.theme.accent}};{{/if}}{{#if view.script.font}} --ec-script-font: '{{view.script.font}}';{{/if}}">
+<div class="ec-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-testid="invoice-root" data-ec-currency="{{@root.invoice.currency}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--ec-text-scale: {{view.print.textScale}}; --ec-print-width: {{view.print.printWidth}}px; --ec-browser-print-width: {{view.print.browserPrintWidth}}px; --ec-print-zoom: {{view.print.printZoom}};{{#if view.theme}} --ec-theme: {{view.theme.accent}};{{/if}}{{#if view.script.font}} --ec-script-font: '{{view.script.font}}';{{/if}}">
   {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
   {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
   {{#unless view.letterheadEveryPage}}
@@ -52,17 +52,17 @@
         </tr>
       </thead>
     {{/if}}
-    {{#if view.footerEveryPage}}{{#unless view.hideFooter}}
+    {{#if view.footerEveryPage}}
       <tfoot class="ec-page-frame-footer">
         <tr>
           <td>
-            <div class="no-dibella invoice-letterhead-footer ec-letterhead-footer ec-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+            <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer ec-letterhead-footer ec-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
               {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
             </div>
           </td>
         </tr>
       </tfoot>
-    {{/unless}}{{/if}}
+    {{/if}}
     <tbody>
       <tr>
         <td class="ec-page-frame-cell">
@@ -182,7 +182,7 @@
 
             <section class="ec-items-section" data-testid="section" data-section="items">
               <div class="ec-items-scroll" data-testid="items-scroll">
-                <table class="ec-items{{#if view.print.compactTable}} is-print-compact{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}" data-testid="items-table"{{#if view.print.tableFit}} style="--ec-table-fit: {{view.print.tableFit}};"{{/if}}>
+                <table class="ec-items{{#if view.print.compactTable}} is-print-compact{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}"{{#if view.print.compactTable}} data-ec-print-compact{{/if}} data-testid="items-table"{{#if view.print.tableFit}} style="--ec-table-fit: {{view.print.tableFit}};"{{/if}}>
                   <thead>
                     <tr data-testid="items-header">
                       <th class="ec-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px">{{view.table.serialLabel}}</th>
@@ -273,10 +273,11 @@
                         {{/if}}
                       {{/if}}
                     {{/each}}
-                    {{#if view.print.stretchTable}}
-                      {{!-- Takes the page's spare height in print (stretchItemTable); empty otherwise. --}}
+                    {{#unless view.pageless}}
+                      {{!-- Takes the sheet's spare height in the preview, and the page's in print when the
+                           business stretches its tables (stretchItemTable); empty otherwise. --}}
                       <tr class="ec-filler" aria-hidden="true"><td class="ec-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
-                    {{/if}}
+                    {{/unless}}
                   </tbody>
                   {{#if view.table.footer.show}}
                     {{!-- TOTAL: under Sr.No and Description, then a cell per column, so the item columns'
@@ -537,14 +538,12 @@
     </tbody>
   </table>
 
-  {{#unless view.hideFooter}}
-    <div class="{{#if view.footerEveryPage}}no-dibella {{/if}}invoice-letterhead-footer ec-letterhead-footer{{#if view.footerEveryPage}} ec-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
-      {{#if @root.invoice.letterHeadFooter}}
-        <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
-      {{else}}
-        <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
-      {{/if}}
-    </div>
-  {{/unless}}
+  <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer ec-letterhead-footer{{#if view.footerEveryPage}} ec-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+    {{#if @root.invoice.letterHeadFooter}}
+      <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{else}}
+      <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{/if}}
+  </div>
 </div>
 {{/with}}

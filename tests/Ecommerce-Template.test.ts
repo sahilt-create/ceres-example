@@ -519,6 +519,29 @@ describe("Ecommerce template — settings and data", () => {
     expect(html).toContain("ec-footer-fixed");
   });
 
+  it("draws the every-page footer itself in the PDF when Hide Footer turns the service's off", () => {
+    const footers = (hideFooter: boolean) =>
+      render((invoice) => {
+        invoice.letterHeadFooter = "https://example.com/foot.png";
+        invoice.template = {
+          pdfOptions: { footerOnLastPage: false, hideFooter },
+        };
+      }).match(/<div class="[^"]*invoice-letterhead-footer[^"]*"/g) ?? [];
+    // Shown: the PDF service stamps the footer, the template's copies are for other prints.
+    expect(footers(false)).toHaveLength(2);
+    footers(false).forEach((tag) => expect(tag).toContain("no-dibella"));
+    // Hide Footer: the service draws none, so the template's copies print in the PDF too.
+    expect(footers(true)).toHaveLength(2);
+    footers(true).forEach((tag) => expect(tag).not.toContain("no-dibella"));
+    expect(
+      view((invoice) => {
+        invoice.template = {
+          pdfOptions: { footerOnLastPage: true, hideFooter: true },
+        };
+      }).serviceFooter
+    ).toBe(false);
+  });
+
   it("puts the theme colour on the table header fill", () => {
     const html = render((invoice) => {
       invoice.template = { primaryColor: "#1565c0" };
@@ -1237,11 +1260,77 @@ describe("Ecommerce template — files and CSS", () => {
     // A4 at 1 cm side margins: 794 - 76 - 4 px kept back.
     expect(width({})).toBe(714);
     expect(width({ xMargins: "0.5" })).toBe(751);
+    // 0 cm runs to the paper's edges; it is not "unset" (1 cm).
+    expect(width({ xMargins: "0" })).toBe(789);
+    expect(width({ xMargins: 0 })).toBe(789);
     expect(width({ zoomSize: "0.9" })).toBe(802);
     expect(width({ landscape: true })).toBe(1042);
     const print = css.slice(css.indexOf("@media print"));
     expect(print).toMatch(/max-width: var\(--ec-print-width, none\);/);
     expect(render()).toContain("--ec-print-width: 714px;");
+  });
+
+  it("keeps the print table's 10 px text floor at 10 px on paper, whatever the print zoom", () => {
+    const zoom = (pdfOptions: Record<string, unknown>) =>
+      mapPrint({ pdfOptions }).printZoom;
+    expect(zoom({})).toBe("1");
+    expect(zoom({ zoomSize: "1.2" })).toBe("1.2");
+    // The renderer applies no zoom for 0.8.
+    expect(zoom({ zoomSize: "0.8" })).toBe("1");
+    expect(render()).toContain("--ec-print-zoom: 1;");
+    const print = css.slice(css.indexOf("@media print"));
+    expect(print).not.toMatch(/font-size: max\(\s*10px,/);
+    // The item table's four floors and the summaries' two.
+    expect(
+      print.match(
+        /font-size: max\(\s*calc\(10px \/ var\(--ec-print-zoom, 1\)\),/g
+      )
+    ).toHaveLength(6);
+  });
+
+  it("lets stacked parties break between parties in print, each party whole", () => {
+    const stacked = css.slice(
+      css.indexOf("@container ec-doc (width < 600px)"),
+      css.indexOf("@container ec-doc (width < 400px)")
+    );
+    expect(stacked).toMatch(/\.ec-doc \.ec-parties \{\s*break-inside: auto;/);
+    expect(stacked).toMatch(
+      /\.ec-doc \.ec-parties \.ec-party \{\s*break-inside: avoid;/
+    );
+  });
+
+  it("leaves the batch columns out when the document switches them off", () => {
+    const heads = (on: boolean | undefined) => {
+      const html = render((invoice) => {
+        invoice.columns = [
+          ...(invoice.columns || []),
+          { key: "batchCode", label: "Batch Code", isHidden: false },
+          { key: "expiryDate", label: "Expiry Date", isHidden: false },
+        ];
+        invoice.advanceOptions = {
+          ...(invoice.advanceOptions || {}),
+          showBatchColumnsInInvoice: on,
+        };
+      });
+      const table = html.slice(html.indexOf('<table class="ec-items'));
+      return plain(table.slice(0, table.indexOf("</thead>")));
+    };
+    expect(heads(true)).toContain("Batch Code");
+    expect(heads(undefined)).toContain("Batch Code");
+    expect(heads(false)).not.toContain("Batch Code");
+    expect(heads(false)).not.toContain("Expiry Date");
+  });
+
+  it("caps a Long PDF's original images at a fixed height, not one read off the window", () => {
+    expect(css).toMatch(
+      /\.ec-doc\.is-pageless \.ec-large-image \{\s*max-height: 490px;/
+    );
+  });
+
+  it("puts the item table and the totals under it on one rule in print", () => {
+    expect(css).toMatch(
+      /\.ec-items\[data-ec-totals-split\] \{\s*margin-top: -1px;/
+    );
   });
 
   it("keeps a clear type hierarchy: section titles 14 px bold, names and labels semibold", () => {
@@ -1329,8 +1418,20 @@ describe("Ecommerce template — files and CSS", () => {
 
   it("keeps an every-page footer within a quarter page, so Chrome repeats its spacer", () => {
     expect(css).toMatch(
-      /\.ec-page-frame-footer \.ec-letterhead-footer img,\s*\.ec-letterhead-footer\.ec-footer-fixed img \{[^}]*max-height: 22vh;/
+      /\.ec-page-frame-footer \.ec-letterhead-footer img,\s*\.ec-letterhead-footer\.ec-footer-fixed img \{[^}]*max-height: min\(22vh, calc\(25vh - 28px\)\);/
     );
+  });
+
+  it("prints the every-page letterhead and footer full width as on screen, whatever the image's own size", () => {
+    [
+      /\.ec-page-frame-header \.ec-letterhead img \{([^}]*)\}/,
+      /\.ec-letterhead-footer\.ec-footer-fixed img \{([^}]*)\}/,
+    ].forEach((rule) => {
+      const body = css.match(rule)?.[1] ?? "";
+      expect(body).toContain("width: 100%;");
+      expect(body).toContain("object-fit: contain;");
+      expect(body).not.toContain("width: auto;");
+    });
   });
 
   it("sizes the signature by its shape, as the logo: wide 200 × 80, square 120 × 120", () => {
@@ -1736,7 +1837,7 @@ describe("Ecommerce template — as refrens.com prints real documents", () => {
     expect(number(true)).not.toContain("#");
   });
 
-  it("stretches the item table to the page only when the business and document ask", () => {
+  it("stretches the printed item table whenever the business asks, whatever the document says", () => {
     const stretch = (enabled: boolean, full: boolean) =>
       render((invoice, root) => {
         invoice.owner = {
@@ -1752,10 +1853,45 @@ describe("Ecommerce template — as refrens.com prints real documents", () => {
           },
         };
       });
-    expect(stretch(true, true)).toContain('class="ec-filler"');
     expect(stretch(true, true)).toContain("ec-doc is-stretch");
-    expect(stretch(false, true)).not.toContain('class="ec-filler"');
-    expect(stretch(true, false)).not.toContain('class="ec-filler"');
+    // The document's own toggle is ignored (user, 2026-10-31): off or missing still stretches.
+    expect(stretch(true, false)).toContain("ec-doc is-stretch");
+    expect(
+      render((invoice) => {
+        invoice.owner = {
+          ...(invoice.owner || {}),
+          configuration: { experimental: { stretchInvoiceTable: true } },
+        };
+      })
+    ).toContain("ec-doc is-stretch");
+    // Business off: never in print, the document's toggle on or not.
+    expect(stretch(false, true)).not.toContain("is-stretch");
+    expect(stretch(false, false)).not.toContain("is-stretch");
+    // The filler row is there either way, for the preview's own stretch.
+    expect(stretch(false, false)).toContain('class="ec-filler"');
+    expect(stretch(true, false)).toContain('class="ec-filler"');
+    // A Long PDF has no page to fill.
+    expect(
+      render((invoice, root) => {
+        invoice.owner = {
+          ...(invoice.owner || {}),
+          configuration: { experimental: { stretchInvoiceTable: true } },
+        };
+        root.pdfOptions = {
+          ...(root.pdfOptions || {}),
+          fullHeightTable: true,
+          longPdf: true,
+        };
+        invoice.template = {
+          ...(invoice.template || {}),
+          pdfOptions: {
+            ...(invoice.template?.pdfOptions || {}),
+            fullHeightTable: true,
+            longPdf: true,
+          },
+        };
+      })
+    ).not.toContain('class="ec-filler"');
     // Every document type (user request), a delivery challan too.
     expect(
       render((invoice, root) => {

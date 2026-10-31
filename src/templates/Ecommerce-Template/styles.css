@@ -158,8 +158,7 @@
   padding-top: var(--ec-gutter);
 }
 
-.ec-doc:has(> .ec-letterhead-footer.is-empty),
-.ec-doc.is-footer-hidden {
+.ec-doc:has(> .ec-letterhead-footer.is-empty) {
   padding-bottom: var(--ec-gutter);
 }
 
@@ -354,9 +353,34 @@
   display: none;
 }
 
-/* The stretch row (print only): empty, the column rules running through it. */
+/*
+ * The stretch row: empty, the column rules running through it, no rule above it, so the last
+ * item reads as running on down (shown by stretchItemTable on screen, by is-stretch in print).
+ * Its rules are as wide as the row is tall, up to the rule's width: at 0 px (a document longer
+ * than a page) it draws nothing at all.
+ */
 .ec-items .ec-filler {
   display: none;
+}
+
+.ec-doc .ec-items-scroll .ec-items .ec-filler > td {
+  padding-block: 0;
+  border-top: 0;
+}
+
+/* The preview's stretch: the sheet filled to A4 (helpers.ts stretchItemTable). */
+@media screen {
+  .ec-doc.is-screen-stretch .ec-items .ec-filler {
+    display: table-row;
+  }
+
+  .ec-doc.is-screen-stretch .ec-items-scroll .ec-items .ec-filler > td {
+    height: var(--ec-screen-filler-height, 0);
+    border-inline-end-width: min(
+      var(--ec-rule-width),
+      var(--ec-screen-filler-height, 0px)
+    );
+  }
 }
 
 /* The document QR under the document details, on their end edge. */
@@ -1195,6 +1219,16 @@
     flex-wrap: wrap;
   }
 
+  /* Stacked, the four parties are most of a short page: kept as one unit in print, A5 left page
+     one empty under the title. A page break falls between them instead, each party whole. */
+  .ec-doc .ec-parties {
+    break-inside: auto;
+  }
+
+  .ec-doc .ec-parties .ec-party {
+    break-inside: avoid;
+  }
+
 }
 
 /* On a phone the QR goes under the bank details. */
@@ -1213,7 +1247,7 @@
  */
 @media print {
   .ec-doc {
-    --ec-font-size-xl: 18px;
+    /* Every text size prints as on screen, the title too (user, 2026-10-21: print 1:1). */
     --ec-gutter: 0px;
 
     width: 100%;
@@ -1222,11 +1256,24 @@
        service lays the page out in a window wider than the paper before it prints, and the
        table measured there was clipped on the page (user report). */
     max-width: var(--ec-print-width, none);
-    margin: 0;
+
+    /* Centred: a browser's own print keeps 1 cm margins, so a document set to wider ones
+       (xMargins 2) sits in the middle of the page rather than against its left edge. */
+    margin: 0 auto;
   }
 
   .ec-status.no-print {
     display: none;
+  }
+
+  /* The 1 px rules (the frame, the enquiry line's) stay 1 px on paper at a print size under 1:
+     zoomed to 0.9 px, Chrome drew them at 0.5 px, as thin as the table's hairlines. */
+  .ec-frame {
+    border-width: max(1px, calc(1px / var(--ec-print-zoom, 1)));
+  }
+
+  .ec-contact {
+    border-top-width: max(1px, calc(1px / var(--ec-print-zoom, 1)));
   }
 
   /* On paper the table fits the page; Description gives up its screen floor. */
@@ -1251,10 +1298,11 @@
     white-space: normal;
   }
 
-  /* A page too narrow even then shrinks the table's text, never under 10 px. */
+  /* A page too narrow even then shrinks the table's text, never under 10 px on paper (the
+     renderer's print zoom scales it: 10 px / zoom). */
   .ec-items.is-print-compact {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-table-fit, 1))
     );
   }
@@ -1268,18 +1316,25 @@
   }
 
   /* The columns' floors shrink with the text, or a wide table's empty columns alone keep it
-     wider than the page and its last column (the amounts, the totals' figures) is cut off. */
+     wider than the page and its last column (the amounts, the totals' figures) is cut off.
+     Like the text floor, they hold on paper whatever the print zoom (A5 at 1.2 cut Total). */
   .ec-items.is-print-fit .ec-col-min {
-    width: calc(40px * var(--ec-print-fit, 1));
+    width: calc(40px * var(--ec-print-fit, 1) / var(--ec-print-zoom, 1));
   }
 
   .ec-items.is-print-fit .ec-desc-min {
-    width: calc(140px * var(--ec-print-fit, 1));
+    width: calc(140px * var(--ec-print-fit, 1) / var(--ec-print-zoom, 1));
+  }
+
+  /* Last resort (helpers.ts fitPrintTable): a table a little too wide even at its floors is
+     scaled down whole; the split-off totals carry the same class and style, so they follow. */
+  .ec-items.is-print-fit {
+    zoom: var(--ec-table-zoom, 1);
   }
 
   .ec-items.is-print-fit {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
     );
   }
@@ -1287,15 +1342,40 @@
   .ec-items.is-print-fit thead th,
   .ec-items.is-print-fit .ec-words-value {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-s) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
     );
   }
 
   .ec-items.is-print-fit .ec-item-codes {
     font-size: max(
-      10px,
+      calc(10px / var(--ec-print-zoom, 1)),
       calc(var(--ec-font-size-xs) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
+    );
+  }
+
+  /* A summary too wide for the page (helpers.ts fitPrintTable: the payments on A5) shrinks as
+     the item table does: tight padding, text down to 10 px, then the whole table. */
+  .ec-summary .ceres-table.is-print-fit :is(th, td) {
+    padding-inline: 4px;
+  }
+
+  .ec-summary .ceres-table.is-print-fit {
+    zoom: var(--ec-table-zoom, 1);
+  }
+
+  .ec-summary .ceres-table.is-print-fit,
+  .ec-summary .ceres-table.is-print-fit thead th {
+    font-size: max(
+      calc(10px / var(--ec-print-zoom, 1)),
+      calc(var(--ec-font-size-base) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
+    );
+  }
+
+  .ec-summary .ceres-table.is-print-fit .ceres-table-words {
+    font-size: max(
+      calc(10px / var(--ec-print-zoom, 1)),
+      calc(var(--ec-font-size-s) * var(--ec-text-scale, 1) * var(--ec-print-fit, 1))
     );
   }
 
@@ -1340,30 +1420,25 @@
     break-inside: avoid;
   }
 
-  /* Stretch on, a document longer than a page (user, 2026-10-19): where a whole item moves to
-     the next page, the column rules run on to the page's foot and a rule closes each page's
-     piece of the table (helpers.ts columnRules), drawn by the items wrapper; on the last
-     piece the table's own bottom rule lies over it. The row groups are opaque, so the rules
-     show only below the page's last row. */
-  .ec-doc.is-stretch .ec-items-scroll {
-    --ec-column-rule-width: var(--ec-rule-width);
-
-    border-bottom: var(--ec-column-rule-width) solid
-      var(--ec-column-rule-color, transparent);
-    background: var(--ec-column-rules, none);
+  /* A row cut by a page break (an item taller than what is left of the page) closes with a
+     rule at the page's foot, and every page's piece of the table with it (user rule,
+     2026-10-20): the cells' own borders end open there. The items wrapper draws that rule on
+     each page's piece (box-decoration-break: clone); on the last piece the table's own
+     bottom rule lies over it. */
+  .ec-items-scroll {
+    border-bottom: var(--ec-rule-width) solid var(--ec-ink);
     /* stylelint-disable-next-line property-no-vendor-prefix -- Chrome before 130 needs it */
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
   }
 
-  .ec-doc.is-stretch .ec-items-scroll > :last-child {
-    margin-bottom: calc(-1 * var(--ec-column-rule-width));
+  .ec-items-scroll > :last-child {
+    margin-bottom: calc(-1 * var(--ec-rule-width));
   }
 
-  :where(.ec-doc.is-stretch .ec-items) > :where(thead, tbody, tfoot) {
-    background-color: #fff;
-  }
-
+  /* Stretch on, a document longer than a page: it prints exactly as with the stretch off
+     (user, 2026-10-31). The column rules the items wrapper used to draw under the page's last
+     row left an empty grid box there. */
   .ec-doc.is-stretch .ec-items .ec-filler {
     display: table-row;
   }
@@ -1393,10 +1468,12 @@
     line-height: 0;
   }
 
-  .ec-doc.is-stretch .ec-items .ec-filler > td {
+  .ec-doc.is-stretch .ec-items-scroll .ec-items .ec-filler > td {
     height: var(--ec-filler-height, 0);
-    padding-block: 0;
-    border-top: 0;
+    border-inline-end-width: min(
+      var(--ec-rule-width),
+      var(--ec-filler-height, 0px)
+    );
   }
 
   /* A group's name row stays with the group's first item, never alone at a page's foot. */
@@ -1413,6 +1490,13 @@
     max-height: min(45vh, 490px); /* px cap: on a Pageless PDF's one tall page vh is the whole document */
     margin-inline: 0; /* from the start edge: centred, a table wider than its page (A5) pushed it past the page edge */
     object-fit: contain;
+  }
+
+  /* Long PDF: no page to keep it within, and a vh cap read off the PDF service's window while
+     it lays out (270 px) grew to 490 px on the tall page it prints on, past the height it had
+     measured. A fixed cap prints as it was measured. */
+  .ec-doc.is-pageless .ec-large-image {
+    max-height: 490px;
   }
 
   .ec-items .ec-items-total,
@@ -1484,13 +1568,16 @@
    * Chrome stops repeating a table header taller than about a quarter of the page, so on a
    * short page (landscape, A5) a full-width letterhead would print on the first page only. The
    * repeated copy keeps its proportions within 22% of the page height (the most that still
-   * repeats on a landscape A4, tested), centred.
+   * repeats on a landscape A4, tested), centred. Full width as on screen otherwise: at
+   * `width: auto` an image smaller than the page (a 480 px letterhead) printed at its own size.
    */
   .ec-page-frame-header .ec-letterhead img {
-    width: auto;
-    max-width: 100%;
-    max-height: 22vh;
-    margin-inline: auto;
+    width: 100%;
+
+    /* With its 20 px spacing the band stays under a quarter of the page, where Chrome stops
+       repeating it (landscape A5 at full width: the footer covered a line on every page). */
+    max-height: min(22vh, calc(25vh - 28px));
+    object-fit: contain;
   }
 
   .ec-page-frame-footer {
@@ -1544,10 +1631,12 @@
    */
   .ec-page-frame-footer .ec-letterhead-footer img,
   .ec-letterhead-footer.ec-footer-fixed img {
-    width: auto;
-    max-width: 100%;
-    max-height: 22vh;
-    margin-inline: auto;
+    width: 100%;
+
+    /* With its 20 px spacing the band stays under a quarter of the page, where Chrome stops
+       repeating it (landscape A5 at full width: the footer covered a line on every page). */
+    max-height: min(22vh, calc(25vh - 28px));
+    object-fit: contain;
   }
 
   /*
@@ -1568,12 +1657,13 @@
  * the two meet on a single line.
  */
 @media print {
+  /* Chrome prints the 0.5 px rule as a whole pixel: a 1 px overlap puts both on one line. */
   .ec-items[data-ec-totals-split] {
-    margin-top: calc(-1 * var(--ec-rule-width));
+    margin-top: -1px;
   }
 
   /* One solid ground under the totals: painted cell by cell, the hairline seams between their
-     empty cells let the stretch column rules (columnRules) show through. */
+     empty cells would let what lies under the table show through. */
   .ec-items[data-ec-totals-split] {
     background-color: #fff;
   }
