@@ -7,6 +7,7 @@ import template from "../src/templates/modern-manufacturing-template/template.hb
 import {
   batchText,
   photoCap,
+  repeatedBandCap,
   buildModernManufacturingView,
   columnNumber,
   formatContext,
@@ -621,7 +622,7 @@ describe("Modern Manufacturing template — render", () => {
       invoice.template = { languageScript: "Arabic", enableRtl: true };
     });
     expect(html).toContain(
-      '<div class="mm-doc" data-testid="invoice-root" data-mm-paper-height="1122" dir="rtl" lang="ar" style="--mm-text-scale: 1; --mm-print-width: 714px; --mm-browser-print-width: 714px; --mm-photo-cap: 596px; --mm-script-font: \'Noto Sans Arabic\';'
+      '<div class="mm-doc" data-testid="invoice-root" data-mm-paper-height="1122" dir="rtl" lang="ar" style="--mm-text-scale: 1; --mm-print-width: 714px; --mm-browser-print-width: 714px; --mm-photo-cap: 596px; --mm-band-cap: 241px; --mm-script-font: \'Noto Sans Arabic\';'
     );
     expect(render()).toContain(
       'data-testid="invoice-root" data-mm-paper-height="1122" dir="ltr" style='
@@ -719,9 +720,9 @@ describe("Modern Manufacturing template — render", () => {
       invoice.items.splice(1, 0, { name: "Castings", group: true });
     });
     expect(html).toContain('data-ceres-field="irn">IRN123</span>');
-    // IRN on its own line; Ack No. | Ack Date side by side, like the party fields.
+    // IRN, Ack No. and Ack Date one a line, each name in a column, like the other boxes.
     expect(html).toMatch(
-      /<p class="mm-id-line mm-irn-row"><span class="mm-id">IRN No.: <span class="mm-irn-value" data-ceres-field="irn">IRN123<\/span><\/span><\/p>\s*<p class="mm-id-line"><span class="mm-id">Ack No\.: <span class="mm-num" data-testid="num">ACK1<\/span><\/span><span class="mm-id">Ack Date: /
+      /<div class="mm-field mm-irn-row"><span class="mm-label">IRN No.<\/span><span class="mm-value mm-irn-value" data-ceres-field="irn">IRN123<\/span><\/div>\s*<div class="mm-field"><span class="mm-label">Ack No\.<\/span><span class="mm-value mm-num" data-testid="num">ACK1<\/span><\/div>\s*<div class="mm-field"><span class="mm-label">Ack Date<\/span>/
     );
     expect(html).toContain("21-Sep-2026");
     expect(html).toContain('src="data:image/png;base64,AAAA"');
@@ -1322,6 +1323,19 @@ describe("Modern Manufacturing template — view model", () => {
       isEmail: true,
     });
     expect(party.lines[2][1]).toMatchObject({ isNum: true, noWrap: true });
+    expect(party.lines[0][0]).toMatchObject({ noWrap: true });
+    // A tax number typed with spaces wraps at them instead of running out of its box.
+    const spaced = mapParty(
+      {},
+      { name: "B", gstin: "27ABC", panNumber: "GKYP efv 7729A" },
+      "Billed To"
+    ) as Json;
+    expect(
+      spaced.lines[0].map((item: Json) => [item.label, item.noWrap])
+    ).toEqual([
+      ["GSTIN", true],
+      ["PAN", false],
+    ]);
 
     const other = mapParty(
       {},
@@ -1346,13 +1360,14 @@ describe("Modern Manufacturing template — view model", () => {
     ]);
     expect(other.contacts).toEqual([]);
     expect(party.hasIdLines).toBe(true);
-    // GSTIN | PAN and Phone | Email share one grid in the party box, so their columns align.
+    // One party field a line, in order, its name in a column before its value: GSTIN, then
+    // Phone (user, 2026-10-28).
     const html = render((doc) => {
       doc.billedTo.phone = "+91 1";
     });
     const bill = html.slice(html.indexOf("is-bill-to"));
     expect(bill).toMatch(
-      /<div class="mm-id-grid">\s*<p class="mm-id-line"><span class="mm-id">GSTIN:[\s\S]*<\/p>\s*<p class="mm-id-line"><span class="mm-id">Phone:/
+      /<div class="mm-party-fields">\s*<div class="mm-field"><span class="mm-label">GSTIN<\/span><span class="mm-value[\s\S]*<div class="mm-field"><span class="mm-label">Phone<\/span><span class="mm-value/
     );
 
     // Party fields read like GSTIN / PAN: a date is formatted, a sentence wraps.
@@ -1364,15 +1379,15 @@ describe("Modern Manufacturing template — view model", () => {
     });
     const fieldsBox = fields.slice(fields.indexOf("is-bill-to"));
     expect(fieldsBox).toContain(
-      '<p class="mm-id-line"><span class="mm-id">date: <span class="mm-num" data-testid="num">13-Oct-2026</span></span><span class="mm-id">Note: <span>Gate 2 after noon</span></span></p>'
+      '<div class="mm-field"><span class="mm-label">date</span><span class="mm-value mm-num" data-testid="num">13-Oct-2026</span></div>'
     );
-    // The header labels phone and email too.
+    expect(fieldsBox).toContain(
+      '<div class="mm-field"><span class="mm-label">Note</span><span class="mm-value">Gate 2 after noon</span></div>'
+    );
+    // The header: Phone | Email on one line, each name just before its value.
     const header = fields.slice(0, fields.indexOf("</header>"));
     expect(header).toContain(
-      '<span class="mm-id">Phone: <span class="mm-num" data-testid="num">\u2066+91 831 298 7000\u2069</span></span>'
-    );
-    expect(header).toContain(
-      '<span class="mm-id">Email: <span class="mm-email">sales@vertexfoundry.com</span></span>'
+      '<p class="mm-id-line"><span class="mm-id"><span class="mm-id-label">Phone</span><span class="mm-num" data-testid="num">\u2066+91 831 298 7000\u2069</span></span><span class="mm-id"><span class="mm-id-label">Email</span><span class="mm-email">sales@vertexfoundry.com</span></span></p>'
     );
   });
 
@@ -1479,7 +1494,7 @@ describe("Modern Manufacturing template — view model", () => {
       shipTo.indexOf("</div>", shipTo.indexOf('<div class="mm-party-supply"'))
     );
     expect(block).toMatch(
-      /^<div class="mm-party-supply" data-ceres-country-of-supply>\s*<p class="mm-id-line" data-ceres-place-of-supply><span class="mm-id">Place of Supply: <span>Maharashtra \(27\)<\/span><\/span><\/p>\s*<p class="mm-id-line"><span class="mm-id">Country of Supply: <span>India<\/span><\/span><\/p>/
+      /^<div class="mm-party-supply" data-ceres-country-of-supply>\s*<div class="mm-field" data-ceres-place-of-supply><span class="mm-label">Place of Supply<\/span><span class="mm-value">Maharashtra \(27\)<\/span>/
     );
     expect(html.slice(0, html.indexOf("Ship To (Consignee)"))).not.toContain(
       "mm-party-supply"
@@ -3265,6 +3280,7 @@ describe("Modern Manufacturing template — view model", () => {
       browserPrintWidth: 714,
       paperHeight: 1122,
       photoCap: 596,
+      bandCap: 241,
       stretchAllowed: false,
       stretchTable: false,
     });
@@ -3276,6 +3292,9 @@ describe("Modern Manufacturing template — view model", () => {
     expect(paperHeight({})).toBe(1122);
     expect(paperHeight({ format: "a5", landscape: true })).toBe(559);
     expect(printWidth({ format: "A5", xMargins: "0.5" })).toBe(517);
+    // 0 cm is a real margin, not unset: the page takes the paper's whole width.
+    expect(printWidth({ xMargins: "0" })).toBe(789);
+    expect(printWidth({ xMargins: 0 })).toBe(789);
     expect(printWidth({ format: "letter", landscape: true })).toBe(976);
     expect(printWidth({ zoomSize: "0.8" })).toBe(714);
     // A large photo is at most 55 % of the page from the paper itself, never the window (vh).
@@ -3285,6 +3304,14 @@ describe("Modern Manufacturing template — view model", () => {
     expect(photoCap({ zoomSize: "1.2" })).toBe(496);
     expect(photoCap({ zoomSize: "0.8" })).toBe(596);
     expect(printWidth({ zoomSize: "1.1", format: "unknown" })).toBe(641);
+    // The letterhead and footer repeated on every page stay under a quarter of a browser
+    // print's page (1 cm margins), less their 16 px gap and 4 px: Chrome stops repeating a
+    // taller table header or footer, and the fixed footer then covered the content.
+    expect(repeatedBandCap({})).toBe(241);
+    expect(repeatedBandCap({ landscape: true })).toBe(159);
+    expect(repeatedBandCap({ format: "a5", landscape: true })).toBe(100);
+    expect(repeatedBandCap({ zoomSize: "1.2" })).toBe(198);
+    expect(repeatedBandCap({ zoomSize: "0.8" })).toBe(241);
     // "Stretch invoice & quotation tables to fill the page": the business allows it
     // (experimental.stretchInvoiceTable), the document's own toggle asks for it.
     const allowed = {
@@ -3322,7 +3349,7 @@ describe("Modern Manufacturing template — view model", () => {
       invoice.template = { pdfOptions: { format: "a5", textScale: 1.1 } };
     });
     expect(html).toContain(
-      'style="--mm-text-scale: 1.1; --mm-print-width: 479px; --mm-browser-print-width: 479px; --mm-photo-cap: 415px;"'
+      'style="--mm-text-scale: 1.1; --mm-print-width: 479px; --mm-browser-print-width: 479px; --mm-photo-cap: 415px; --mm-band-cap: 159px;"'
     );
     expect(html).not.toContain("--mm-print-zoom");
     expect(html).not.toContain("is-print-compact");
@@ -3490,7 +3517,7 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       /font-size: 18px;\s*line-height: [\d.]+;\s*font-weight: 600;/
     );
     expect(rule(".mm-banner .mm-banner-title")).toMatch(
-      /font-size: 16px;\s*line-height: [\d.]+;\s*font-weight: 600;/
+      /font-size: 20px;\s*line-height: [\d.]+;\s*font-weight: 600;/
     );
     // The copy tag reads like the subtitle (user request).
     expect(rule(".mm-copy")).toMatch(
@@ -3515,7 +3542,7 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     );
     expect(rule(".mm-party-label")).toMatch(/font-weight: 600;/);
     // Field values (transport, bank, additional information) at 500 (user request).
-    expect(rule(".mm-kv-value")).toMatch(/font-weight: 500;/);
+    expect(rule(".mm-kv-value")).toMatch(/font-weight: 600;/);
     expect(rule(".mm-info-value")).toMatch(/font-weight: 500;/);
     expect(css).toMatch(
       /600, not the shared widget's 700\. \*\/\n\.mm-totals \.ceres-subtotal-row-grand > \.ceres-subtotal-value \{\s*font-weight: 600;/
@@ -3579,7 +3606,7 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
       /\.mm-parties > \.mm-pair-box,\s*\.mm-dispatch > \.mm-pair-box \{\s*gap: 6px;\s*padding: 12px;/
     );
     expect(rule(".mm-detail")).toMatch(/gap: 4px;[\s\S]*padding: 12px;/);
-    expect(rule(".mm-detail .mm-value")).toMatch(/font-weight: 500;/);
+    expect(rule(".mm-detail .mm-value")).toMatch(/font-weight: 600;/);
     expect(rule(".mm-banner")).toMatch(/border-radius: 6px;/);
     // Item headers and cells: 6 px on every side, the row ends too (user request).
     expect(css).toMatch(
@@ -3814,13 +3841,36 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     ).not.toMatch(/white-space: nowrap;/);
   });
 
-  it("lines up the second field mid-box in every party box", () => {
-    expect(rule(".mm-party .mm-id-grid")).toMatch(
-      /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
+  it("sets one party field a line, its name in a column as in the Transport box", () => {
+    expect(rule(".mm-party-fields")).toMatch(
+      /display: grid;\s*grid-template-columns: auto auto;\s*justify-content: start;\s*gap: 4px 16px;/
     );
-    // Alone in its row (no Shipped To), the second field sits just after the first.
-    expect(rule(".mm-pair > .mm-party:only-child .mm-id-grid")).toMatch(
-      /grid-template-columns: repeat\(2, auto\);/
+    expect(css).not.toMatch(/\.mm-party:only-child \.mm-party-fields/);
+    expect(rule(".mm-field")).toMatch(/display: contents;/);
+    // The name column is at least 100 px and widens to its longest name while the values fit.
+    expect(rule(".mm-field > .mm-label::before")).toMatch(
+      /width: min\(100px, 30cqi\);\s*height: 0;/
+    );
+    // Party boxes: title 4 px above the name, name / address / fields 4 px apart.
+    expect(rule(".mm-party-head")).toMatch(/gap: 4px;/);
+    expect(rule(".mm-parties > .mm-party,\n.mm-dispatch > .mm-party")).toMatch(
+      /gap: 4px;/
+    );
+    expect(rule(".mm-field .mm-value")).toMatch(/font-weight: 600;/);
+    // Header and IRN lines ("GSTIN: …") read the same way: the name 400 grey, the value 500 ink.
+    expect(rule(".mm-id-label")).toMatch(
+      /color: var\(--mm-muted\);\s*font-weight: 400;/
+    );
+    expect(rule(".mm-id-line")).toMatch(/color: var\(--mm-ink\);/);
+    // The header's seller fields: two a line, each name 12 px before its value.
+    expect(rule(".mm-seller-ids,\n.mm-seller-ids > .mm-id-line")).toMatch(
+      /gap: 4px 24px;/
+    );
+    expect(rule(".mm-seller-ids .mm-id-label")).toMatch(
+      /margin-inline-end: 12px;/
+    );
+    expect(css).toMatch(
+      /\.mm-seller-ids > \.mm-id-line \{\s*font-weight: 600;/
     );
   });
 
@@ -3871,7 +3921,7 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
   });
 
   it("sets the bank details rows 6 px apart", () => {
-    expect(rule(".mm-bank-rows")).toMatch(/gap: 6px 24px;/);
+    expect(rule(".mm-bank-rows")).toMatch(/gap: 4px 16px;/);
   });
 
   it("heads tables in descriptions and notes like the summary tables", () => {
@@ -3965,13 +4015,8 @@ describe("Modern Manufacturing template — CSS (spec tokens and scope)", () => 
     expect(css).toMatch(
       /\.mm-doc \.mm-widget-table \.ceres-table td\[data-label\]::before \{[^}]*content: attr\(data-label\);/
     );
-    // A party line whose field does not fit its half on one line stacks its fields instead.
-    expect(rule(".mm-id-grid > .mm-id-line.is-stacked > .mm-id")).toMatch(
-      /grid-column: 1 \/ -1;/
-    );
-    expect(rule(".mm-id-grid.is-measuring > .mm-id-line .mm-id")).toMatch(
-      /white-space: nowrap;/
-    );
+    // Party fields: one a line, never split onto stacked rows.
+    expect(css).not.toMatch(/\.mm-id-line\.is-stacked/);
     expect(rule(".mm-large-image")).toMatch(
       /width: 100%;\s*max-width: 100%;\s*height: auto;/
     );

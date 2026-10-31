@@ -441,7 +441,7 @@ test("D1: tokens, typography, spacing and column widths match Figma", async ({
   // CHANGED (user request, 2026-10-07): body text 12 px → 13 px.
   const type: [string, string, string][] = [
     ['[data-section="header"] [data-role="company-name"]', "18px", "600"],
-    ['[data-section="banner"] [data-role="title"]', "16px", "600"],
+    ['[data-section="banner"] [data-role="title"]', "20px", "600"],
     ['[data-testid="items-header"] [data-col="desc"]', "13px", "600"],
     ['[data-testid="item-row"] [data-col="qty"]', "13px", "400"],
     ['[data-testid="item-row"] [data-col="amt"]', "13px", "600"],

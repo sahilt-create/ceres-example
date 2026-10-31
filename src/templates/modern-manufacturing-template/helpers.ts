@@ -795,7 +795,7 @@ export const mapParty = (
    * boxes: the tax numbers (GSTIN | PAN …), Phone | Email, then the responsible person and
    * the party's own fields (ID No., custom fields…) two to a line, in the order they were
    * filled in the form. Figures, codes, dates and one-word values never wrap
-   * (isNum); an email stays on one line while it fits and breaks only when its box is too
+   * (isNum); a value with spaces wraps at them; an email stays on one line while it fits and breaks only when its box is too
    * narrow (isEmail), never overflowing; other text wraps.
    */
   const entry = (row: LabelValue & { isNum?: boolean }, isNum: boolean) => ({
@@ -812,7 +812,8 @@ export const mapParty = (
       .filter((_, index) => index % 2 === 0)
       .map((_, index) => rows.slice(index * 2, index * 2 + 2));
   const lines = [
-    ids.map((row) => entry(row, true)),
+    // A tax number stays whole; one typed with spaces wraps at them (user, 2026-10-27).
+    ids.map((row) => entry(row, /^\S+$/.test(row.value))),
     contacts.map((row) => entry(row, row.isNum)),
     ...pairs(
       [...person, ...extras].map((row) =>
@@ -3246,7 +3247,11 @@ export const printWidth = (pdfOptions: UnknownRecord): number => {
   const paperMm = flagSetting(pdfOptions.landscape) === true ? height : width;
   const zoom = positiveNumber(pdfOptions.zoomSize) ?? 1;
   const rendererZoom = zoom === 0.8 ? 1 : zoom;
-  const sideMarginCm = positiveNumber(pdfOptions.xMargins) ?? 1;
+  // 0 cm is a real choice (Refrens' "0" margin), not unset: only a missing value means 1 cm.
+  const margin = hasValue(pdfOptions.xMargins)
+    ? Number(text(pdfOptions.xMargins))
+    : NaN;
+  const sideMarginCm = Number.isFinite(margin) && margin >= 0 ? margin : 1;
   return Math.floor(
     ((paperMm / 25.4) * 96) / rendererZoom - (2 * sideMarginCm * 96) / 2.54 - 4
   );
@@ -3280,6 +3285,23 @@ export const photoCap = (pdfOptions: UnknownRecord): number => {
   );
 };
 
+/*
+ * The letterhead and footer on every printed page repeat as the page frame's <thead> and
+ * <tfoot>, and Chrome stops repeating either once it is taller than a quarter of the page:
+ * a landscape A4 footer (224 px of a 718 px page) then printed over the content of every page
+ * (2026-10-27). Each band is kept under that quarter of a browser print's page (1 cm margins,
+ * its 16 px gap and 4 px to spare included), in the document's own pixels.
+ */
+// A browser's own print: 1 cm above and below the page.
+const BROWSER_MARGINS_PX = (2 * 96) / 2.54;
+
+export const repeatedBandCap = (pdfOptions: UnknownRecord): number => {
+  const zoom = positiveNumber(pdfOptions.zoomSize) ?? 1;
+  const rendererZoom = zoom === 0.8 ? 1 : zoom;
+  const pageArea = paperHeight(pdfOptions) - BROWSER_MARGINS_PX;
+  return Math.floor(pageArea / rendererZoom / 4) - 20;
+};
+
 export const mapPrint = (state: UnknownRecord) => {
   const pdfOptions = asRecord(state.pdfOptions);
   const invoice = asRecord(state.invoice);
@@ -3306,6 +3328,7 @@ export const mapPrint = (state: UnknownRecord) => {
     browserPrintWidth: printWidth({ ...pdfOptions, xMargins: 1 }),
     paperHeight: paperHeight(pdfOptions),
     photoCap: photoCap(pdfOptions),
+    bandCap: repeatedBandCap(pdfOptions),
     stretchAllowed,
     stretchTable:
       stretchAllowed && flagSetting(pdfOptions.fullHeightTable) === true,
@@ -3367,13 +3390,18 @@ export const buildModernManufacturingView = (root: unknown) => {
     ...supply.rows.filter((row) => row.key === "placeOfSupply"),
     ...supply.rows.filter((row) => row.key === "countryOfSupply"),
   ];
-  const partyBoxes = parties.map((party) => ({
-    ...party,
-    supply:
+  const partyBoxes = parties.map((party) => {
+    const partySupply =
       !party.isBillTo && supplyLines.length
         ? { hidden: supply.hidden, rows: supplyLines }
-        : null,
-  }));
+        : null;
+    return {
+      ...party,
+      supply: partySupply,
+      // The field grid: the party's own fields, then (Shipped To) its supply rows.
+      hasFields: Boolean(party.hasIdLines || partySupply),
+    };
+  });
   const status = statusTag(invoice);
   const hsn = mapHsnSummary(state, ctx);
   const payments = asArray(invoice.allPayments);
@@ -3925,13 +3953,24 @@ export const withPrintRules = <T>(width: number, measure: () => T): T => {
  * The template's stylesheet comes from another origin than the renderer (GitHub Pages under
  * lstatic.refrens.com), so its rules cannot be read and withPrintRules could not switch its
  * print rules on: a browser's own print counted the pages of an unfitted table and left blank
- * pages at the end (2026-10-24). Once loaded, the same CSS is fetched (both hosts allow it) and
- * put in the page as a <style> right after the link, which is then switched off: the page reads
- * as before, and its rules can be read. A readable stylesheet (served from the renderer's own
- * origin) is left alone.
+ * pages at the end (2026-10-24). The bundle carries the same CSS as text (index.ts), without
+ * its font imports: put in the page once as a <style> right after the stylesheet, switched
+ * off, and switched on only for a measurement. Nothing is requested: Refrens' PDF service
+ * answered a fetched copy with a "404 Web Site" page instead of the PDF (Viraj, 2026-10-26),
+ * and switching the link off reloads it. A readable stylesheet (served from the renderer's
+ * own origin) is left alone.
  */
 const TEMPLATE_STYLESHEET =
   /\/modern-manufacturing-template\/[^/]+\/bundle\.css(?:[?#]|$)/;
+
+let stylesheetText = "";
+let measureStyle: HTMLStyleElement | null = null;
+
+export const setModernManufacturingStylesheetText = (css: string): void => {
+  stylesheetText = css
+    .replace(/@import[^;]*;/g, "")
+    .replace(/@font-face\s*\{[^}]*\}/g, "");
+};
 
 const readable = (sheet: CSSStyleSheet | null): boolean => {
   try {
@@ -3941,36 +3980,31 @@ const readable = (sheet: CSSStyleSheet | null): boolean => {
   }
 };
 
-export const inlineTemplateStylesheet = (): Promise<void> =>
-  Promise.all(
-    Array.from(
-      document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
-    )
-      .filter(
-        (link) =>
-          TEMPLATE_STYLESHEET.test(link.href) &&
-          !link.disabled &&
-          !link.hasAttribute("data-mm-inlining") &&
-          link.sheet &&
-          !readable(link.sheet)
-      )
-      .map(async (link) => {
-        link.setAttribute("data-mm-inlining", "");
-        try {
-          const response = await fetch(link.href, { mode: "cors" });
-          if (!response.ok) throw new Error(String(response.status));
-          const style = document.createElement("style");
-          style.setAttribute("data-mm-stylesheet", link.href);
-          style.textContent = await response.text();
-          link.after(style);
-          // eslint-disable-next-line no-param-reassign
-          link.disabled = true;
-        } catch {
-          // Not fetched: the link stays in use; the print media listener still fits the table.
-          link.removeAttribute("data-mm-inlining");
-        }
-      })
-  ).then(() => undefined);
+export const withReadableStylesheet = <T>(measure: () => T): T => {
+  const link = Array.from(
+    document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
+  ).find(
+    (candidate) =>
+      TEMPLATE_STYLESHEET.test(candidate.href) && !readable(candidate.sheet)
+  );
+  if (!link || !stylesheetText) return measure();
+  if (!measureStyle?.isConnected) {
+    measureStyle = document.createElement("style");
+    measureStyle.setAttribute("data-mm-measure", "");
+    measureStyle.textContent = stylesheetText;
+    link.after(measureStyle);
+  }
+  const { sheet } = measureStyle;
+  if (!sheet) return measure();
+  // The link itself is left as it is: switching its media off and back for the measurement
+  // dropped the last pages of a browser's printout (the HSN and tax summaries, 2026-10-27).
+  sheet.disabled = false;
+  try {
+    return measure();
+  } finally {
+    sheet.disabled = true;
+  }
+};
 
 /*
  * For the same measurement, the template's own checks of `matchMedia("print")` answer yes, so
@@ -4023,10 +4057,12 @@ export const prepareBrowserPrint = (
   ).map((table) => [table, table.className] as const);
   fitted.forEach(([table]) => table.classList.remove("is-cards", "is-grid"));
   const docWidth = doc.style.width;
-  withPrintRules(width, () => {
-    doc.style.width = `${width}px`;
-    withPrintMedia(() => (layout ? layout() : fitPrintTable(root, true)));
-  });
+  withReadableStylesheet(() =>
+    withPrintRules(width, () => {
+      doc.style.width = `${width}px`;
+      withPrintMedia(() => (layout ? layout() : fitPrintTable(root, true)));
+    })
+  );
   doc.style.width = docWidth;
   fitted.forEach(([table, className]) => {
     // eslint-disable-next-line no-param-reassign
@@ -4354,26 +4390,21 @@ export const labelSummaryCells = (root: ParentNode = document): void => {
 };
 
 /*
- * Two fields side by side in a party box (Phone | Email): when one of them does not fit its half
- * on one line (a long email, "GSTIN:" over its number), the line puts each field on a row of its
- * own, the whole width of the box, rather than wrap it (user, 2026-10-20). A field still too
- * wide for the whole box wraps as before.
+ * Party fields stay one a line; the header's seller fields go one a line only when a field of
+ * theirs would wrap two across (an A5 page; user, 2026-10-28). The boxes are stacked too.
  */
 export const stackCrampedFields = (root: ParentNode = document): void => {
-  root.querySelectorAll<HTMLElement>(".mm-id-grid").forEach((grid) => {
-    const lines = [
-      ...grid.querySelectorAll<HTMLElement>(":scope > .mm-id-line"),
-    ].filter((line) => line.children.length > 1);
-    if (!lines.length) return;
-    lines.forEach((line) => line.classList.remove("is-stacked"));
-    grid.classList.add("is-measuring");
-    const cramped = lines.filter((line) =>
-      [...line.querySelectorAll<HTMLElement>(":scope > .mm-id")].some(
-        (field) => field.scrollWidth > field.clientWidth + 1
-      )
+  root
+    .querySelectorAll<HTMLElement>(".mm-id-line.is-stacked")
+    .forEach((line) => line.classList.remove("is-stacked"));
+  root.querySelectorAll<HTMLElement>(".mm-seller-ids").forEach((grid) => {
+    grid.classList.remove("is-stacked");
+    const wraps = [...grid.querySelectorAll<HTMLElement>(".mm-id")].some(
+      (field) =>
+        field.getBoundingClientRect().height >
+        (parseFloat(getComputedStyle(field).lineHeight) || 20) * 1.5
     );
-    grid.classList.remove("is-measuring");
-    cramped.forEach((line) => line.classList.add("is-stacked"));
+    if (wraps) grid.classList.add("is-stacked");
   });
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   stackCrampedPairs(root);
@@ -4453,9 +4484,13 @@ export const registerModernManufacturingPrint = (): void => {
     printLayout();
     placeFootersOnPageEdge();
   });
-  window.addEventListener("beforeprint", () =>
-    prepareBrowserPrint(printLayout)
-  );
+  // Refrens' PDF service is already in print media when it prints (the listener above laid
+  // the page out) and its PDF call fires beforeprint too: refitting then would fit the table
+  // to a browser's 1 cm margins instead of the document's own.
+  window.addEventListener("beforeprint", () => {
+    if (window.matchMedia("print").matches) return;
+    prepareBrowserPrint(printLayout);
+  });
   window.addEventListener("afterprint", reset);
   window.addEventListener("message", (event) => {
     applyTemplateUpdate(event.data);
@@ -4496,9 +4531,6 @@ export const registerModernManufacturingPrint = (): void => {
     },
     true
   );
-  // The template's stylesheet made readable for a browser's own print, now or once it loads.
-  inlineTemplateStylesheet();
-  document.addEventListener("load", () => inlineTemplateStylesheet(), true);
   document.fonts?.ready.then(refitSoon);
   if (typeof MutationObserver === "function") {
     new MutationObserver(refitSoon).observe(document.documentElement, {

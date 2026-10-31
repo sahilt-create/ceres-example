@@ -47,9 +47,9 @@
   --mm-font-size-xs: 10px;
   --mm-font-size-s: 11px;
   --mm-font-size-base: 13px;
-  --mm-font-size-m: 16px; /* the banner title, 16 px (user request) */
+  --mm-font-size-m: 16px;
   --mm-font-size-lg: 18px;
-  --mm-font-size-xl: 20px;
+  --mm-font-size-xl: 20px; /* the banner title (user, 2026-10-28) */
   --mm-title-font: var(--title-font, var(--mm-font)), var(--mm-script-font, sans-serif);
 
   display: flex;
@@ -328,12 +328,13 @@
   border-radius: 8px;
 }
 
-/* GSTIN / PAN / phone / email: 12/500, 8 px between items. */
+/* GSTIN / PAN / phone / email: the value 500 in ink, its name 400 in grey, as in the details
+   box (user, 2026-10-27); 8 px between items. */
 .mm-id-line {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 8px;
-  color: var(--mm-strong);
+  color: var(--mm-ink);
   font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   font-weight: 500;
@@ -366,12 +367,14 @@
 
 /* .mm-banner .mm-banner-title outranks the h2 margin reset. Title, copy tag and status tag sit
    together at the start, 12 px apart (the banner's gap); the subtitle takes the free space. */
+
+/* The title 20 px on 24 px lines (user, 2026-10-28). */
 .mm-banner .mm-banner-title {
   min-width: 0;
   margin-inline-end: 0;
   font-family: var(--mm-title-font);
-  font-size: calc(var(--mm-font-size-m) * var(--mm-text-scale, 1));
-  line-height: 1.5;
+  font-size: calc(var(--mm-font-size-xl) * var(--mm-text-scale, 1));
+  line-height: 1.2;
   font-weight: 600;
 }
 
@@ -426,7 +429,7 @@
 
 .mm-detail .mm-value {
   color: var(--mm-ink);
-  font-weight: 500;
+  font-weight: 600; /* user, 2026-10-28 */
   overflow-wrap: break-word;
 }
 
@@ -449,13 +452,10 @@
   display: flex;
 }
 
+/* It fills the room beside the QR: its own width does not count (container-type). */
 .mm-compliance-fields {
+  flex: 1 1 0;
   min-width: 0;
-}
-
-/* The IRN is long: it takes a line of its own across both columns and breaks anywhere. */
-.mm-id-grid > .mm-irn-row > .mm-id {
-  grid-column: 1 / -1;
 }
 
 .mm-irn-row:has(.mm-irn-value:empty) {
@@ -531,6 +531,19 @@
   font-weight: 600;
 }
 
+/* Party boxes: the title 4 px above the name; name, address and the fields 4 px apart (user,
+   2026-10-28). */
+.mm-parties > .mm-party,
+.mm-dispatch > .mm-party {
+  gap: 4px;
+}
+
+.mm-party-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .mm-party-name {
   color: var(--mm-strong);
   font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
@@ -544,6 +557,11 @@
   font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
   line-height: 1.5385;
   overflow-wrap: break-word;
+}
+
+.mm-id-label {
+  color: var(--mm-muted);
+  font-weight: 400;
 }
 
 /*
@@ -575,27 +593,42 @@
 }
 
 /*
- * Party boxes (Billed To, Shipped To, Shipped From) split into two equal halves, so the second
- * field of a line starts mid-box in every box, however short the fields are (user request).
+ * Party boxes (Billed To, Shipped To, Shipped From): one field a line, in order, the names in a
+ * column at least 100 px wide, the values 16 px after it. The name column widens to its longest
+ * name ("Responsible Person" on one line) while the values still fit the box; once they reach
+ * the box edge, names and values both wrap, sharing the room (user, 2026-10-28). A narrow box
+ * (A5) lowers the 100 px floor, so a number never runs into the next box.
  */
-.mm-party .mm-id-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.mm-party-fields {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  gap: 4px 16px; /* rows 4 px apart (user, 2026-10-28) */
+  container-type: inline-size;
+  font-size: calc(var(--mm-font-size-base) * var(--mm-text-scale, 1));
+  line-height: 1.5385;
 }
 
-/* A party box alone in its row (Billed To, no Shipped To) spans the page: its second field sits
-   12 px after the first, as in the header, not mid-page (user, 2026-10-26). */
-.mm-pair > .mm-party:only-child .mm-id-grid {
-  grid-template-columns: repeat(2, auto);
+/* The 100 px floor as a spacer, so a word of the name (Responsible) never breaks below it. */
+.mm-field > .mm-label::before {
+  content: "";
+  display: block;
+  width: min(100px, 30cqi);
+  height: 0;
 }
 
-/* A line whose field does not fit its half on one line (a long email, "GSTIN:" over its number)
-   gives each field a row of its own (stackCrampedFields; user, 2026-10-20). */
-.mm-id-grid > .mm-id-line.is-stacked > .mm-id {
-  grid-column: 1 / -1;
+.mm-field {
+  display: contents;
 }
 
-.mm-id-grid.is-measuring > .mm-id-line .mm-id {
-  white-space: nowrap;
+/* No min-width: 0 here: a number keeps its width and the names wrap first. */
+.mm-field > * {
+  overflow-wrap: break-word;
+}
+
+.mm-field .mm-value {
+  color: var(--mm-ink);
+  font-weight: 600; /* user, 2026-10-27: party values stand out from their grey names */
 }
 
 /* An email has no spaces: it breaks anywhere, and only when its column is too narrow. */
@@ -607,7 +640,7 @@
 .mm-kv-row {
   display: grid;
   grid-template-columns: 100px minmax(0, 1fr);
-  column-gap: 24px;
+  column-gap: 16px; /* user, 2026-10-28 */
 }
 
 /*
@@ -646,25 +679,24 @@
 
 .mm-kv-value {
   color: var(--mm-strong);
-  font-weight: 500; /* user request: field values at 500, like the party and seller fields */
+  font-weight: 600; /* Transport and Bank values at 600, as the party values (user, 2026-10-28) */
   overflow-wrap: break-word;
 }
 
-.mm-transport {
-  gap: 8px;
+/* Rows 4 px apart (user, 2026-10-28); the title stays 6 px above them. */
+.mm-dispatch > .mm-transport {
+  gap: 4px;
+}
+
+.mm-transport > .mm-party-label {
+  margin-bottom: 2px;
 }
 
 /* ------------------------------------------------------------ supply */
 
-/* Place / Country of Supply under Shipped To, read like its other fields; all hidden, no gap. */
+/* Place / Country of Supply under Shipped To: cells of its field grid, after its other fields. */
 .mm-party-supply {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mm-party-supply:not(:has(> .mm-id-line:not([style*="none"]))) {
-  display: none;
+  display: contents;
 }
 
 /* ------------------------------------------------------------ 6. items table */
@@ -841,6 +873,15 @@
   margin: 0 0 4px 4px;
 }
 
+/* A column never narrower than the thumbnail and a short word beside it: on a page of many
+   columns it fell to the thumbnail's width and the name broke inside its words ("tes / t"). */
+.mm-items td.mm-col-name:has(> .mm-item-thumbnail)::before {
+  content: "";
+  display: block;
+  width: calc(68px + 4em);
+  height: 0;
+}
+
 /* Item images are square-cornered: thumbnail, large image and the gallery below. */
 .mm-thumbnail {
   display: block;
@@ -965,13 +1006,36 @@
   display: grid;
   flex: 1 1 240px;
   grid-template-columns: minmax(100px, max-content) minmax(min-content, 1fr);
-  gap: 6px 24px; /* rows 6 px apart (user request) */
+  gap: 4px 16px; /* rows 4 px apart, 16 px to the value (user, 2026-10-28) */
   align-content: start;
   min-width: 0;
 }
 
 .mm-bank-rows > .mm-kv-row {
   display: contents;
+}
+
+/* The seller's GSTIN | PAN, Phone | Email… in the header: two fields a line, each name 12 px
+   before its value, the second field of every line at the same place, lines 4 px apart
+   (user, 2026-10-28). */
+.mm-seller-ids,
+.mm-seller-ids > .mm-id-line {
+  gap: 4px 24px; /* the line's own gap would win over the grid's */
+  min-width: 0;
+}
+
+.mm-seller-ids .mm-id-label {
+  margin-inline-end: 12px;
+}
+
+/* Values at 600, as in the other boxes (user, 2026-10-28); the names stay 400. */
+.mm-seller-ids > .mm-id-line {
+  font-weight: 600;
+}
+
+/* Too narrow two across (stackCrampedFields): one field a line. */
+.mm-seller-ids.is-stacked {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .mm-upi-qr {
@@ -1643,7 +1707,7 @@
 
 .mm-info-value {
   color: var(--mm-strong);
-  font-weight: 500; /* user request: field values at 500, like the party and seller fields */
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
@@ -1884,7 +1948,7 @@
   unicode-bidi: isolate;
 }
 
-.mm-doc[dir="rtl"] :is(.mm-detail > .mm-value, .mm-detail > .mm-label, .mm-kv-label, .mm-kv-value, .mm-info-label, .mm-info-value) {
+.mm-doc[dir="rtl"] :is(.mm-detail > .mm-value, .mm-detail > .mm-label, .mm-field > .mm-value, .mm-field > .mm-label, .mm-kv-label, .mm-kv-value, .mm-info-label, .mm-info-value) {
   text-align: right;
 }
 
@@ -1892,7 +1956,7 @@
  * "PAN: AAVFV1234H" reads as one line in the direction of its own label, as do the labels and
  * the centred Sr. heading ("Sr.", not ".Sr").
  */
-.mm-doc[dir="rtl"] :is(.mm-detail > .mm-label, .mm-kv-label, .mm-info-label, .mm-id, .mm-items th.mm-col-serial) {
+.mm-doc[dir="rtl"] :is(.mm-detail > .mm-label, .mm-field > .mm-label, .mm-kv-label, .mm-info-label, .mm-id, .mm-items th.mm-col-serial) {
   unicode-bidi: plaintext;
 }
 
@@ -1922,10 +1986,6 @@
 
   .mm-details {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .mm-seller .mm-id-grid {
-    text-align: start;
   }
 
   /* Too narrow for aligned columns: each line wraps on its own. */
@@ -2126,6 +2186,7 @@
   .mm-doc .mm-items th[style] {
     width: auto !important;
   }
+
 
   .mm-desc-min {
     display: none;
@@ -2355,6 +2416,14 @@
     bottom: 0;
     left: 0;
     width: 100%;
+  }
+
+  /* Under a quarter of the page each (helpers repeatedBandCap), or Chrome stops repeating the
+     frame's copies and the fixed footer prints over the content: a taller image keeps its
+     proportions, centred. */
+  .mm-doc :is(.mm-page-frame-header .mm-letterhead, .mm-footer-spacer, .mm-footer-fixed) img {
+    max-height: var(--mm-band-cap, none);
+    object-fit: contain;
   }
 
   /* The PDF service draws the letterhead and footer itself. */

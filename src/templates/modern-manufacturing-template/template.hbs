@@ -13,7 +13,7 @@
   data-role / data-col are the spec's test hooks (section 11).
 --}}
 {{#with (mmView @root) as |view|}}
-<div class="mm-doc" data-testid="invoice-root"{{#if view.foreignCurrency}} data-mm-currency="{{view.foreignCurrency}}"{{/if}}{{#if view.print.stretchAllowed}} data-mm-stretch-allowed{{/if}}{{#if view.print.stretchTable}} data-mm-stretch-table{{/if}} data-mm-paper-height="{{view.print.paperHeight}}" dir="{{view.script.direction}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}} style="--mm-text-scale: {{view.print.textScale}}; --mm-print-width: {{view.print.printWidth}}px; --mm-browser-print-width: {{view.print.browserPrintWidth}}px; --mm-photo-cap: {{view.print.photoCap}}px;{{#if view.script.font}} --mm-script-font: '{{view.script.font}}';{{/if}}{{#if view.theme}} --mm-theme: {{view.theme.accent}}; --mm-theme-tint: {{view.theme.tint}};{{/if}}">
+<div class="mm-doc" data-testid="invoice-root"{{#if view.foreignCurrency}} data-mm-currency="{{view.foreignCurrency}}"{{/if}}{{#if view.print.stretchAllowed}} data-mm-stretch-allowed{{/if}}{{#if view.print.stretchTable}} data-mm-stretch-table{{/if}} data-mm-paper-height="{{view.print.paperHeight}}" dir="{{view.script.direction}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}} style="--mm-text-scale: {{view.print.textScale}}; --mm-print-width: {{view.print.printWidth}}px; --mm-browser-print-width: {{view.print.browserPrintWidth}}px; --mm-photo-cap: {{view.print.photoCap}}px; --mm-band-cap: {{view.print.bandCap}}px;{{#if view.script.font}} --mm-script-font: '{{view.script.font}}';{{/if}}{{#if view.theme}} --mm-theme: {{view.theme.accent}}; --mm-theme-tint: {{view.theme.tint}};{{/if}}">
   {{#unless view.letterheadEveryPage}}
     <div class="no-dibella invoice-letterhead mm-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}">
       {{#if @root.invoice.letterHead}}
@@ -82,9 +82,11 @@
                     </div>
                   {{/if}}
                   {{#if view.brand.seller.hasIdLines}}
-                    <div class="mm-id-grid">
+                    {{!-- Two fields a line, left to right, each name 12 px before its value; the second
+                         field of every line starts at the same place (user, 2026-10-28). --}}
+                    <div class="mm-id-grid mm-seller-ids">
                       {{#each view.brand.seller.lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{else if isEmail}} class="mm-email"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
+                        <p class="mm-id-line">{{#each this}}<span class="mm-id"><span class="mm-id-label">{{label}}</span><span class="{{#if noWrap}}mm-num{{else if isEmail}}mm-email{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
                       {{/each}}
                     </div>
                   {{/if}}
@@ -128,22 +130,25 @@
             <section class="mm-pair mm-parties" data-testid="section" data-section="parties" data-pair="parties">
               {{#each view.parties}}
                 <div class="mm-pair-box mm-party{{#if isBillTo}} is-bill-to{{/if}}">
-                  {{#if title}}<h3 class="mm-label mm-party-label">{{title}}</h3>{{/if}}
-                  <p class="mm-party-name">{{name}}</p>
+                  <div class="mm-party-head">
+                    {{#if title}}<h3 class="mm-label mm-party-label">{{title}}</h3>{{/if}}
+                    <p class="mm-party-name">{{name}}</p>
+                  </div>
                   {{#if address}}<p class="mm-party-address" data-role="address">{{address}}</p>{{/if}}
-                  {{#if hasIdLines}}
-                    <div class="mm-id-grid">
-                      {{#each lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{else if isEmail}} class="mm-email"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
-                      {{/each}}
-                    </div>
-                  {{/if}}
-                  {{#if supply}}
-                    {{!-- Place / Country of Supply, under Shipped To only (user decision); the host's live toggles still reach them. --}}
-                    <div class="mm-party-supply" data-ceres-country-of-supply{{#if supply.hidden}} style="display:none"{{/if}}>
-                      {{#each supply.rows}}
-                        <p class="mm-id-line"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="mm-id">{{label}}: <span>{{value}}</span></span></p>
-                      {{/each}}
+                  {{#if hasFields}}
+                    {{!-- Field name above its value, as in the details box; two to a row, left to right, in order (user, 2026-10-27). --}}
+                    <div class="mm-party-fields">
+                      {{#each lines}}{{#each this}}
+                        <div class="mm-field"><span class="mm-label">{{label}}</span><span class="mm-value{{#if noWrap}} mm-num{{else if isEmail}} mm-email{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></div>
+                      {{/each}}{{/each}}
+                      {{#if supply}}
+                        {{!-- Place / Country of Supply, under Shipped To only (user decision); the host's live toggles still reach them. --}}
+                        <div class="mm-party-supply" data-ceres-country-of-supply{{#if supply.hidden}} style="display:none"{{/if}}>
+                          {{#each supply.rows}}
+                            <div class="mm-field"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="mm-label">{{label}}</span><span class="mm-value">{{value}}</span></div>
+                          {{/each}}
+                        </div>
+                      {{/if}}
                     </div>
                   {{/if}}
                 </div>
@@ -155,14 +160,16 @@
             <section class="mm-pair mm-dispatch" data-testid="section" data-section="dispatch" data-pair="dispatch">
               {{#if view.shippedFrom}}
                 <div class="mm-pair-box mm-party">
-                  {{#if view.shippedFrom.title}}<h3 class="mm-label mm-party-label">{{view.shippedFrom.title}}</h3>{{/if}}
-                  <p class="mm-party-name">{{view.shippedFrom.name}}</p>
+                  <div class="mm-party-head">
+                    {{#if view.shippedFrom.title}}<h3 class="mm-label mm-party-label">{{view.shippedFrom.title}}</h3>{{/if}}
+                    <p class="mm-party-name">{{view.shippedFrom.name}}</p>
+                  </div>
                   {{#if view.shippedFrom.address}}<p class="mm-party-address" data-role="address">{{view.shippedFrom.address}}</p>{{/if}}
                   {{#if view.shippedFrom.hasIdLines}}
-                    <div class="mm-id-grid">
-                      {{#each view.shippedFrom.lines}}
-                        <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span{{#if noWrap}} class="mm-num"{{else if isEmail}} class="mm-email"{{/if}}{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
-                      {{/each}}
+                    <div class="mm-party-fields">
+                      {{#each view.shippedFrom.lines}}{{#each this}}
+                        <div class="mm-field"><span class="mm-label">{{label}}</span><span class="mm-value{{#if noWrap}} mm-num{{else if isEmail}} mm-email{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></div>
+                      {{/each}}{{/each}}
                     </div>
                   {{/if}}
                 </div>
@@ -188,13 +195,14 @@
             host can post values in live; the block shows only once one has a value.
           --}}
           <div class="mm-box mm-compliance">
-            <div class="mm-id-grid mm-compliance-fields">
+            {{!-- One field a line, its name in a column, as in the other boxes (user, 2026-10-28). --}}
+            <div class="mm-party-fields mm-compliance-fields">
               {{#if view.compliance.showIrn}}
-                <p class="mm-id-line mm-irn-row"><span class="mm-id">{{view.compliance.irnLabel}}: <span class="mm-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></span></p>
+                <div class="mm-field mm-irn-row"><span class="mm-label">{{view.compliance.irnLabel}}</span><span class="mm-value mm-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></div>
               {{/if}}
-              {{#each view.compliance.rowLines}}
-                <p class="mm-id-line">{{#each this}}<span class="mm-id">{{label}}: <span class="mm-num" data-testid="num">{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{mmDate value 0}}{{else}}{{value}}{{/if}}</span></span>{{/each}}</p>
-              {{/each}}
+              {{#each view.compliance.rowLines}}{{#each this}}
+                <div class="mm-field"><span class="mm-label">{{label}}</span><span class="mm-value mm-num" data-testid="num">{{#if isDate}}{{mmDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{mmDate value 0}}{{else}}{{value}}{{/if}}</span></div>
+              {{/each}}{{/each}}
             </div>
             <div class="mm-qr-list">
               <div class="mm-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode">

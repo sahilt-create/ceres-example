@@ -19,6 +19,8 @@ import {
   printMediaText,
   withPrintRules,
   prepareBrowserPrint,
+  setModernManufacturingStylesheetText,
+  withReadableStylesheet,
 } from "../src/templates/modern-manufacturing-template/helpers";
 
 /*
@@ -609,6 +611,26 @@ describe("Modern Manufacturing — a wide table fitted to the printed page", () 
     fitPrintTable();
     expect(table().classList.contains("is-print-fit")).toBe(false);
   });
+
+  it("fits before a browser's own print, but not again when the PDF service is already in print", () => {
+    const state = window as typeof window & { mmPrintRegistered?: boolean };
+    delete state.mmPrintRegistered;
+    document.body.innerHTML =
+      '<div class="mm-doc" style="--mm-print-width: 714px;"><div class="mm-items-scroll"><table class="mm-items"></table></div></div>';
+    mockWidths(1000, 900);
+    window.matchMedia = jest
+      .fn()
+      .mockReturnValue({ matches: true, addEventListener: () => undefined });
+    registerModernManufacturingPrint();
+    window.dispatchEvent(new Event("beforeprint"));
+    expect(table().classList.contains("is-print-fit")).toBe(false);
+
+    window.matchMedia = jest
+      .fn()
+      .mockReturnValue({ matches: false, addEventListener: () => undefined });
+    window.dispatchEvent(new Event("beforeprint"));
+    expect(table().classList.contains("is-print-fit")).toBe(true);
+  });
 });
 
 describe("Modern Manufacturing — the tax summary's words in the document's currency", () => {
@@ -706,15 +728,14 @@ describe("Modern Manufacturing — party fields too wide for their half", () => 
     return [...document.querySelectorAll<HTMLElement>(".mm-id-line")];
   };
 
-  it("stacks a line whose field needs more than its half, measured on one line", () => {
+  it("keeps every line two fields across, in order, however wide a field is", () => {
     const lines = grid([[150, 180], [150, 260], [320]]);
     stackCrampedFields();
     expect(lines.map((line) => line.classList.contains("is-stacked"))).toEqual([
       false,
-      true,
+      false,
       false,
     ]);
-    expect(document.querySelector(".is-measuring")).toBeNull();
   });
 
   it("puts a line back side by side once its fields fit again", () => {
@@ -815,6 +836,64 @@ describe("Modern Manufacturing — a browser's own print", () => {
     expect(document.querySelector(".mm-items")?.className).toBe(
       "mm-items has-thumbnails is-cards"
     );
+  });
+});
+
+describe("Modern Manufacturing — the cross-origin stylesheet, readable without a request", () => {
+  const crossOriginLink = () => {
+    document.head.innerHTML = "";
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href =
+      "https://example.github.io/templates/modern-manufacturing-template/1.0.10/bundle.css";
+    document.head.appendChild(link);
+    const media = { mediaText: "" };
+    Object.defineProperty(link, "sheet", {
+      configurable: true,
+      get: () => ({
+        media,
+        get cssRules() {
+          throw new DOMException("cross-origin", "SecurityError");
+        },
+      }),
+    });
+    return media;
+  };
+
+  it("measures with the bundled CSS text switched on, then off again, leaving the link alone", () => {
+    setModernManufacturingStylesheetText(
+      '@import url("https://fonts.example/inter.css");\n@font-face { font-family: X; src: url(x.woff2); }\n@media print { .probe { color: red; } }'
+    );
+    const media = crossOriginLink();
+    const seen = withReadableStylesheet(() => {
+      const style = document.querySelector<HTMLStyleElement>(
+        "style[data-mm-measure]"
+      );
+      return {
+        enabled: style?.sheet?.disabled === false,
+        text: style?.textContent ?? "",
+        linkMedia: media.mediaText,
+      };
+    });
+    expect(seen.enabled).toBe(true);
+    expect(seen.linkMedia).toBe("");
+    expect(seen.text).toContain("@media print");
+    expect(seen.text).not.toContain("@import");
+    expect(seen.text).not.toContain("@font-face");
+    expect(media.mediaText).toBe("");
+    expect(
+      document.querySelector<HTMLStyleElement>("style[data-mm-measure]")?.sheet
+        ?.disabled
+    ).toBe(true);
+  });
+
+  it("never fetches the stylesheet (Refrens' PDF service answered that with a 404 page)", () => {
+    crossOriginLink();
+    const fetchSpy = jest.fn();
+    (window as unknown as { fetch: unknown }).fetch = fetchSpy;
+    withReadableStylesheet(() => undefined);
+    document.dispatchEvent(new Event("load"));
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
