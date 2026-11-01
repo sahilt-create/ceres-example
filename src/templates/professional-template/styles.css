@@ -1475,16 +1475,15 @@
     --pt-gutter: 0px;
 
     /*
-     * A table too wide for the paper scales the whole document (--pt-doc-fit, helpers.ts
-     * fitPrintTable), as refrens.com's own PDF does, so print keeps the screen's proportions;
-     * it is laid out that much wider, so it still fills the page.
+     * Nothing shrinks to fit the paper: every text, the tables' included, prints at the print
+     * size (zoomSize, the renderer's html zoom), and a table too wide for the page is cut off at
+     * its edge (.pt-items-scroll clips it); landscape gives it room (user, 2026-11-01).
      */
-    zoom: var(--pt-doc-fit, 1);
-    width: calc(100% / var(--pt-doc-fit, 1));
+    width: 100%;
 
     /* Never wider than the paper's printable width (helpers.ts mapPrint): Refrens' PDF
        service lays the page out in a window wider than the paper before it prints. */
-    max-width: calc(var(--pt-print-width, 100000px) / var(--pt-doc-fit, 1));
+    max-width: var(--pt-print-width, 100000px);
 
     /* Centred: a browser's own print keeps 1 cm margins, so a document set to wider ones
        (xMargins 2) sits in the middle of the page rather than against its left edge. */
@@ -1495,7 +1494,7 @@
      prints, narrower than a landscape or A3 page: the document takes the paper's printable
      width there, so the table is fitted to the paper and not to the window. */
   [class~="isDibella"] .pt-doc {
-    width: calc(var(--pt-print-width, 100%) / var(--pt-doc-fit, 1));
+    width: var(--pt-print-width, 100%);
     max-width: none;
   }
 

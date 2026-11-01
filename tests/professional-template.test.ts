@@ -538,19 +538,23 @@ describe("Professional Template — boolean settings", () => {
     expect(html).not.toContain("is-footer-hidden");
   });
 
-  // User (2026-10-31): a table too wide for the paper scales the whole document, as refrens.com
-  // does, never the table alone (no compact padding, no table-only text shrink).
-  it("fits a wide table by scaling the whole document in print", () => {
+  // User (2026-11-01): text scale is the same everywhere. Nothing shrinks to fit the paper, the
+  // table included; a table too wide for the page is cut off at its edge (landscape gives room).
+  it("never shrinks the document or the table to fit the paper", () => {
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     const print = css.slice(css.indexOf("@media print {"));
     expect(print).toMatch(
-      /\.pt-doc \{[^}]*zoom: var\(--pt-doc-fit, 1\);\s*width: calc\(100% \/ var\(--pt-doc-fit, 1\)\);/
+      /\.pt-doc \{[^}]*width: 100%;\s*[^}]*max-width: var\(--pt-print-width, 100000px\);/
     );
-    expect(css).not.toMatch(/is-print-compact|--pt-table-fit/);
-    expect(render()).not.toMatch(/is-print-compact|--pt-table-fit/);
-    const print4 = mapPrint(state()) as Record<string, unknown>;
-    expect(print4.compactTable).toBeUndefined();
-    expect(print4.tableFit).toBeUndefined();
+    expect(print).toMatch(
+      /\.pt-items-scroll,\s*\.pt-widget-table \{\s*overflow: clip;/
+    );
+    expect(css).not.toMatch(
+      /--pt-doc-fit|is-print-compact|--pt-table-fit|zoom:/
+    );
+    expect(render()).not.toMatch(
+      /--pt-doc-fit|is-print-compact|--pt-table-fit/
+    );
   });
 
   // The business's toggle alone stretches the printed table; the document's own is ignored
@@ -1107,10 +1111,8 @@ describe("Professional Template — files and CSS", () => {
       "text-transform: uppercase",
     ]);
     expect(source).not.toMatch(/@page\s*\{/);
-    // The one zoom: the whole document's print fit for a too-wide table (2026-10-31).
-    expect(source.match(/zoom:[^;]+;/g)).toEqual([
-      "zoom: var(--pt-doc-fit, 1);",
-    ]);
+    // No zoom of its own: the print size is the renderer's html zoom (user, 2026-11-01).
+    expect(source.match(/zoom:[^;]+;/g)).toBeNull();
     const sizes = Array.from(
       source.matchAll(/font-size:\s*([^;]+);/g),
       (m) => m[1]
@@ -1440,10 +1442,10 @@ describe("Professional Template — PDF service page hooks", () => {
 describe("Professional Template — PDF service window", () => {
   const source = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
   it("lays the document out at the paper's printable width in the PDF service", () => {
-    // The service's window is narrower than a landscape page: the fit must see the paper.
+    // The service's window is narrower than a landscape page: the layout must see the paper.
     const print = source.slice(source.indexOf("@media print {"));
     expect(print).toMatch(
-      /\[class~="isDibella"\] \.pt-doc \{\s*width: calc\(var\(--pt-print-width, 100%\) \/ var\(--pt-doc-fit, 1\)\);\s*max-width: none;/
+      /\[class~="isDibella"\] \.pt-doc \{\s*width: var\(--pt-print-width, 100%\);\s*max-width: none;/
     );
   });
 });

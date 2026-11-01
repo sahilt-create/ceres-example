@@ -2,8 +2,6 @@
  * @jest-environment jsdom
  */
 import {
-  clearPreparedPrint,
-  fitPrintTable,
   prepareBrowserPrint,
   printMediaText,
   setProfessionalStylesheetText,
@@ -125,56 +123,17 @@ describe("Professional Template — a browser's own print", () => {
     expect(doc.style.getPropertyValue("--pt-print-width")).toBe("714px");
   });
 
-  // A wide table scales the whole document (user, 2026-10-31), as refrens.com's PDF does.
-  const wideTable = (need: number) => {
+  // Nothing shrinks to fit the paper (user, 2026-11-01): the browser's print lays the page out
+  // at its width and the table keeps the print size, cut off at the edge when too wide.
+  it("never scales the document or the table for a browser's print", () => {
     document.body.innerHTML = `<div class="pt-doc" style="--pt-print-width: 714px;"><div class="pt-items-scroll"><table class="pt-items"></table></div></div>`;
     const doc = document.querySelector(".pt-doc") as HTMLElement;
-    const box = document.querySelector(".pt-items-scroll") as HTMLElement;
-    const table = document.querySelector(".pt-items") as HTMLElement;
-    // The room grows as the document is laid out wider by 1 / fit; the table's narrowest stays.
-    const fit = () =>
-      parseFloat(doc.style.getPropertyValue("--pt-doc-fit")) || 1;
-    box.getBoundingClientRect = () => ({ width: 714 / fit() } as DOMRect);
-    table.getBoundingClientRect = () => ({ width: need } as DOMRect);
-    table.getClientRects = () => [{}] as unknown as DOMRectList;
-    return { doc, fit };
-  };
-  const inPrint = <T>(run: () => T): T => {
-    const original = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: /print/.test(query),
-      media: query,
-    })) as unknown as typeof window.matchMedia;
-    try {
-      return run();
-    } finally {
-      window.matchMedia = original;
-    }
-  };
-
-  it("scales the whole document so a wide table fits, and leaves a narrow one alone", () => {
-    const wide = wideTable(980);
-    inPrint(() => fitPrintTable());
-    // 714 × 0.99 / 980 = 0.721
-    expect(wide.fit()).toBeCloseTo(0.721, 2);
-    fitPrintTable(); // screen: no fit
-    expect(wide.doc.style.getPropertyValue("--pt-doc-fit")).toBe("");
-    const narrow = wideTable(600);
-    inPrint(() => fitPrintTable());
-    expect(narrow.doc.style.getPropertyValue("--pt-doc-fit")).toBe("");
-  });
-
-  // A browser's print counts pages from the prepared layout; what prints must match it.
-  it("allows for print's wider text when preparing, then keeps what was prepared", () => {
-    const { doc, fit } = wideTable(700);
-    // 700 px in screen media fits 714 × 0.99; with print's wider text (× 1.06) it does not.
-    prepareBrowserPrint(() => fitPrintTable());
-    const prepared = Number(doc.dataset.ptPreparedZoom);
-    expect(prepared).toBeLessThan(1);
-    // In print the same table would fit unscaled, yet keeps the prepared scale.
-    inPrint(() => fitPrintTable());
-    expect(fit()).toBe(prepared);
-    clearPreparedPrint();
+    let widthWhilePreparing = "";
+    prepareBrowserPrint(() => {
+      widthWhilePreparing = doc.style.width;
+    });
+    expect(widthWhilePreparing).toBe("714px");
+    expect(doc.getAttribute("style")).not.toMatch(/zoom|fit/);
     expect(doc.dataset.ptPreparedZoom).toBeUndefined();
   });
 
