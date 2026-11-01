@@ -4431,6 +4431,8 @@ export interface FooterPlacement {
 const PAGE_EDGE_SLACK = 6;
 
 /* The space to add above the footer so it ends on the page's bottom edge. */
+// Per page, how much earlier the page ends read off forced breaks are taken (placeFootersOnPageEdge).
+const PAGE_END_DRIFT = 4;
 
 /* Below this a "page" is a collapsed forced break, not a printed page (Dibella path). */
 const MIN_PAGE_HEIGHT = 200;
@@ -4488,8 +4490,18 @@ export const placeFootersOnPageEdge = (root: ParentNode = document): void => {
       parent.insertBefore(marker, footer);
       return marker;
     });
-    const [pageEnd, nextPageEnd] = breaks.map(pageTop);
+    const [rawPageEnd, rawNextPageEnd] = breaks.map(pageTop);
     breaks.forEach((marker) => marker.remove());
+    // Page ends read off forced breaks run late by 2.4–2.6 px a page (measured 2026-10-31 and
+    // 2026-11-01: 26 px by page 10 of an A4 invoice with a cut-off table), and a footer set on
+    // them slipped onto a page the print had not counted (lost, a blank last page). They are
+    // taken 4 px a page earlier.
+    const drift = (end: number) =>
+      rawNextPageEnd > rawPageEnd
+        ? PAGE_END_DRIFT * Math.round(end / (rawNextPageEnd - rawPageEnd))
+        : 0;
+    const pageEnd = rawPageEnd - drift(rawPageEnd);
+    const nextPageEnd = rawNextPageEnd - drift(rawNextPageEnd);
     const pageHeight = nextPageEnd - pageEnd;
     // Not paginated yet (the PDF service switches to print media before it prints, so the
     // forced breaks collapse to a few pixels): the page edge cannot be measured, and the
