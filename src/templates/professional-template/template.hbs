@@ -1,0 +1,579 @@
+{{!--
+  Professional Template (Figma Document-Templates, node 1801:8109 "Professional Template").
+
+  Root is normalizeInvoiceTemplateState's output. Every block reads the view model built once
+  by `ptView` (helpers.ts): labels, visibility and table columns all come from the payload.
+  The design has no fixed assets: the logo, the QR codes and the signature are the document's.
+
+  Order: header (title + status | document details, business logo + document QR), Billed By |
+  Billed To, Shipped From | Shipped To, Transport Details | E-Invoice / E-Way Bill (with the
+  e-invoice QR), items (with the column-sum row), then two columns: Bank and UPI, Terms, Notes,
+  Additional Info, Attachments on the left; totals, amount in words and signature on the
+  right. Summaries (HSN, tax, batch, payments) and the enquiry line close the document.
+  data-testid / data-section / data-col are test hooks; data-ceres-* are the host's live
+  update targets.
+--}}
+{{#with (ptView @root) as |view|}}
+<div class="pt-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-pt-currency="{{@root.invoice.currency}}" data-testid="invoice-root" data-pt-side-margin="{{view.print.sideMargin}}" data-pt-paper-width="{{view.print.paperWidth}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--pt-text-scale: {{view.print.textScale}}; --pt-print-scale: {{view.print.printScale}}; --pt-print-width: {{view.print.printWidth}}px; --pt-browser-print-width: {{view.print.browserPrintWidth}}px; --pt-print-base: {{view.print.printBase}}px; --pt-browser-print-height: {{view.print.browserPrintHeight}}px; --pt-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --pt-theme: {{view.theme.accent}}; --pt-on-accent: {{view.theme.onAccent}};{{/if}}{{#if view.script.font}} --pt-script-font: {{{view.script.font}}};{{/if}}">
+  {{!-- Text Scale Smaller (0.8, also unset): Refrens' renderer leaves the page unzoomed then, so the template zooms it (helpers.ts mapPrint ownPrintZoom); :where() lets the renderer's own rule win once Lydia sets another size live. --}}
+  {{#if view.print.ownPrintZoom}}<style id="pt-own-zoom">@media print { :where(html) { zoom: {{view.print.ownPrintZoom}}; } }</style>{{/if}}
+  {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
+  {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
+  {{#unless view.letterheadEveryPage}}
+    {{!-- Letterhead on the first page only (pdfOptions.letterHeadOnFirstPage): in the flow. --}}
+    <div class="{{#if view.serviceLetterhead}}no-dibella {{/if}}invoice-letterhead pt-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="first">
+      {{#if @root.invoice.letterHead}}
+        <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+      {{else}}
+        <img alt="Letterhead" data-ceres-height="letterhead" />
+      {{/if}}
+    </div>
+  {{/unless}}
+
+  {{!--
+    Print frame: transparent on screen (display: contents). In print, the letterhead repeats
+    at the top of every page in the <thead> unless it is for the first page only; when the
+    footer repeats on every page (pdfOptions.footerOnLastPage off), the real footer is fixed
+    to the foot of each page and the repeating <tfoot> holds an invisible copy of it, so
+    content never runs under it.
+  --}}
+  <table class="pt-page-frame" role="presentation">
+    {{!-- The page's top margin in a browser's own print, whose page margins are 0 there so Chrome
+          prints no date / title / URL / page-number stamps (helpers.ts applyBrowserPrintPage);
+          hidden otherwise, and under an every-page letterhead, which sits on the page's edge. --}}
+    <thead class="pt-page-frame-header">
+      <tr class="pt-page-margin" aria-hidden="true"><td></td></tr>
+      {{#if view.letterheadEveryPage}}
+        {{!-- What the PDF service's stamped letterhead takes past its margin (helpers.ts placeStampRoom). --}}
+        <tr class="pt-stamp-room is-top" aria-hidden="true"><td></td></tr>
+        <tr>
+          <td>
+            <div class="no-dibella invoice-letterhead pt-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="all">
+              {{#if @root.invoice.letterHead}}
+                <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+              {{else}}
+                <img alt="Letterhead" data-ceres-height="letterhead" />
+              {{/if}}
+            </div>
+          </td>
+        </tr>
+      {{/if}}
+    </thead>
+    <tfoot class="pt-page-frame-footer">
+      {{#if view.footerEveryPage}}
+        <tr>
+          <td>
+            <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer pt-letterhead-footer pt-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+              {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
+            </div>
+          </td>
+        </tr>
+        <tr class="pt-stamp-room is-bottom" aria-hidden="true"><td></td></tr>
+      {{/if}}
+      {{#if view.ownSignatureNote}}
+        <tr class="pt-signature-note"><td><p>This is an electronically generated document, no signature is required.</p></td></tr>
+      {{/if}}
+      <tr class="pt-page-margin" aria-hidden="true"><td></td></tr>
+    </tfoot>
+    <tbody>
+      <tr>
+        <td class="pt-page-frame-cell">
+          <div class="pt-page-body">
+          <header class="pt-header" data-testid="section" data-section="header">
+            <div class="pt-header-main">
+              <div class="pt-title-row">
+                {{#if view.title}}<h1 class="pt-title" data-role="title">{{view.title}}</h1>{{/if}}
+                {{#if view.status}}
+                  <span class="pt-status{{#unless view.status.inPrint}} no-print{{/unless}}"><span class="invoice-tag {{view.status.color}}">{{view.status.text}}</span></span>
+                {{/if}}
+              </div>
+              {{!-- Subtitle, then the copy label ("Original for Recipient"), right under the title. --}}
+              {{#if view.subtitle}}<p class="pt-subtitle">{{view.subtitle}}</p>{{/if}}
+              {{#if view.copy}}<p class="pt-copy" data-role="tag">{{view.copy}}</p>{{/if}}
+              {{#if view.meta.length}}
+                <div class="pt-meta" data-testid="section" data-section="details">
+                  {{#each view.meta}}
+                    <div class="pt-meta-row pt-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}>
+                      <span class="pt-meta-label">{{label}}</span>
+                      <span class="pt-meta-value{{#if isNum}} pt-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ptDate value 0}}{{else}}{{value}}{{/if}}</span>
+                    </div>
+                  {{/each}}
+                </div>
+              {{/if}}
+              {{!-- The document QR under the details, where refrens.com places it
+                    (qrCodePlacement IN_DOCUMENT_DETAILS); one QR only, none while an e-invoice
+                    QR prints. The container stays for the host's live QR. --}}
+              {{#if view.qrInDetails}}
+                <div class="pt-qr pt-doc-qr pt-details-qr{{#unless view.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.documentQr}} src="{{view.documentQr}}"{{/if}} alt="Document QR Code" /></div>
+              {{/if}}
+            </div>
+            {{!-- The business's logo, top right (and the document QR beside it under any other
+                  QR placement). --}}
+            {{#if view.hasBrandRow}}
+              <div class="pt-brand">
+                {{#if view.brand.logo}}
+                  <div class="pt-logo">
+                    {{> CeresImage src=view.brand.logo alt=view.brand.name class="pt-logo-image"}}
+                  </div>
+                {{/if}}
+                {{#unless view.qrInDetails}}
+                <div class="pt-qr pt-doc-qr{{#unless view.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.documentQr}} src="{{view.documentQr}}"{{/if}} alt="Document QR Code" /></div>
+                {{/unless}}
+              </div>
+            {{/if}}
+          </header>
+
+          {{!-- Billed, Shipped and Transport / E-Invoice cards fill one two-column grid in order,
+                left to right, with no gap where a card is missing (user, 2026-11-02). --}}
+          <div class="pt-card-flow">
+          {{#if view.parties.length}}
+            <section class="pt-cards pt-parties" data-testid="section" data-section="parties">
+              {{#each view.parties}}
+                <div class="pt-card pt-party is-tinted" data-role="{{role}}">
+                  {{!-- In print the card's edges on every page it spans; the title once, at its start (styles.css pt-split-frame). --}}
+                  <table class="pt-split-frame" role="presentation"><thead class="pt-split-head"><tr class="pt-split-edge is-top" aria-hidden="true"><td class="pt-split-cap"></td></tr></thead><tbody>{{#if title}}<tr class="pt-split-title"><td class="pt-split-body"><h2 class="pt-card-title">{{title}}</h2></td></tr>{{/if}}<tr><td class="pt-split-body">
+                  <div class="pt-party-body">
+                    <p class="pt-party-name" dir="auto">{{name}}</p>
+                    {{#if address}}<p class="pt-party-address" data-role="address">{{address}}</p>{{/if}}
+                    {{#if fields.length}}
+                      <div class="pt-fields">
+                        {{#each fields}}
+                          <p class="pt-field"><span class="pt-field-label">{{label}}</span><span class="pt-field-value{{#if noWrap}} pt-num{{else if isEmail}} pt-email{{/if}}{{#if isToken}} pt-break{{/if}}">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                        {{/each}}
+                      </div>
+                    {{/if}}
+                  </div>
+                  </td></tr></tbody><tfoot class="pt-split-edge is-bottom" aria-hidden="true"><tr><td class="pt-split-cap"></td></tr></tfoot></table>
+                </div>
+              {{/each}}
+            </section>
+          {{/if}}
+
+          {{#if view.hasShipping}}
+            {{!-- Shipped From on the left, Shipped To on the right, each under its Billed card. --}}
+            <section class="pt-cards pt-shipping" data-testid="section" data-section="dispatch">
+              {{#each view.dispatchParties}}
+                <div class="pt-card pt-party pt-col-{{column}}" data-role="{{role}}">
+                  {{!-- In print the card's edges on every page it spans; the title once, at its start (styles.css pt-split-frame). --}}
+                  <table class="pt-split-frame" role="presentation"><thead class="pt-split-head"><tr class="pt-split-edge is-top" aria-hidden="true"><td class="pt-split-cap"></td></tr></thead><tbody>{{#if title}}<tr class="pt-split-title"><td class="pt-split-body"><h2 class="pt-card-title">{{title}}</h2></td></tr>{{/if}}<tr><td class="pt-split-body">
+                  <div class="pt-party-body">
+                    <p class="pt-party-name" dir="auto">{{name}}</p>
+                    {{#if address}}<p class="pt-party-address" data-role="address">{{address}}</p>{{/if}}
+                    {{#if fields.length}}
+                      <div class="pt-fields">
+                        {{#each fields}}
+                          <p class="pt-field"><span class="pt-field-label">{{label}}</span><span class="pt-field-value{{#if noWrap}} pt-num{{else if isEmail}} pt-email{{/if}}{{#if isToken}} pt-break{{/if}}">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                        {{/each}}
+                      </div>
+                    {{/if}}
+                  </div>
+                  </td></tr></tbody><tfoot class="pt-split-edge is-bottom" aria-hidden="true"><tr><td class="pt-split-cap"></td></tr></tfoot></table>
+                </div>
+              {{/each}}
+            </section>
+          {{/if}}
+
+          {{!--
+            Transport Details | E-Invoice / E-Way Bill. The compliance card's containers stay in
+            the DOM so the host can post IRN and QR values in live; the card shows once one has
+            a value. Below the items instead when the business places the IRN there.
+          --}}
+          <section class="pt-cards pt-logistics{{#unless view.transport}}{{#if view.compliance.isBelowItems}} is-empty{{/if}}{{/unless}}" data-testid="section" data-section="logistics">
+            {{#if view.transport}}
+              <div class="pt-card pt-transport pt-col-1">
+                <table class="pt-split-frame" role="presentation"><thead class="pt-split-head"><tr class="pt-split-edge is-top" aria-hidden="true"><td class="pt-split-cap"></td></tr></thead><tbody>{{#if view.transport.title}}<tr class="pt-split-title"><td class="pt-split-body"><h2 class="pt-card-title">{{view.transport.title}}</h2></td></tr>{{/if}}<tr><td class="pt-split-body">
+                <div class="pt-kv">
+                  {{#each view.transport.rows}}
+                    <span class="pt-kv-label pt-transport-{{key}}">{{label}}</span>
+                    <span class="pt-kv-value{{#if isNum}} pt-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ptDate value 0}}{{else}}{{value}}{{/if}}</span>
+                  {{/each}}
+                </div>
+                </td></tr></tbody><tfoot class="pt-split-edge is-bottom" aria-hidden="true"><tr><td class="pt-split-cap"></td></tr></tfoot></table>
+              </div>
+            {{/if}}
+            {{!-- The E-Invoice / E-Way Bill card (Figma "Eway Bill Details"): IRN, Ack No., Ack Date, the
+                  e-way bill rows, and the e-invoice / ZATCA / LHDN QR on the right. --}}
+            {{#unless view.compliance.isBelowItems}}
+            <div class="pt-card pt-compliance pt-col-2{{#unless view.hasCompliance}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+              <div class="pt-compliance-text">
+                {{#if view.compliance.title}}<h2 class="pt-card-title">{{view.compliance.title}}</h2>{{/if}}
+                <div class="pt-kv">
+                  {{#if view.compliance.showIrn}}
+                    <span class="pt-kv-label pt-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}>{{view.compliance.irnLabel}}</span>
+                    <span class="pt-kv-value pt-irn-value"{{#unless view.compliance.irn}} style="display:none"{{/unless}} data-ceres-field="irn">{{view.compliance.irn}}</span>
+                  {{/if}}
+                  {{#each view.compliance.rows}}
+                    <span class="pt-kv-label">{{label}}</span>
+                    <span class="pt-kv-value pt-num" data-testid="num">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ptDate value 0}}{{else}}{{value}}{{/if}}</span>
+                  {{/each}}
+                </div>
+              </div>
+              <div class="pt-qr-list">
+                <div class="pt-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                <div class="pt-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                <div class="pt-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+              </div>
+            </div>
+            {{/unless}}
+          </section>
+          </div>
+
+          {{!-- Country / Place of Supply just above the items, as refrens.com's default layout prints
+                them (data-ceres-country-of-supply: the host's live hide toggle). --}}
+          {{#if view.supply}}
+            <div class="pt-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+              {{#each view.supply.rows}}
+                <p class="pt-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="pt-supply-label">{{label}}</span><span class="pt-supply-value">{{value}}</span></p>
+              {{/each}}
+            </div>
+          {{/if}}
+
+          <section class="pt-items-section" data-testid="section" data-section="items">
+            <div class="pt-items-scroll" data-testid="items-scroll">
+              <table class="pt-items{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--pt-figures: {{view.table.figureCount}}; --pt-serial-width: {{view.table.serialWidth}}px;">
+                <thead>
+                  <tr data-testid="items-header">
+                    {{!-- No "Sr." text over the serial numbers (user request, 2026-10-23); kept for screen readers. --}}
+                    <th class="pt-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px" aria-label="{{view.table.serialLabel}}"></th>
+                    {{#each view.table.header}}
+                      <th class="{{className}}" data-col="{{col}}"{{#if width}} style="width: {{width}}px"{{/if}}>
+                        {{#if isName}}<span class="pt-desc-min" aria-hidden="true" style="width: {{view.table.descriptionMin}}px"></span>{{/if}}
+                        {{#each labelParts}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}
+                      </th>
+                    {{/each}}
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each view.table.rows}}
+                    {{#if isGroupHeader}}
+                      <tr class="pt-group-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-row">
+                        <td colspan="{{colspan}}">
+                          <span class="pt-group-name">{{name}}</span>
+                          {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                        </td>
+                      </tr>
+                      {{#if originalImages.length}}
+                        <tr class="pt-image-row pt-group-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-image-row">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="pt-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{else}}
+                      {{#if nameRow}}
+                        <tr class="pt-name-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-name-row" data-item-index="{{itemIndex}}">
+                          <td class="pt-col-serial" data-col="sr" rowspan="2">{{#if serial}}<span class="pt-num" data-testid="num">{{serial}}</span>{{/if}}</td>
+                          <td colspan="{{detailColspan}}">
+                            <span class="pt-item-name">{{name}}</span>
+                            {{#if inlineCodes.length}}<span class="pt-item-codes">{{#each inlineCodes}}<span class="pt-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                      <tr class="pt-item-row{{#if isStripe}} is-stripe{{/if}}{{#if isRich}} is-rich{{/if}}{{#if isGroupTotal}} pt-group-total-row{{/if}}{{#if nameRow}} has-name-row{{/if}}" data-testid="item-row" data-item-index="{{itemIndex}}">
+                        {{#unless nameRow}}<td class="pt-col-serial" data-col="sr">{{#if serial}}<span class="pt-num" data-testid="num">{{serial}}</span>{{/if}}</td>{{/unless}}
+                        {{#each cells}}
+                          {{#if isName}}
+                            <td class="{{className}}" data-col="{{col}}">
+                              {{#if ../thumbnail}}
+                                <div class="pt-item-thumbnail">{{> CeresImage src=../thumbnail alt=../name class="pt-thumbnail" href=../thumbnail}}</div>
+                              {{/if}}
+                              {{#unless ../nameRow}}
+                                <span class="pt-item-name">{{../name}}</span>
+                                {{#if ../inlineCodes.length}}<span class="pt-item-codes">{{#each ../inlineCodes}}<span class="pt-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                              {{/unless}}
+                              {{#if ../hasDetail}}
+                                <div class="pt-item-detail" data-ceres-description-inline{{#if ../detailRow}} style="display: none;"{{/if}}>
+                                  {{#unless ../detailRow}}
+                                    <div data-ceres-description-content>
+                                      {{#if ../description}}<div class="pt-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData ../description) }}</div>{{/if}}
+                                      {{#if ../images.length}}{{> CeresImageGallery (prepareImageGallery ../images variant="thumbnail" alt=../name) }}{{/if}}
+                                    </div>
+                                  {{/unless}}
+                                </div>
+                              {{/if}}
+                            </td>
+                          {{else}}
+                            <td class="{{className}}" data-col="{{col}}" data-label="{{label}}">{{#if isNum}}<span class="pt-num" data-testid="num">{{value}}</span>{{else}}{{value}}{{/if}}</td>
+                          {{/if}}
+                        {{/each}}
+                      </tr>
+                      {{#if hasDetail}}
+                        {{!-- Full-width description row (isDescriptionFullWidth), kept for the live toggle. --}}
+                        <tr class="pt-detail-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}" data-ceres-description-row{{#unless detailRow}} style="display: none;"{{/unless}}>
+                          <td class="pt-col-serial"></td>
+                          <td colspan="{{detailColspan}}">
+                            <div class="pt-item-detail" data-ceres-description-full-width>
+                              {{#if detailRow}}
+                                <div data-ceres-description-content>
+                                  {{#if description}}<div class="pt-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData description) }}</div>{{/if}}
+                                  {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                                </div>
+                              {{/if}}
+                            </div>
+                          </td>
+                        </tr>
+                      {{/if}}
+                      {{#if imageRow}}
+                        {{!-- Original images: their own row under the item, across the whole table. --}}
+                        <tr class="pt-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="pt-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{/if}}
+                  {{/each}}
+                  {{!-- Stretch row: takes the spare height of a one-page printout, or of the preview's A4 sheet. --}}
+                  <tr class="pt-filler" aria-hidden="true"><td class="pt-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tbody>
+                {{#if view.table.footer.show}}
+                  <tbody class="pt-items-total">
+                    <tr class="pt-total-row" data-testid="items-total">
+                      <td class="pt-col-serial" data-col="sr">{{#if view.table.footer.labelInSerial}}{{view.table.footer.label}}{{/if}}</td>
+                      {{#each view.table.footer.cells}}
+                        <td class="{{className}}" data-col="{{col}}"{{#unless isName}} data-label="{{label}}"{{/unless}}>{{#if isName}}{{view.table.footer.label}}{{else if isNum}}<span class="pt-num" data-testid="num">{{value}}</span>{{/if}}</td>
+                      {{/each}}
+                    </tr>
+                  </tbody>
+                {{/if}}
+                {{!-- Print only: repeated at the foot of each page the table spans, it rounds the
+                      corners of the page's last row (styles.css, "corners at a page break"). --}}
+                <tfoot class="pt-items-corners" aria-hidden="true">
+                  <tr><td class="pt-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+
+          {{#if view.compliance.isBelowItems}}
+            <section class="pt-cards pt-logistics" data-testid="section" data-section="logistics-below">
+              <div class="pt-card pt-compliance pt-col-2{{#unless view.hasCompliance}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+                <div class="pt-compliance-text">
+                  {{#if view.compliance.title}}<h2 class="pt-card-title">{{view.compliance.title}}</h2>{{/if}}
+                  <div class="pt-kv">
+                    {{#if view.compliance.showIrn}}
+                      <span class="pt-kv-label pt-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}>{{view.compliance.irnLabel}}</span>
+                      <span class="pt-kv-value pt-irn-value"{{#unless view.compliance.irn}} style="display:none"{{/unless}} data-ceres-field="irn">{{view.compliance.irn}}</span>
+                    {{/if}}
+                    {{#each view.compliance.rows}}
+                      <span class="pt-kv-label">{{label}}</span>
+                      <span class="pt-kv-value pt-num" data-testid="num">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{ptDate value 0}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </div>
+                <div class="pt-qr-list">
+                  <div class="pt-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                  <div class="pt-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                  <div class="pt-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                </div>
+              </div>
+            </section>
+          {{/if}}
+
+          <div class="pt-bottom">
+            <div class="pt-bottom-main">
+              {{!-- The amount in words on one line, at the head of the left column, beside the
+                    totals (refrens.com; user request, 2026-10-24). --}}
+              {{#if view.words}}
+                <p class="pt-words ceres-subtotal-words{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}{{#if view.words.hiddenBySetting}} is-hidden-by-words-setting{{/if}}" data-ceres-total-in-words>
+                  <span class="pt-words-label">{{view.words.label}} :</span>
+                  <span class="pt-words-value">{{view.words.value}}</span>
+                </p>
+              {{/if}}
+              {{#if view.bank.show}}
+                <section class="pt-card pt-bank" data-testid="section" data-section="bank">
+                  <div class="pt-bank-main">
+                    {{#if view.bank.title}}<h2 class="pt-card-title" data-role="title">{{view.bank.title}}</h2>{{/if}}
+                    <div class="pt-kv pt-bank-rows">
+                      {{#each view.bank.rows}}
+                        <span class="pt-kv-label pt-bank-{{key}}">{{label}}</span>
+                        <span class="pt-kv-value{{#if isNum}} pt-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
+                      {{/each}}
+                      {{!-- The UPI ID prints once, as refrens.com prints it: under the QR when there
+                            is one, else here with the bank rows. --}}
+                      {{#if view.bank.upi}}{{#unless view.bank.upi.qr}}
+                        <span class="pt-kv-label pt-bank-upi">{{view.bank.upi.label}}</span>
+                        <span class="pt-kv-value pt-num" data-testid="num">{{view.bank.upi.id}}</span>
+                      {{/unless}}{{/if}}
+                    </div>
+                  </div>
+                  {{#if view.bank.upi.qr}}
+                    <figure class="pt-upi">
+                      <figcaption class="pt-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
+                      <img class="pt-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
+                      <p class="pt-upi-id pt-num">{{view.bank.upi.id}}</p>
+                      {{#if view.bank.upi.note}}<p class="pt-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                    </figure>
+                  {{/if}}
+                </section>
+              {{/if}}
+
+            </div>
+
+            <div class="pt-bottom-side">
+              {{!--
+                The totals: the shared Subtotal widget's rows (computeSubtotalRows) with its classes
+                and data-ceres-* hooks, so the live hideTotals / hideTaxes toggles and the widget's
+                visibility CSS still apply. The grand total reads large between two rules.
+              --}}
+              <table class="pt-totals-table" data-testid="totals-table">
+                <tbody class="pt-totals ceres-subtotal" data-ceres-subtotal data-testid="section" data-section="totals">
+                  {{#each view.totals.rows}}
+                    <tr
+                      class="ceres-subtotal-row ceres-subtotal-row-{{emphasis}}{{#if isGrand}} pt-grand-row{{/if}}{{#if isExtra}} pt-extra-row{{/if}}{{#if view.totals.hidden}}{{#unless survivesHideTotals}} is-hidden-by-totals{{/unless}}{{/if}}{{#if isTaxRow}}{{#if view.totals.hideTaxes}} is-hidden-by-taxes{{/if}}{{/if}}"
+                      data-ceres-subtotal-row="{{key}}"
+                      {{#if isTaxRow}}data-ceres-subtotal-taxes{{/if}}
+                      {{#if survivesHideTotals}}data-ceres-subtotal-keep{{/if}}
+                    >
+                      <th class="ceres-subtotal-label" scope="row">
+                        {{label}}
+                        {{#if note}}<div class="ceres-subtotal-note">{{note}}</div>{{/if}}
+                      </th>
+                      <td class="ceres-subtotal-value">
+                        <span class="pt-num"{{#if isNum}} data-testid="num"{{/if}}{{#if isGrand}} data-role="grand-total-row"{{/if}}>{{value}}</span>
+                        {{#if converted}}<div class="ceres-subtotal-converted">{{converted}}</div>{{/if}}
+                        {{#if extra}}
+                          <div class="ceres-subtotal-extra">
+                            {{extra.value}}
+                            {{#if extra.converted}}<div class="ceres-subtotal-converted">{{extra.converted}}</div>{{/if}}
+                          </div>
+                        {{/if}}
+                      </td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+
+              {{!-- Only for a signature the document has (an image or a digital request); no
+                    "For <business>" line, as refrens.com prints it. --}}
+              {{#if view.signature.show}}
+                <section class="pt-signature" data-testid="signature">
+                  <div class="pt-signature-mark">
+                    {{#if view.signature.image}}
+                      {{> CeresImage src=view.signature.image alt=view.signature.label class="pt-signature-image"}}
+                    {{else if view.signature.awaitingDigital}}
+                      <p class="pt-signature-banner">Awaiting Digital Signature</p>
+                    {{else if view.signature.signedDigital}}
+                      <p class="pt-signature-banner">
+                        Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+                        {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+                      </p>
+                    {{/if}}
+                  </div>
+                  {{#if view.signature.label}}<p class="pt-signature-label">{{view.signature.label}}</p>{{/if}}
+                </section>
+              {{/if}}
+            </div>
+          </div>
+          {{!-- Terms, notes, additional information and attachments across the page, straight
+                after the bank and totals row. --}}
+          <div class="pt-after">
+            {{#each view.terms}}
+              <section class="pt-card pt-terms" data-testid="section" data-section="terms">
+                <h2 class="pt-card-title" data-role="title">{{title}}</h2>
+                <ol class="pt-terms-list">
+                  {{#each items}}<li>{{this}}</li>{{/each}}
+                </ol>
+              </section>
+            {{/each}}
+
+            {{#if view.notes}}
+              <section class="pt-card pt-notes" data-testid="section" data-section="notes">
+                {{#if view.notes.title}}<h2 class="pt-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
+                <div class="pt-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
+              </section>
+            {{/if}}
+
+            {{#if view.additional}}
+              <section class="pt-card" data-testid="section" data-section="additional">
+                {{#if view.additional.title}}<h2 class="pt-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
+                <div class="pt-kv">
+                  {{#each view.additional.rows}}
+                    <span class="pt-kv-label" data-role="ai-label">{{label}}</span>
+                    <span class="pt-kv-value{{#if isDate}} pt-num{{/if}}" data-role="ai-value">{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
+                  {{/each}}
+                </div>
+              </section>
+            {{/if}}
+
+            {{#if view.attachments}}
+              <section class="pt-card" data-testid="section" data-section="attachments">
+                {{#if view.attachments.title}}<h2 class="pt-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}
+                <ol class="pt-attachments">
+                  {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
+                </ol>
+              </section>
+            {{/if}}
+          </div>
+
+          {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered
+                with their data, hidden while switched off (live toggles). --}}
+          <section class="pt-card pt-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+            {{#if view.hsn.title}}<h3 class="pt-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
+            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          <section class="pt-card pt-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
+            {{#if view.taxSummary.title}}<h3 class="pt-card-title" data-role="title">{{view.taxSummary.title}}</h3>{{/if}}
+            {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          {{#if view.stock}}
+            <section class="pt-card pt-widget-table" data-testid="section" data-section="stock-summary" data-ceres-batch-summary{{#if view.stock.hidden}} style="display: none;"{{/if}}>
+              {{#if view.stock.title}}<h3 class="pt-card-title" data-role="title">{{view.stock.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table pt-stock-table">
+                  <thead><tr>{{#each view.stock.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.stock.rows}}
+                      <tr>{{#each this}}<td{{#if isNum}} class="pt-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.payments.show}}
+            <section class="pt-card pt-widget-table" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
+              {{#if view.payments.title}}<h3 class="pt-card-title" data-role="title">{{view.payments.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table pt-payments-table">
+                  <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.payments.rows}}
+                      <tr data-testid="payment">
+                        {{#each this}}
+                          <td{{#unless isText}} class="pt-num"{{/unless}}>{{#if isDate}}{{ptDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="pt-payment-converted">{{converted}}</span>{{/if}}</td>
+                        {{/each}}
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                  {{#if view.payments.total}}
+                    <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="pt-num">{{value}}</td>{{/each}}</tr></tfoot>
+                  {{/if}}
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.enquiry}}
+            <p class="pt-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="pt-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="pt-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
+          {{/if}}
+
+          {{> RefrensBranding @root.invoice}}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer pt-letterhead-footer{{#if view.footerEveryPage}} pt-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+    {{#if @root.invoice.letterHeadFooter}}
+      <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{else}}
+      <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{/if}}
+  </div>
+</div>
+{{/with}}

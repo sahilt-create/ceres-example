@@ -850,7 +850,13 @@ module.exports = {
         use: [{ loader: "babel-loader" }],
         exclude: /node_modules/,
       },
-      { test: /\.css$/, use: [MiniCssExtractPlugin.loader, "css-loader"] },
+      // `import text from "./styles.css?raw"`: the stylesheet's text in the bundle.
+      { test: /\.css$/, resourceQuery: /raw/, type: "asset/source" },
+      {
+        test: /\.css$/,
+        resourceQuery: { not: [/raw/] },
+        use: [MiniCssExtractPlugin.loader, "css-loader"],
+      },
       {
         test: /\.hbs$/,
         loader: "handlebars-loader",
@@ -908,6 +914,10 @@ module.exports = {
     splitChunks: false,
     runtimeChunk: false,
     minimize: true,
+    // webpack ≥5.111 minifies HTML assets by default, which rewrites the inline
+    // scripts in index.html after CspMetaPlugin has hashed them — the CSP then
+    // blocks the bootstrap and the page hangs on "Trying to load document...".
+    minimizeOptions: { html: false },
     minimizer: ["...", new CssMinimizerPlugin()],
   },
   devtool: false,
