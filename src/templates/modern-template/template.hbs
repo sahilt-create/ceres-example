@@ -1,0 +1,581 @@
+{{!--
+  Modern Template (Figma Document-Templates, node 1801:8109 "Modern Template").
+
+  Root is normalizeInvoiceTemplateState's output. Every block reads the view model built once
+  by `moView` (helpers.ts): labels, visibility and table columns all come from the payload.
+  The design has no fixed assets: the logo, the QR codes and the signature are the document's.
+
+  Order: header (title + status | document details, business logo + document QR), Billed By |
+  Billed To, Shipped From | Shipped To, Transport Details | E-Invoice / E-Way Bill (with the
+  e-invoice QR), items (with the column-sum row), then two columns: Bank and UPI, Terms, Notes,
+  Additional Info, Attachments on the left; totals, amount in words and signature on the
+  right. Summaries (HSN, tax, batch, payments) and the enquiry line close the document.
+  data-testid / data-section / data-col are test hooks; data-ceres-* are the host's live
+  update targets.
+--}}
+{{#with (moView @root) as |view|}}
+<div class="mo-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-mo-currency="{{@root.invoice.currency}}" data-testid="invoice-root" data-mo-side-margin="{{view.print.sideMargin}}" data-mo-paper-width="{{view.print.paperWidth}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--mo-text-scale: {{view.print.textScale}}; --mo-print-scale: {{view.print.printScale}}; --mo-print-width: {{view.print.printWidth}}px; --mo-browser-print-width: {{view.print.browserPrintWidth}}px; --mo-print-base: {{view.print.printBase}}px; --mo-browser-print-height: {{view.print.browserPrintHeight}}px; --mo-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --mo-theme: {{view.theme.accent}}; --mo-on-accent: {{view.theme.onAccent}};{{#if view.theme.accentText}} --mo-accent-text: {{view.theme.accentText}};{{/if}}{{/if}}{{#if view.script.font}} --mo-script-font: {{{view.script.font}}};{{/if}}">
+  {{!-- Text Scale Smaller (0.8, also unset): Refrens' renderer leaves the page unzoomed then, so the template zooms it (helpers.ts mapPrint ownPrintZoom); :where() lets the renderer's own rule win once Lydia sets another size live. --}}
+  {{#if view.print.ownPrintZoom}}<style id="mo-own-zoom">@media print { :where(html) { zoom: {{view.print.ownPrintZoom}}; } }</style>{{/if}}
+  {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
+  {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
+  {{#unless view.letterheadEveryPage}}
+    {{!-- Letterhead on the first page only (pdfOptions.letterHeadOnFirstPage): in the flow. --}}
+    <div class="{{#if view.serviceLetterhead}}no-dibella {{/if}}invoice-letterhead mo-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="first">
+      {{#if @root.invoice.letterHead}}
+        <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+      {{else}}
+        <img alt="Letterhead" data-ceres-height="letterhead" />
+      {{/if}}
+    </div>
+  {{/unless}}
+
+  {{!--
+    Print frame: transparent on screen (display: contents). In print, the letterhead repeats
+    at the top of every page in the <thead> unless it is for the first page only; when the
+    footer repeats on every page (pdfOptions.footerOnLastPage off), the real footer is fixed
+    to the foot of each page and the repeating <tfoot> holds an invisible copy of it, so
+    content never runs under it.
+  --}}
+  <table class="mo-page-frame" role="presentation">
+    {{!-- The page's top margin in a browser's own print, whose page margins are 0 there so Chrome
+          prints no date / title / URL / page-number stamps (helpers.ts applyBrowserPrintPage);
+          hidden otherwise, and under an every-page letterhead, which sits on the page's edge. --}}
+    <thead class="mo-page-frame-header">
+      <tr class="mo-page-margin" aria-hidden="true"><td></td></tr>
+      {{#if view.letterheadEveryPage}}
+        {{!-- What the PDF service's stamped letterhead takes past its margin (helpers.ts placeStampRoom). --}}
+        <tr class="mo-stamp-room is-top" aria-hidden="true"><td></td></tr>
+        <tr>
+          <td>
+            <div class="no-dibella invoice-letterhead mo-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="all">
+              {{#if @root.invoice.letterHead}}
+                <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+              {{else}}
+                <img alt="Letterhead" data-ceres-height="letterhead" />
+              {{/if}}
+            </div>
+          </td>
+        </tr>
+      {{/if}}
+    </thead>
+    <tfoot class="mo-page-frame-footer">
+      {{#if view.footerEveryPage}}
+        <tr>
+          <td>
+            <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer mo-letterhead-footer mo-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+              {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
+            </div>
+          </td>
+        </tr>
+        <tr class="mo-stamp-room is-bottom" aria-hidden="true"><td></td></tr>
+      {{/if}}
+      {{#if view.ownSignatureNote}}
+        <tr class="mo-signature-note"><td><p>This is an electronically generated document, no signature is required.</p></td></tr>
+      {{/if}}
+      <tr class="mo-page-margin" aria-hidden="true"><td></td></tr>
+    </tfoot>
+    <tbody>
+      <tr>
+        <td class="mo-page-frame-cell">
+          <div class="mo-page-body">
+          {{!--
+            The band (Modern design, user's mock 2026-11-05): everything above the items on the
+            theme colour, laid out as Refrens' own Modern template places the fields: the title,
+            then the logo on a white tile | the seller | Billed To, then the document details
+            between two rules (Country / Place of Supply among them, the document QR on the right),
+            then Shipped From | Shipped To | Transport Details | E-Invoice. Each row prints whole.
+          --}}
+          <header class="mo-band" data-testid="section" data-section="header">
+            {{#if view.title}}
+              <div class="mo-band-row mo-title-block">
+                <div class="mo-title-row">
+                  <h1 class="mo-title" data-role="title">{{view.title}}</h1>
+                  {{#if view.status}}
+                    <span class="mo-status{{#unless view.status.inPrint}} no-print{{/unless}}"><span class="invoice-tag {{view.status.color}}">{{view.status.text}}</span></span>
+                  {{/if}}
+                </div>
+                {{#if view.subtitle}}<p class="mo-subtitle">{{view.subtitle}}</p>{{/if}}
+                {{#if view.copy}}<p class="mo-copy" data-role="tag">{{view.copy}}</p>{{/if}}
+              </div>
+            {{/if}}
+
+            <div class="mo-band-row mo-band-parties" data-testid="section" data-section="parties">
+              {{#if view.brand.logo}}
+                <div class="mo-logo">
+                  {{> CeresImage src=view.brand.logo alt=view.brand.name class="mo-logo-image"}}
+                </div>
+              {{/if}}
+              {{#with view.seller as |party|}}
+                <div class="mo-party mo-seller" data-role="billed-by">
+                  <p class="mo-party-name mo-seller-name" dir="auto">{{party.name}}</p>
+                  {{#if party.address}}<p class="mo-party-address" data-role="address">{{party.address}}</p>{{/if}}
+                  {{#if party.fields.length}}
+                    <div class="mo-fields">
+                      {{#each party.fields}}
+                        <p class="mo-field"><span class="mo-field-label">{{label}}</span><span class="mo-field-value{{#if noWrap}} mo-num{{else if isEmail}} mo-email{{/if}}{{#if isToken}} mo-break{{/if}}">{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                </div>
+              {{/with}}
+              {{#with view.buyer as |party|}}
+                <div class="mo-party mo-buyer" data-role="billed-to">
+                  {{#if party.title}}<h2 class="mo-band-caption">{{party.title}}</h2>{{/if}}
+                  <p class="mo-party-name" dir="auto">{{party.name}}</p>
+                  {{#if party.address}}<p class="mo-party-address" data-role="address">{{party.address}}</p>{{/if}}
+                  {{#if party.fields.length}}
+                    <div class="mo-fields">
+                      {{#each party.fields}}
+                        <p class="mo-field"><span class="mo-field-label">{{label}}</span><span class="mo-field-value{{#if noWrap}} mo-num{{else if isEmail}} mo-email{{/if}}{{#if isToken}} mo-break{{/if}}">{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                </div>
+              {{/with}}
+              {{!-- The document QR here when the business places it elsewhere than the details. --}}
+              {{#unless view.qrInDetails}}
+                <div class="mo-qr mo-doc-qr{{#unless view.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.documentQr}} src="{{view.documentQr}}"{{/if}} alt="Document QR Code" /></div>
+              {{/unless}}
+            </div>
+
+            {{#if view.hasDetailsRow}}
+              <div class="mo-band-row mo-details-band"><div class="mo-details-row">
+                <div class="mo-details" data-testid="section" data-section="details">
+                  {{#each view.details}}
+                    <div class="mo-detail mo-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}>
+                      <span class="mo-detail-label">{{label}}</span>
+                      <span class="mo-detail-value{{#if isNum}} mo-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{moDate value 0}}{{else}}{{value}}{{/if}}</span>
+                    </div>
+                  {{/each}}
+                  {{!-- Country / Place of Supply among the details, as Refrens' Modern prints them
+                        (data-ceres-country-of-supply: the host's live hide toggle). --}}
+                  {{#if view.supply}}
+                    <div class="mo-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                      {{#each view.supply.rows}}
+                        <div class="mo-detail mo-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}>
+                          <span class="mo-detail-label">{{label}}</span>
+                          <span class="mo-detail-value">{{value}}</span>
+                        </div>
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                </div>
+                {{#if view.qrInDetails}}
+                  <div class="mo-qr mo-doc-qr{{#unless view.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.documentQr}} src="{{view.documentQr}}"{{/if}} alt="Document QR Code" /></div>
+                {{/if}}
+              </div></div>
+            {{/if}}
+
+            {{!-- Shipped From | Shipped To | Transport Details | E-Invoice / E-Way Bill: each takes the
+                  next column, no gap where one is missing. The compliance block's containers stay
+                  for the host's live IRN and QR values. --}}
+            <div class="mo-band-row mo-band-logistics" data-testid="section" data-section="logistics">
+              {{#each view.dispatchParties}}
+                <div class="mo-party mo-ship" data-role="{{role}}">
+                  {{#if title}}<h2 class="mo-band-caption">{{title}}</h2>{{/if}}
+                  <p class="mo-party-name" dir="auto">{{name}}</p>
+                  {{#if address}}<p class="mo-party-address" data-role="address">{{address}}</p>{{/if}}
+                  {{#if fields.length}}
+                    <div class="mo-fields">
+                      {{#each fields}}
+                        <p class="mo-field"><span class="mo-field-label">{{label}}</span><span class="mo-field-value{{#if noWrap}} mo-num{{else if isEmail}} mo-email{{/if}}{{#if isToken}} mo-break{{/if}}">{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                </div>
+              {{/each}}
+              {{#if view.transport}}
+                <div class="mo-party mo-transport" data-role="transport">
+                  {{#if view.transport.title}}<h2 class="mo-band-caption">{{view.transport.title}}</h2>{{/if}}
+                  <div class="mo-fields">
+                    {{#each view.transport.rows}}
+                      <p class="mo-field"><span class="mo-field-label mo-transport-{{key}}">{{label}}</span><span class="mo-field-value{{#if isNum}} mo-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{moDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                </div>
+              {{/if}}
+              {{#unless view.compliance.isBelowItems}}
+                <div class="mo-party mo-compliance{{#unless view.hasCompliance}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+                  {{#if view.compliance.title}}<h2 class="mo-band-caption">{{view.compliance.title}}</h2>{{/if}}
+                  <div class="mo-fields">
+                    {{#if view.compliance.showIrn}}
+                      <p class="mo-field mo-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}><span class="mo-field-label">{{view.compliance.irnLabel}}</span><span class="mo-field-value mo-irn-value mo-break" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+                    {{/if}}
+                    {{#each view.compliance.rows}}
+                      <p class="mo-field"><span class="mo-field-label">{{label}}</span><span class="mo-field-value mo-num" data-testid="num">{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{moDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                  <div class="mo-qr-list">
+                    <div class="mo-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                    <div class="mo-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                    <div class="mo-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                  </div>
+                </div>
+              {{/unless}}
+            </div>
+          </header>
+
+          <section class="mo-items-section" data-testid="section" data-section="items">
+            <div class="mo-items-scroll" data-testid="items-scroll">
+              <table class="mo-items{{#if view.printTight}} is-print-tight{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--mo-figures: {{view.table.figureCount}}; --mo-serial-width: {{view.table.serialWidth}}px;">
+                <thead>
+                  <tr data-testid="items-header">
+                    {{!-- No "Sr." text over the serial numbers (user request, 2026-10-23); kept for screen readers. --}}
+                    <th class="mo-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px" aria-label="{{view.table.serialLabel}}"></th>
+                    {{#each view.table.header}}
+                      <th class="{{className}}" data-col="{{col}}"{{#if width}} style="width: {{width}}px"{{/if}}>
+                        {{#if isName}}<span class="mo-desc-min" aria-hidden="true" style="width: {{view.table.descriptionMin}}px"></span>{{/if}}
+                        {{#each labelParts}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}
+                      </th>
+                    {{/each}}
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each view.table.rows}}
+                    {{#if isGroupHeader}}
+                      <tr class="mo-group-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-row">
+                        <td colspan="{{colspan}}">
+                          <span class="mo-group-name">{{name}}</span>
+                          {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                        </td>
+                      </tr>
+                      {{#if originalImages.length}}
+                        <tr class="mo-image-row mo-group-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-image-row">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="mo-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{else}}
+                      {{#if nameRow}}
+                        <tr class="mo-name-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-name-row" data-item-index="{{itemIndex}}">
+                          <td class="mo-col-serial" data-col="sr" rowspan="2">{{#if serial}}<span class="mo-num" data-testid="num">{{serial}}</span>{{/if}}</td>
+                          <td colspan="{{detailColspan}}">
+                            <span class="mo-item-name">{{name}}</span>
+                            {{#if inlineCodes.length}}<span class="mo-item-codes">{{#each inlineCodes}}<span class="mo-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                      <tr class="mo-item-row{{#if isStripe}} is-stripe{{/if}}{{#if isRich}} is-rich{{/if}}{{#if isGroupTotal}} mo-group-total-row{{/if}}{{#if nameRow}} has-name-row{{/if}}" data-testid="item-row" data-item-index="{{itemIndex}}">
+                        {{#unless nameRow}}<td class="mo-col-serial" data-col="sr">{{#if serial}}<span class="mo-num" data-testid="num">{{serial}}</span>{{/if}}</td>{{/unless}}
+                        {{#each cells}}
+                          {{#if isName}}
+                            <td class="{{className}}" data-col="{{col}}">
+                              {{#if ../thumbnail}}
+                                <div class="mo-item-thumbnail">{{> CeresImage src=../thumbnail alt=../name class="mo-thumbnail" href=../thumbnail}}</div>
+                              {{/if}}
+                              {{#unless ../nameRow}}
+                                <span class="mo-item-name">{{../name}}</span>
+                                {{#if ../inlineCodes.length}}<span class="mo-item-codes">{{#each ../inlineCodes}}<span class="mo-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                              {{/unless}}
+                              {{#if ../hasDetail}}
+                                <div class="mo-item-detail" data-ceres-description-inline{{#if ../detailRow}} style="display: none;"{{/if}}>
+                                  {{#unless ../detailRow}}
+                                    <div data-ceres-description-content>
+                                      {{#if ../description}}<div class="mo-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData ../description) }}</div>{{/if}}
+                                      {{#if ../images.length}}{{> CeresImageGallery (prepareImageGallery ../images variant="thumbnail" alt=../name) }}{{/if}}
+                                    </div>
+                                  {{/unless}}
+                                </div>
+                              {{/if}}
+                            </td>
+                          {{else}}
+                            <td class="{{className}}" data-col="{{col}}" data-label="{{label}}">{{#if isNum}}<span class="mo-num" data-testid="num">{{value}}</span>{{else}}{{value}}{{/if}}</td>
+                          {{/if}}
+                        {{/each}}
+                      </tr>
+                      {{#if hasDetail}}
+                        {{!-- Full-width description row (isDescriptionFullWidth), kept for the live toggle. --}}
+                        <tr class="mo-detail-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}" data-ceres-description-row{{#unless detailRow}} style="display: none;"{{/unless}}>
+                          <td class="mo-col-serial"></td>
+                          <td colspan="{{detailColspan}}">
+                            <div class="mo-item-detail" data-ceres-description-full-width>
+                              {{#if detailRow}}
+                                <div data-ceres-description-content>
+                                  {{#if description}}<div class="mo-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData description) }}</div>{{/if}}
+                                  {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                                </div>
+                              {{/if}}
+                            </div>
+                          </td>
+                        </tr>
+                      {{/if}}
+                      {{#if imageRow}}
+                        {{!-- Original images: their own row under the item, across the whole table. --}}
+                        <tr class="mo-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="mo-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{/if}}
+                  {{/each}}
+                  {{!-- Stretch row: takes the spare height of a one-page printout, or of the preview's A4 sheet. --}}
+                  <tr class="mo-filler" aria-hidden="true"><td class="mo-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tbody>
+                {{#if view.table.footer.show}}
+                  <tbody class="mo-items-total">
+                    <tr class="mo-total-row" data-testid="items-total">
+                      <td class="mo-col-serial" data-col="sr">{{#if view.table.footer.labelInSerial}}{{view.table.footer.label}}{{/if}}</td>
+                      {{#each view.table.footer.cells}}
+                        <td class="{{className}}" data-col="{{col}}"{{#unless isName}} data-label="{{label}}"{{/unless}}>{{#if isName}}{{view.table.footer.label}}{{else if isNum}}<span class="mo-num" data-testid="num">{{value}}</span>{{/if}}</td>
+                      {{/each}}
+                    </tr>
+                  </tbody>
+                {{/if}}
+                {{!-- Print only: repeated at the foot of each page the table spans, it rounds the
+                      corners of the page's last row (styles.css, "corners at a page break"). --}}
+                <tfoot class="mo-items-corners" aria-hidden="true">
+                  <tr><td class="mo-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+
+          {{#if view.compliance.isBelowItems}}
+            <section class="mo-cards mo-logistics" data-testid="section" data-section="logistics-below">
+              <div class="mo-card mo-compliance mo-col-2{{#unless view.hasCompliance}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+                <div class="mo-compliance-text">
+                  {{#if view.compliance.title}}<h2 class="mo-card-title">{{view.compliance.title}}</h2>{{/if}}
+                  <div class="mo-kv">
+                    {{#if view.compliance.showIrn}}
+                      <span class="mo-kv-label mo-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}>{{view.compliance.irnLabel}}</span>
+                      <span class="mo-kv-value mo-irn-value"{{#unless view.compliance.irn}} style="display:none"{{/unless}} data-ceres-field="irn">{{view.compliance.irn}}</span>
+                    {{/if}}
+                    {{#each view.compliance.rows}}
+                      <span class="mo-kv-label">{{label}}</span>
+                      <span class="mo-kv-value mo-num" data-testid="num">{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{moDate value 0}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </div>
+                <div class="mo-qr-list">
+                  <div class="mo-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                  <div class="mo-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                  <div class="mo-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                </div>
+              </div>
+            </section>
+          {{/if}}
+
+          <div class="mo-bottom">
+            <div class="mo-bottom-main">
+              {{#if view.bank.show}}
+                <section class="mo-card mo-bank" data-testid="section" data-section="bank">
+                  <div class="mo-bank-main">
+                    {{#if view.bank.title}}<h2 class="mo-card-title" data-role="title">{{view.bank.title}}</h2>{{/if}}
+                    <div class="mo-kv mo-bank-rows">
+                      {{#each view.bank.rows}}
+                        <span class="mo-kv-label mo-bank-{{key}}">{{label}}</span>
+                        <span class="mo-kv-value{{#if isNum}} mo-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
+                      {{/each}}
+                      {{!-- The UPI ID prints once, as refrens.com prints it: under the QR when there
+                            is one, else here with the bank rows. --}}
+                      {{#if view.bank.upi}}{{#unless view.bank.upi.qr}}
+                        <span class="mo-kv-label mo-bank-upi">{{view.bank.upi.label}}</span>
+                        <span class="mo-kv-value mo-num" data-testid="num">{{view.bank.upi.id}}</span>
+                      {{/unless}}{{/if}}
+                    </div>
+                  </div>
+                  {{#if view.bank.upi.qr}}
+                    <figure class="mo-upi">
+                      <figcaption class="mo-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
+                      <img class="mo-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
+                      <p class="mo-upi-id mo-num">{{view.bank.upi.id}}</p>
+                      {{#if view.bank.upi.note}}<p class="mo-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                    </figure>
+                  {{/if}}
+                </section>
+              {{/if}}
+
+              {{!-- Terms, notes, additional information and attachments under the bank details, in
+                    the left column beside the totals (Modern design). --}}
+              {{#each view.terms}}
+                <section class="mo-card mo-terms" data-testid="section" data-section="terms">
+                  <h2 class="mo-card-title" data-role="title">{{title}}</h2>
+                  <ol class="mo-terms-list">
+                    {{#each items}}<li>{{this}}</li>{{/each}}
+                  </ol>
+                </section>
+              {{/each}}
+
+              {{#if view.notes}}
+                <section class="mo-card mo-notes" data-testid="section" data-section="notes">
+                  {{#if view.notes.title}}<h2 class="mo-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
+                  <div class="mo-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
+                </section>
+              {{/if}}
+
+              {{#if view.additional}}
+                <section class="mo-card" data-testid="section" data-section="additional">
+                  {{#if view.additional.title}}<h2 class="mo-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
+                  <div class="mo-kv">
+                    {{#each view.additional.rows}}
+                      <span class="mo-kv-label" data-role="ai-label">{{label}}</span>
+                      <span class="mo-kv-value{{#if isDate}} mo-num{{/if}}" data-role="ai-value">{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </section>
+              {{/if}}
+
+              {{#if view.attachments}}
+                <section class="mo-card" data-testid="section" data-section="attachments">
+                  {{#if view.attachments.title}}<h2 class="mo-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}
+                  <ol class="mo-attachments">
+                    {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
+                  </ol>
+                </section>
+              {{/if}}
+
+            </div>
+
+            <div class="mo-bottom-side">
+              {{!--
+                The totals: the shared Subtotal widget's rows (computeSubtotalRows) with its classes
+                and data-ceres-* hooks, so the live hideTotals / hideTaxes toggles and the widget's
+                visibility CSS still apply. The grand total reads large between two rules.
+              --}}
+              <table class="mo-totals-table" data-testid="totals-table">
+                <tbody class="mo-totals ceres-subtotal" data-ceres-subtotal data-testid="section" data-section="totals">
+                  {{#each view.totals.rows}}
+                    <tr
+                      class="ceres-subtotal-row ceres-subtotal-row-{{emphasis}}{{#if isGrand}} mo-grand-row{{/if}}{{#if isExtra}} mo-extra-row{{/if}}{{#if view.totals.hidden}}{{#unless survivesHideTotals}} is-hidden-by-totals{{/unless}}{{/if}}{{#if isTaxRow}}{{#if view.totals.hideTaxes}} is-hidden-by-taxes{{/if}}{{/if}}"
+                      data-ceres-subtotal-row="{{key}}"
+                      {{#if isTaxRow}}data-ceres-subtotal-taxes{{/if}}
+                      {{#if survivesHideTotals}}data-ceres-subtotal-keep{{/if}}
+                    >
+                      <th class="ceres-subtotal-label" scope="row">
+                        {{label}}
+                        {{#if note}}<div class="ceres-subtotal-note">{{note}}</div>{{/if}}
+                      </th>
+                      <td class="ceres-subtotal-value">
+                        <span class="mo-num"{{#if isNum}} data-testid="num"{{/if}}{{#if isGrand}} data-role="grand-total-row"{{/if}}>{{value}}</span>
+                        {{#if converted}}<div class="ceres-subtotal-converted">{{converted}}</div>{{/if}}
+                        {{#if extra}}
+                          <div class="ceres-subtotal-extra">
+                            {{extra.value}}
+                            {{#if extra.converted}}<div class="ceres-subtotal-converted">{{extra.converted}}</div>{{/if}}
+                          </div>
+                        {{/if}}
+                      </td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+
+              {{!-- The amount in words under the grand total, its title a coloured caption (Modern
+                    design; Refrens' Modern places it there too). --}}
+              {{#if view.words}}
+                <div class="mo-words ceres-subtotal-words{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}{{#if view.words.hiddenBySetting}} is-hidden-by-words-setting{{/if}}" data-ceres-total-in-words>
+                  <h2 class="mo-section-title mo-words-label">{{view.words.label}}</h2>
+                  <p class="mo-words-value">{{view.words.value}}</p>
+                </div>
+              {{/if}}
+
+              {{!-- Only for a signature the document has (an image or a digital request); no
+                    "For <business>" line, as refrens.com prints it. --}}
+              {{#if view.signature.show}}
+                <section class="mo-signature" data-testid="signature">
+                  <div class="mo-signature-mark">
+                    {{#if view.signature.image}}
+                      {{> CeresImage src=view.signature.image alt=view.signature.label class="mo-signature-image"}}
+                    {{else if view.signature.awaitingDigital}}
+                      <p class="mo-signature-banner">Awaiting Digital Signature</p>
+                    {{else if view.signature.signedDigital}}
+                      <p class="mo-signature-banner">
+                        Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+                        {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+                      </p>
+                    {{/if}}
+                  </div>
+                  {{#if view.signature.label}}<p class="mo-signature-label">{{view.signature.label}}</p>{{/if}}
+                </section>
+              {{/if}}
+            </div>
+          </div>
+
+          {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered
+                with their data, hidden while switched off (live toggles). --}}
+          <section class="mo-card mo-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+            {{#if view.hsn.title}}<h3 class="mo-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
+            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          <section class="mo-card mo-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
+            {{#if view.taxSummary.title}}<h3 class="mo-card-title" data-role="title">{{view.taxSummary.title}}</h3>{{/if}}
+            {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          {{#if view.stock}}
+            <section class="mo-card mo-widget-table" data-testid="section" data-section="stock-summary" data-ceres-batch-summary{{#if view.stock.hidden}} style="display: none;"{{/if}}>
+              {{#if view.stock.title}}<h3 class="mo-card-title" data-role="title">{{view.stock.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table mo-stock-table">
+                  <thead><tr>{{#each view.stock.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.stock.rows}}
+                      <tr>{{#each this}}<td{{#if isNum}} class="mo-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.payments.show}}
+            <section class="mo-card mo-widget-table" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
+              {{#if view.payments.title}}<h3 class="mo-card-title" data-role="title">{{view.payments.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table mo-payments-table">
+                  <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.payments.rows}}
+                      <tr data-testid="payment">
+                        {{#each this}}
+                          <td{{#unless isText}} class="mo-num"{{/unless}}>{{#if isDate}}{{moDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="mo-payment-converted">{{converted}}</span>{{/if}}</td>
+                        {{/each}}
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                  {{#if view.payments.total}}
+                    <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="mo-num">{{value}}</td>{{/each}}</tr></tfoot>
+                  {{/if}}
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.enquiry}}
+            <p class="mo-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="mo-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="mo-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
+          {{/if}}
+
+          {{> RefrensBranding @root.invoice}}
+          {{!-- On the last page only: the content's last block, so in print the content before it
+                goes over to a new page with it rather than leave it alone there. --}}
+          {{#unless view.footerEveryPage}}
+        <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer mo-letterhead-footer{{#if view.footerEveryPage}} mo-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+          {{#if @root.invoice.letterHeadFooter}}
+            <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+          {{else}}
+            <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+          {{/if}}
+        </div>
+          {{/unless}}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  {{!-- On every page: fixed to each printed page's foot (print rules), outside the frame. --}}
+  {{#if view.footerEveryPage}}
+  <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer mo-letterhead-footer{{#if view.footerEveryPage}} mo-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+    {{#if @root.invoice.letterHeadFooter}}
+      <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{else}}
+      <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
+{{/with}}
