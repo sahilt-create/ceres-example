@@ -83,25 +83,25 @@
   --mo-label-font: var(--mo-title-font);
 
   /*
-   * Type scale: every text 13 px (user request, 2026-10-23) but the title (24) and the item
+   * Type scale: every text 13 px (user request, 2026-10-23; 14 → 13 again 2026-11-12) but the title (24) and the item
    * codes under an item's name (11, user request); weight and colour carry the hierarchy.
    * Print uses the same sizes (user, 2026-10-21: print 1:1).
    */
   --mo-font-size-code: 11px;
-  --mo-font-size-xs: 14px;
-  --mo-font-size-sm: 14px;
-  --mo-font-size-s: 14px;
-  --mo-font-size-base: 14px;
-  --mo-font-size-m: 14px;
-  --mo-font-size-l: 14px;
-  --mo-font-size-lg: 14px;
-  --mo-font-size-xl: 42px; /* the title, as Refrens' Modern */
+  --mo-font-size-xs: 13px;
+  --mo-font-size-sm: 13px;
+  --mo-font-size-s: 13px;
+  --mo-font-size-base: 13px;
+  --mo-font-size-m: 13px;
+  --mo-font-size-l: 13px;
+  --mo-font-size-lg: 13px;
+  --mo-font-size-xl: 32px; /* the title (user, 2026-11-12; Refrens' Modern has 42) */
   --mo-font-size-heading: 16px; /* the coloured section headings (user request, 2026-10-24) */
-  --mo-font-size-subheading: 14px; /* the coloured headings under the item table (user, 2026-10-24) */
+  --mo-font-size-subheading: 13px; /* the coloured headings under the item table (user, 2026-10-24) */
   --mo-font-size-grand: 16px; /* the grand total, label and figure (Refrens' Modern) */
   --mo-font-size-name: 16px; /* Billed To / Shipped names in the band (Refrens' Modern) */
   --mo-font-size-brand: 20px; /* the seller's name beside the logo (Refrens' Modern) */
-  --mo-font-size-section: 14px; /* headings under the band and the table's headings (Refrens' Modern) */
+  --mo-font-size-section: 13px; /* headings under the band and the table's headings (Refrens' Modern) */
   --mo-font-size-label: 12px; /* the band's captions, Scan to pay (Refrens' Modern) */
   --mo-font-size-words: 13px; /* the amount in words (Refrens' Modern) */
   --mo-font-size-grand-figure: 16px; /* the grand total's figure (Refrens' Modern) */
@@ -314,7 +314,7 @@
   font-family: var(--mo-title-font);
   font-size: calc(var(--mo-font-size-xl) * var(--mo-text-scale, 1));
   font-weight: 400;
-  line-height: 1.143; /* 42 on 48 */
+  line-height: 1.25; /* 32 on 40 */
   letter-spacing: 0;
   overflow-wrap: anywhere;
 }
@@ -361,11 +361,11 @@
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
 }
 
-/* The logo as refrens.com sizes it (its own size, down to 240 × 120, square corners), on a
-   white tile with rounded corners (Modern design). */
+/* The logo as refrens.com sizes it (its own size, down to 240 × 120, square corners), on white
+   with no padding and square corners (user, 2026-11-12). */
 .mo-logo {
-  padding: 8px;
-  border-radius: 10px;
+  padding: 0;
+  border-radius: 0;
   background: var(--mo-paper);
   line-height: 0;
 }
@@ -456,7 +456,13 @@
 /* Document details between two rules: each a soft label over its bold value; Country / Place
    of Supply among them; the document QR on its white tile at the end. */
 .mo-band-logistics .mo-fields {
+  /* A value keeps its unbreakable width (a Transporter ID, an Ack No.): the card grows to it. */
+  grid-template-columns: fit-content(50%) minmax(min-content, 1fr);
   gap: 10px 16px;
+}
+
+.mo-band-logistics .mo-field-value {
+  min-width: min-content;
 }
 
 /* The details: 20 px inside the rules, cells 154 px apart across and 28 down, 4 px from a
@@ -464,7 +470,7 @@
 .mo-details-row {
   display: flex;
   gap: 24px;
-  align-items: center;
+  align-items: flex-start; /* the QR level with the first row of details (user, 2026-11-12) */
   padding-block: 20px;
   border-block: 1px solid var(--mo-band-rule);
 }
@@ -506,17 +512,59 @@
   overflow-wrap: normal;
 }
 
+/* A long text value (over 30 characters: a description in a custom field) takes a row of its
+   own and wraps across it, not down a narrow column (user, 2026-11-12: a custom field's
+   paragraph made the band three pages tall). */
+.mo-detail.is-long {
+  grid-column: 1 / -1;
+}
+
+/* Wider than the whole strip (fitDetails): a row of its own, broken inside it. */
+.mo-detail.is-squeezed .mo-detail-value {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The IRN and e-way bill cells lay out among the details (their group adds no box); the IRN,
+   64 characters that break anywhere, takes two columns so it wraps in about three lines, as
+   Refrens' Modern prints it. */
+.mo-details > .mo-details-compliance {
+  display: contents;
+}
+
+.mo-details .mo-irn-row {
+  grid-column: span 2;
+}
+
+/* The QRs at the end of the details row; none, no space kept. */
+.mo-details-qrs {
+  flex: none;
+}
+
+.mo-details-qrs:not(:has(.mo-qr:not(.is-empty))) {
+  display: none;
+}
+
 /* The amount due goes with the totals: hidden while they are (Hide Totals, live too). */
 .mo-doc:has(.mo-grand-row.is-hidden-by-totals) .mo-detail[class~="mo-meta-dueAmount"] {
   display: none;
 }
 
 /* Shipped From | Shipped To | Transport Details | E-Invoice: the next column each. */
+
+/* Shipped From | Shipped To | Transport | E-Invoice side by side, sharing the row; a card is
+   never narrower than its content (a Transporter ID or IRN that cannot wrap ran into the next
+   card, user 2026-11-12): one that does not fit moves to the next line. */
 .mo-band-logistics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 24px 14px;
-  align-items: start;
+  align-items: flex-start;
+}
+
+.mo-band-logistics > * {
+  flex: 1 1 200px;
+  min-width: min-content;
 }
 
 .mo-band-logistics:not(:has(> :not(.is-empty))) {
@@ -531,11 +579,12 @@
   margin-top: 8px;
 }
 
-/* Every QR on a white tile in the band (Refrens' Modern), 120 px square inside it. */
+/* Every QR in the band on white (a code on the theme colour does not scan), square and with no
+   padding round it (user, 2026-11-12). */
 .mo-band .mo-qr:not(.is-empty) {
   flex: none;
-  padding: 6px;
-  border-radius: 8px;
+  padding: 0;
+  border-radius: 0;
   background: var(--mo-paper);
   line-height: 0;
 }
@@ -598,9 +647,10 @@
   text-transform: uppercase;
 }
 
-/* The summaries' titles: theme-coloured capital captions like every heading under the items. */
+/* The summaries' titles a quiet grey caption in capitals, as in Professional, so the coloured
+   tables under them don't make the page too colourful (user request, 2026-11-12). */
 .mo-card.mo-widget-table > .mo-card-title {
-  color: var(--mo-accent-text);
+  color: var(--mo-caption);
   font-size: calc(var(--mo-font-size-section) * var(--mo-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0;
@@ -725,9 +775,11 @@
      (corners at a page break, the split totals' joint) read the same variable. */
   --mo-line: var(--mo-accent-text);
 
-  /* Rows are parted by a hairline (user, 2026-11-06: separators at 0.5); the table's outline,
-     its bottom edge included, stays 1 px. */
-  --mo-separator: 0.5px;
+  /* Rows are parted as in Refrens' Modern (measured on its share page, user 2026-11-12: "too
+     thick"): a 1 px rule in the theme colour at 20 % (Refrens' secondary colour), lighter than
+     the table's outline, which stays the full theme colour. */
+  --mo-separator: 1px;
+  --mo-sep-color: color-mix(in srgb, var(--mo-accent-text) 20%, var(--mo-paper));
 
   min-width: 0;
 }
@@ -769,14 +821,15 @@
   vertical-align: top;
 }
 
-/* The separator is an inset shadow, not a border: Chrome rounds a border thinner than a pixel up
-   to a whole device pixel (the 0.5 px rule printed at 0.75 pt), a shadow it draws as set. A row
-   without a separator sets --mo-sep to nothing; the table's bottom edge is a 1 px border. */
+/* The separator is a 1 px bottom border in the separator colour (Refrens' Modern). Not an inset
+   shadow: Chrome stores a cell's inset shadow in a PDF as a tinted fill of the whole cell under
+   a white one, and PDF viewers and Chrome's print preview showed a faint vertical line at every
+   cell's edge (user, 2026-11-12). A row without a separator sets its own bottom border. */
 .mo-items > tbody > tr > td {
-  --mo-sep: inset 0 calc(-1 * var(--mo-separator)) 0 var(--mo-line);
+  --mo-sep: 0 0 transparent;
 
-  border-bottom: 0;
-  box-shadow: var(--mo-sep);
+  border-bottom: var(--mo-separator) solid var(--mo-sep-color);
+  box-shadow: none;
 }
 
 .mo-items > tbody > tr > td:first-child {
@@ -794,18 +847,20 @@
 
 /* The last visible row closes the table with rounded corners: the Total row when there is
    one, else the last item's last visible row (the stretch row and a hidden live-toggle
-   detail row never count on screen). In print the Total row is a table of its own under the
+   detail row never count on screen) — only while the stretch row is the table's last: when a
+   group's Sub total follows it, the Sub total closes the table and the item above stays
+   square (user, 2026-11-12: two curves). In print the Total row is a table of its own under the
    items (splitTotals): the corners are its, the items' last row stays square. */
-.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler), :has(+ tr[style*="none"] + .mo-filler)) > td:first-child {
+.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td:first-child {
   border-end-start-radius: 8px;
 }
 
-.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler), :has(+ tr[style*="none"] + .mo-filler)) > td:last-child {
+.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td:last-child {
   border-end-end-radius: 8px;
 }
 
 /* That last row's bottom rule is the table's edge: the outline's 1 px, not a separator. */
-.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler), :has(+ tr[style*="none"] + .mo-filler)) > td {
+.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td {
   --mo-sep: 0 0 transparent;
 
   border-bottom: 1px solid var(--mo-line);
@@ -820,7 +875,7 @@
 /* Cell by cell, fractional column widths leave hairline seams in a tinted row: each cell's
    colour runs 1px under its neighbour. */
 .mo-items > tbody > tr.is-stripe > td:not(:last-child) {
-  box-shadow: 1px 0 0 var(--mo-zebra), var(--mo-sep);
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
 }
 
 /* The fill on the row, not on each heading: cell by cell, columns with fractional widths left
@@ -995,11 +1050,11 @@
    the preview and a browser's print (user, 2026-11-04): each cell's colour runs 1px under its
    neighbour, as the zebra rows'. */
 .mo-total-row > td:not(:last-child) {
-  box-shadow: 1px 0 0 var(--mo-zebra), var(--mo-sep);
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
 }
 
 .mo-doc[dir="rtl"] .mo-total-row > td:not(:last-child) {
-  box-shadow: -1px 0 0 var(--mo-zebra), var(--mo-sep);
+  box-shadow: none;
 }
 
 /* The same across a summary table's total row (payments, tax summary). */
@@ -1060,27 +1115,45 @@
   margin-bottom: 8px;
 }
 
+/* The UPI block follows the bank rows at a fixed 40 px, not at the card's far end: in a wide
+   card (landscape, the totals narrower) it sat far from the rows it belongs to (user,
+   2026-11-12). */
 .mo-bank {
   flex-flow: row wrap;
-  gap: 20px;
+  gap: 20px 40px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 /* The rows take what the QR leaves and wrap there: a long account name sized them to its
    one-line width and pushed the QR under them, leaving the card's right side empty (user,
    2026-11-02). Only an unbreakable figure wider than that room moves the QR down. */
+
+/* The UPI block stays beside the rows only while they keep about 300 px (labels on one line,
+   values of some 20 characters); in less, the rows wrapped word by word into a tall narrow
+   column, so the UPI block moves under them and they take the card's width (user, 2026-11-12).
+   Short details ask only for their own width (max-width: max-content), so the QR stays beside
+   them; an unbreakable figure still widens them (min-width). */
 .mo-bank-main {
   display: flex;
-  flex: 1 1 0;
+  flex: 1 1 calc(300px * var(--mo-text-scale, 1));
   flex-direction: column;
   gap: 8px;
   min-width: min-content;
+  max-width: max-content; /* no wider than its rows: the UPI block follows them */
   align-self: flex-start;
 }
 
 .mo-bottom-main {
   min-width: min-content;
+}
+
+/* Terms, notes, additional information and attachments take the column's width, never set it:
+   a wide table in the notes (a technical specification) made the column so wide the totals
+   wrapped under all of it, pages below the bank details (user, 2026-11-12). Their text and
+   tables wrap to the column instead. The bank details still widen it (a long account number). */
+.mo-bottom-main > .mo-card:not(.mo-bank) {
+  contain: inline-size;
 }
 
 /* As wide as its widest unbroken line (the UPI ID or the QR), at least 140 px; the note wraps
@@ -1108,6 +1181,7 @@
   font-weight: 600;
   line-height: 1.75; /* 21 px */
   letter-spacing: 0;
+  text-transform: uppercase; /* SCAN TO PAY VIA UPI, as the headings beside it (user, 2026-11-12) */
 }
 
 .mo-upi-qr {
@@ -1832,41 +1906,25 @@
        page, past the table's room, and the whole table printed at 98 % to make way for it. */
     max-width: 100%;
     object-fit: contain;
+
+    /* Capped, the picture sits at the row's start, not in the middle of its box (user,
+       2026-11-12). */
+    object-position: left top;
+  }
+
+  .mo-doc[dir="rtl"] .mo-large-image {
+    object-position: right top;
   }
 
   /* A row cut by a page break (an item taller than what is left of the page) closes with a
      rule at the page's foot, and every page's piece of the table with it (user rule,
-     2026-10-20): the cells' own borders end open there. The items wrapper draws that rule on
-     each page's piece (box-decoration-break: clone); on the last piece the table's own
-     bottom rule lies over it. */
-  .mo-items-scroll {
-    border-bottom: 1px solid var(--mo-line);
-    /* stylelint-disable-next-line property-no-vendor-prefix -- Chrome before 130 needs it */
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-  }
-
-  .mo-items-scroll > :last-child {
-    margin-bottom: calc(-1 * 1px);
-  }
-
-  /* Stretch on, a document longer than a page (user, 2026-10-19): where a whole item moves to
-     the next page, the column rules run on to the page's foot and a rule closes each page's
-     piece of the table (helpers.ts columnRules), drawn by the items wrapper; on the last
-     piece the table's own bottom rule lies over it. The row groups are opaque, so the rules
-     show only below the page's last row. */
+     2026-10-20): the item table's repeated footer (.mo-items-corners, below) draws that rule
+     and the rounded corners under each page's last row. The items wrapper draws no rule of
+     its own: a newer Chrome's print runs a box broken across pages down to the page's foot,
+     so its rule came out a second line under the table, apart from it (user, 2026-11-12).
+     Chrome 122 (the PDF service) ends the piece at the last row, where the footer is. */
   .mo-doc.is-stretch .mo-items-scroll {
     --mo-column-rule-width: 1px;
-
-    border-bottom: var(--mo-column-rule-width) solid
-      var(--mo-column-rule-color, var(--mo-line));
-
-    /* The wrapper's own side rules run to the page foot: no extra column rules here. */
-    box-decoration-break: clone;
-  }
-
-  .mo-doc.is-stretch .mo-items-scroll > :last-child {
-    margin-bottom: calc(-1 * var(--mo-column-rule-width));
   }
 
   :where(.mo-doc.is-stretch .mo-items) > :where(thead, tbody, tfoot) {
@@ -2092,9 +2150,19 @@
     display: none;
   }
 
-  /* The page body is the narrow-page container in print (see the container queries). */
+  /* The page body is the narrow-page container in print (see the container queries). The
+     letterhead, the template and the footer meet with no gap (user, 2026-11-12: a 16 px strip
+     under the letterhead in print and the PDF). */
   .mo-doc {
     container-type: normal;
+    row-gap: 0;
+  }
+
+  /* A browser's print: the frame's 1 cm top margin row is for the pages after the first; on
+     the first it fell under a first-page letterhead (already at the paper's top edge), a 1 cm
+     strip between it and the template. The frame starts under the letterhead instead. */
+  body:not([class~="isDibella"]) .mo-doc:not(.is-pageless) > .mo-letterhead:not(.is-empty) + .mo-page-frame {
+    margin-top: calc(-1cm / var(--mo-page-zoom, 1));
   }
 
   /* A plain block in print, its sections spaced by margins: as a flex column, Chrome 122
@@ -2103,6 +2171,17 @@
   .mo-page-body {
     display: block;
     container: mo-doc / inline-size;
+  }
+
+  /* Measured once more with the text a touch wider, as Chrome prints it a little wider than it
+     lays it out (helpers.ts stretchItemTable, flowBreakFills): on only while measuring. */
+  .mo-doc.is-flow-measure .mo-page-frame * {
+    letter-spacing: 0.02em;
+  }
+
+  .mo-doc.is-flow-measure .mo-items,
+  .mo-doc.is-flow-measure .mo-items * {
+    letter-spacing: calc(0.02em - 0.25px);
   }
 
   /* .mo-doc first: the paragraph reset (.mo-doc p { margin: 0 }) took the enquiry line's gap. */
@@ -2210,7 +2289,7 @@ body[class~="isDibella"]
 
 .mo-doc.is-filled .mo-items > tbody > tr.is-stripe + .mo-filler > td:not(:last-child),
 .mo-doc.is-filled .mo-items > tbody > tr.is-stripe + tr[style*="none"] + .mo-filler > td:not(:last-child) {
-  box-shadow: 1px 0 0 var(--mo-zebra), var(--mo-sep);
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
 }
 
 /*
@@ -2291,7 +2370,7 @@ body[class~="isDibella"]
   /* Where the Total row follows in its own table, this rule is the line between the last item
      and it: a separator, at its 0.5 px (the totals draw the same line, laid over it). */
   .mo-items:has(+ [data-mo-totals-split]) > .mo-items-corners td {
-    box-shadow: 0 calc(-0.5 * var(--mo-separator)) 0 calc(0.5 * var(--mo-separator)) var(--mo-line);
+    box-shadow: 0 calc(-0.5 * var(--mo-separator)) 0 calc(0.5 * var(--mo-separator)) var(--mo-sep-color);
   }
 
   .mo-items > .mo-items-corners td:is(:first-child, :last-child) {
@@ -2391,7 +2470,7 @@ body[class~="isDibella"]
      PDF viewers drew each cell's edge as a faint vertical line in the Total row (user,
      2026-11-03). */
   .mo-items[data-mo-totals-split] {
-    box-shadow: inset 0 var(--mo-joint-rule, 1px) 0 var(--mo-line);
+    box-shadow: inset 0 var(--mo-joint-rule, 1px) 0 var(--mo-sep-color);
   }
 
   .mo-items[data-mo-totals-split] > :is(thead, tbody, tfoot),
@@ -2456,7 +2535,7 @@ body[class~="isDibella"]
   .mo-doc .mo-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr + tr,
   .mo-doc .mo-items:is(.is-cards, .is-grid) > tbody + tbody > tr:first-child,
   .mo-doc .mo-items:is(.is-cards, .is-grid) > thead + tbody > tr:first-child {
-    border-top: var(--mo-separator) solid var(--mo-line);
+    border-top: var(--mo-separator) solid var(--mo-sep-color);
   }
 
   .mo-doc .mo-items:is(.is-cards, .is-grid) .mo-desc-min,

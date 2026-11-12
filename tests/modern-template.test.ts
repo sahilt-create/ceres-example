@@ -1004,28 +1004,46 @@ describe("Modern Template — view model", () => {
     expect(html).toMatch(/mo-detail-label">Reason<[\s\S]*?Product Return/);
   });
 
-  it("puts the document QR under the details (refrens.com's placement), one QR only", () => {
+  it("puts the QRs at the end of the details, IRN and e-way bill among them, one QR only", () => {
     const withQr = render((invoice) => {
       invoice.documentQr = "doc-qr-payload";
     });
     expect(withQr).toMatch(
       /data-section="details"[\s\S]*?mo-doc-qr"[^>]*><img[^>]*src="data:image\//
     );
-    // Another placement puts it beside the logo.
+    // Whatever the business's placement: the QR stays with the details (user, 2026-11-12).
     const beside = render((invoice) => {
       invoice.documentQr = "doc-qr-payload";
       invoice.owner.configuration.experimental = {
         qrCodePlacement: "BESIDE_LOGO",
       };
     });
-    expect(beside).toMatch(/mo-band-parties[\s\S]*?mo-logo[\s\S]*?mo-doc-qr"/);
-    expect(beside).not.toContain("mo-details-qr");
+    expect(beside).toMatch(
+      /data-section="details"[\s\S]*?mo-details-qrs[\s\S]*?mo-doc-qr"/
+    );
+    expect(beside).not.toMatch(
+      /mo-band-parties[^]*?mo-doc-qr[^]*?data-section="details"/
+    );
     const active = render((invoice) => {
       invoice.documentQr = "doc-qr-payload";
       invoice.qrCode = "irn-qr-payload";
       invoice.irn = { Irn: "abc", qrCode: "irn-qr-payload" };
     });
     expect(active).toContain("mo-doc-qr is-empty");
+    // The IRN and the e-way bill are cells of the details; no E-Invoice card in the band.
+    const eway = render((invoice) => {
+      invoice.irn = {
+        Irn: "abc123",
+        EwbNo: "602218603039",
+        EwbDt: "2026-11-12 10:00:00",
+      };
+    });
+    expect(eway).toMatch(
+      /data-section="details"[\s\S]*?mo-irn-row[\s\S]*?abc123[\s\S]*?Eway Bill[\s\S]*?602218603039[\s\S]*?Eway Date/
+    );
+    expect(eway).not.toMatch(
+      /mo-band-logistics[\s\S]*?data-section="compliance"[\s\S]*?<\/header>/
+    );
   });
 
   it("sizes the table from the Figma's 934 px table with a 32 px serial column", () => {
