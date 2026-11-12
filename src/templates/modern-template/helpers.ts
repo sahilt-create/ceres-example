@@ -5655,6 +5655,8 @@ export interface FlowPlaced {
   page: number;
   bottom: FlowLength;
   end: FlowLength;
+  // Cut by a page break: starts on an earlier page than it ends on.
+  broken?: boolean;
 }
 
 /*
@@ -5691,6 +5693,7 @@ const placeUnits = (
   units.forEach((unit, at) => {
     const top = (): FlowLength => ({ c: unit.top + shift.c, k: shift.k });
     const bottom = (): FlowLength => ({ c: unit.bottom + shift.c, k: shift.k });
+    let broken = false;
     for (
       let guard = 0;
       guard < 200 &&
@@ -5709,6 +5712,7 @@ const placeUnits = (
           )
         : undefined;
       if (unit.cards && (cardCut || firstOnPage)) {
+        broken = true;
         // Cut between the cards' lines (none fits on a page of its own: cut at its foot, as
         // Chrome does): the row goes on at the next page's top with what is left of it.
         index += 1;
@@ -5728,6 +5732,7 @@ const placeUnits = (
         // Breaks where the page ends and runs on at the next page's start (a table's heading
         // repeated), a line or two later for text (the line across the break, orphans).
         const cut = regionEnd(index, unit);
+        broken = true;
         cutAt = Math.min(cutAt, at);
         if (near) doubt = Math.min(doubt, at);
         index += 1;
@@ -5743,7 +5748,12 @@ const placeUnits = (
       flowAt(regionEnd(index, unit), page) - flowAt(bottom(), page) < FLOW_DOUBT
     )
       doubt = Math.min(doubt, at);
-    placed.push({ page: index, bottom: bottom(), end: regionEnd(index, unit) });
+    placed.push({
+      page: index,
+      bottom: bottom(),
+      end: regionEnd(index, unit),
+      broken,
+    });
   });
   return { placed, cut: cutAt, doubt, nearMoves };
 };
@@ -5765,6 +5775,15 @@ export const flowFiller = (
   const at = placed[anchor];
   if (!at || cut <= anchor) return undefined;
   if (lastPageOnly && placed.some((unit) => unit.page !== 0)) return undefined;
+  /*
+   * What follows the table runs over to the next page (terms carrying on line by line): the
+   * page is full already, and a space under the table only pushed a line over, then a tall
+   * last-page footer onto a page of its own (quotation A00052-D, 2026-11-12). No space.
+   */
+  const firstNext = placed.findIndex(
+    (unit, n) => n > anchor && unit.page > at.page
+  );
+  if (firstNext > 0 && placed[firstNext].broken) return undefined;
   const after = placed
     .slice(anchor + 1)
     .filter((unit) => unit.page === at.page);
@@ -6255,7 +6274,23 @@ export const stretchPrintRules = (
     const pageLayout = { ...layout, page };
     const sized = flowAtHeight(units, height);
     const parts: string[] = [];
-    const room = flowFiller(sized, anchor, pageLayout);
+    /*
+     * The space under the last item by the smaller of the two measures (as the E-commerce
+     * template): sized to the narrow one alone it came out a few px too tall, a line of the
+     * terms went over to the next page, and a tall last-page footer then took a page of its
+     * own (quotation A00052-D, landscape, 2026-11-12).
+     */
+    const narrowRoom = flowFiller(sized, anchor, pageLayout);
+    const wideRoom =
+      wide && wide.length === units.length
+        ? flowFiller(flowAtHeight(wide, height), anchor, pageLayout)
+        : narrowRoom;
+    const room =
+      narrowRoom && wideRoom
+        ? [narrowRoom, wideRoom].reduce((least, next) =>
+            flowAt(next, page) < flowAt(least, page) ? next : least
+          )
+        : undefined;
     if (room && flowAt(room, page) > slack)
       parts.push(
         `.mo-doc.is-stretch .mo-items .mo-filler { --mo-filler-height: ${length(

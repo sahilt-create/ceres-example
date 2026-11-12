@@ -341,24 +341,30 @@
   overflow-wrap: anywhere;
 }
 
-/* Logo on its white tile | the seller | Billed To. */
+/* Logo on its white tile | the seller | Billed To, each in its own column: a logo that does not
+   load is hidden (.mo-logo:has(.is-broken)), and its column then takes no room — placed by
+   order instead, the seller took the logo's auto column and Billed To was squeezed one
+   letter wide (2026-11-12, an expired logo link). The gaps are the cards' own margins, so an
+   empty logo column leaves none. */
 .mo-band-parties {
   display: grid;
   grid-template-columns: auto minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 24px;
+  gap: 24px 0;
   align-items: start;
 }
 
-.mo-band-parties:not(:has(> .mo-logo)) {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+.mo-band-parties > .mo-logo {
+  grid-column: 1;
+  margin-inline-end: 24px;
 }
 
-.mo-band-parties:has(> .mo-doc-qr:not(.is-empty)) {
-  grid-template-columns: auto minmax(0, 1.25fr) minmax(0, 1fr) auto;
+.mo-band-parties > .mo-seller {
+  grid-column: 2;
+  margin-inline-end: 24px;
 }
 
-.mo-band-parties:not(:has(> .mo-logo)):has(> .mo-doc-qr:not(.is-empty)) {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
+.mo-band-parties > .mo-buyer {
+  grid-column: 3;
 }
 
 /* The logo as refrens.com sizes it (its own size, down to 240 × 120, square corners), on white
@@ -1730,15 +1736,16 @@
    the UPI QR goes under the bank rows. */
 @container mo-doc (width < 600px) {
   /* The band's parties stack: the logo, the seller, Billed To; the details two across. */
-  .mo-band-parties,
-  .mo-band-parties:not(:has(> .mo-logo)),
-  .mo-band-parties:has(> .mo-doc-qr:not(.is-empty)),
-  .mo-band-parties:not(:has(> .mo-logo)):has(> .mo-doc-qr:not(.is-empty)) {
+  .mo-band-parties {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .mo-band-parties > .mo-logo,
-  .mo-band-parties > .mo-doc-qr {
+  .mo-band-parties > :is(.mo-logo, .mo-seller, .mo-buyer) {
+    grid-column: 1;
+    margin-inline-end: 0;
+  }
+
+  .mo-band-parties > .mo-logo {
     justify-self: start;
   }
 
@@ -2270,6 +2277,13 @@ body[class~="isDibella"]
 .mo-doc.is-filled .mo-items .mo-filler > td {
   height: var(--mo-filler-height, 0);
   padding-block: 0;
+}
+
+/* Not the table's end: the space carries no rule of its own (the separator is a border now,
+   2026-11-12) — an empty space row drew a 1 px line and took that pixel from a full page, a
+   line of the terms went over, and the last-page footer with it (quotation A00052-D). */
+.mo-doc.is-filled .mo-items .mo-filler:not(:last-child) > td {
+  border-bottom: 0;
 }
 
 /* A Sub total under the space (helpers.ts placeFiller) stays with it: the summary rows never
