@@ -5878,9 +5878,13 @@ const flowUnits = (
         const at = box(img);
         const room =
           (img.parentElement?.getBoundingClientRect().width || 0) / scale;
+        // styles.css draws it the row's full width (width: 100%), a small photo scaled up too:
+        // capped at its own size, a 500 px photo printed 140 px taller than reckoned, the page's
+        // fill ran over and the table's foot printed on a page of its own (invoice 0024,
+        // 2026-11-13).
         const natural =
           img.naturalWidth > 0
-            ? img.naturalHeight * Math.min(1, room / img.naturalWidth)
+            ? img.naturalHeight * (room / img.naturalWidth)
             : at.bottom - at.top;
         return { top: at.top, measured: at.bottom - at.top, natural };
       })
