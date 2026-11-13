@@ -1,0 +1,574 @@
+{{!--
+  Simple Template (Figma Document-Templates, node 1801:8109 "Simple Template").
+
+  Root is normalizeInvoiceTemplateState's output. Every block reads the view model built once
+  by `smView` (helpers.ts): labels, visibility and table columns all come from the payload.
+  The design has no fixed assets: the logo, the QR codes and the signature are the document's.
+
+  Order: header (title + status | document details, business logo + document QR), Billed By |
+  Billed To, Shipped From | Shipped To, Transport Details | E-Invoice / E-Way Bill (with the
+  e-invoice QR), items (with the column-sum row), then two columns: Bank and UPI, Terms, Notes,
+  Additional Info, Attachments on the left; totals, amount in words and signature on the
+  right. Summaries (HSN, tax, batch, payments) and the enquiry line close the document.
+  data-testid / data-section / data-col are test hooks; data-ceres-* are the host's live
+  update targets.
+--}}
+{{#with (smView @root) as |view|}}
+<div class="sm-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-sm-currency="{{@root.invoice.currency}}" data-testid="invoice-root" data-sm-side-margin="{{view.print.sideMargin}}" data-sm-paper-width="{{view.print.paperWidth}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--sm-text-scale: {{view.print.textScale}}; --sm-print-scale: {{view.print.printScale}}; --sm-print-width: {{view.print.printWidth}}px; --sm-browser-print-width: {{view.print.browserPrintWidth}}px; --sm-print-base: {{view.print.printBase}}px; --sm-browser-print-height: {{view.print.browserPrintHeight}}px; --sm-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --sm-theme: {{view.theme.accent}}; --sm-on-accent: {{view.theme.onAccent}};{{#if view.theme.accentText}} --sm-accent-text: {{view.theme.accentText}};{{/if}}{{/if}}{{#if view.script.font}} --sm-script-font: {{{view.script.font}}};{{/if}}">
+  {{!-- Text Scale Smaller (0.8, also unset): Refrens' renderer leaves the page unzoomed then, so the template zooms it (helpers.ts mapPrint ownPrintZoom); :where() lets the renderer's own rule win once Lydia sets another size live. --}}
+  {{#if view.print.ownPrintZoom}}<style id="sm-own-zoom">@media print { :where(html) { zoom: {{view.print.ownPrintZoom}}; } }</style>{{/if}}
+  {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
+  {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
+  {{#unless view.letterheadEveryPage}}
+    {{!-- Letterhead on the first page only (pdfOptions.letterHeadOnFirstPage): in the flow. --}}
+    <div class="{{#if view.serviceLetterhead}}no-dibella {{/if}}invoice-letterhead sm-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="first">
+      {{#if @root.invoice.letterHead}}
+        <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+      {{else}}
+        <img alt="Letterhead" data-ceres-height="letterhead" />
+      {{/if}}
+    </div>
+  {{/unless}}
+
+  {{!--
+    Print frame: transparent on screen (display: contents). In print, the letterhead repeats
+    at the top of every page in the <thead> unless it is for the first page only; when the
+    footer repeats on every page (pdfOptions.footerOnLastPage off), the real footer is fixed
+    to the foot of each page and the repeating <tfoot> holds an invisible copy of it, so
+    content never runs under it.
+  --}}
+  <table class="sm-page-frame" role="presentation">
+    {{!-- The page's top margin in a browser's own print, whose page margins are 0 there so Chrome
+          prints no date / title / URL / page-number stamps (helpers.ts applyBrowserPrintPage);
+          hidden otherwise, and under an every-page letterhead, which sits on the page's edge. --}}
+    <thead class="sm-page-frame-header">
+      <tr class="sm-page-margin" aria-hidden="true"><td></td></tr>
+      {{#if view.letterheadEveryPage}}
+        {{!-- What the PDF service's stamped letterhead takes past its margin (helpers.ts placeStampRoom). --}}
+        <tr class="sm-stamp-room is-top" aria-hidden="true"><td></td></tr>
+        <tr>
+          <td>
+            <div class="no-dibella invoice-letterhead sm-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="all">
+              {{#if @root.invoice.letterHead}}
+                <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+              {{else}}
+                <img alt="Letterhead" data-ceres-height="letterhead" />
+              {{/if}}
+            </div>
+          </td>
+        </tr>
+      {{/if}}
+    </thead>
+    <tfoot class="sm-page-frame-footer">
+      {{#if view.footerEveryPage}}
+        <tr>
+          <td>
+            <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer sm-letterhead-footer sm-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+              {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
+            </div>
+          </td>
+        </tr>
+        <tr class="sm-stamp-room is-bottom" aria-hidden="true"><td></td></tr>
+      {{/if}}
+      {{#if view.ownSignatureNote}}
+        <tr class="sm-signature-note"><td><p>This is an electronically generated document, no signature is required.</p></td></tr>
+      {{/if}}
+      <tr class="sm-page-margin" aria-hidden="true"><td></td></tr>
+    </tfoot>
+    <tbody>
+      <tr>
+        <td class="sm-page-frame-cell">
+          <div class="sm-page-body">
+          {{!--
+            Simple design: one ruled frame. Row 1 the logo | the title, status and subtitle | the
+            QR; row 2 the document details | Billed By | Billed To; row 3 Shipped From | Shipped To
+            | Transport Details, each a third of the width so the rules line up. Each row prints
+            whole; rows meet on one rule.
+          --}}
+          <header class="sm-box sm-head" data-testid="section" data-section="header">
+            <div class="sm-logo-cell">
+              {{#if view.brand.logo}}
+                <div class="sm-logo">
+                  {{> CeresImage src=view.brand.logo alt=view.brand.name class="sm-logo-image"}}
+                </div>
+              {{/if}}
+            </div>
+            {{#if view.title}}
+              <div class="sm-title-block">
+                <div class="sm-title-row">
+                  <h1 class="sm-title" data-role="title">{{view.title}}</h1>
+                  {{#if view.status}}
+                    <span class="sm-status{{#unless view.status.inPrint}} no-print{{/unless}}"><span class="invoice-tag {{view.status.color}}">{{view.status.text}}</span></span>
+                  {{/if}}
+                </div>
+                {{#if view.subtitle}}<p class="sm-subtitle">{{view.subtitle}}</p>{{/if}}
+                {{#if view.copy}}<p class="sm-copy" data-role="tag">{{view.copy}}</p>{{/if}}
+              </div>
+            {{/if}}
+            {{!-- One QR: the e-invoice QR while the IRN is active, else the document QR; ZATCA /
+                  LHDN beside it. --}}
+            <div class="sm-qr-list sm-head-qrs">
+              <div class="sm-qr sm-doc-qr{{#unless view.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.documentQr}} src="{{view.documentQr}}"{{/if}} alt="Document QR Code" /></div>
+              {{#unless view.compliance.isBelowItems}}
+                <div class="sm-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                <div class="sm-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                <div class="sm-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+              {{/unless}}
+            </div>
+          </header>
+
+          <div class="sm-box sm-row sm-row-parties" data-testid="section" data-section="parties">
+            {{!-- The document details: label | bold value; the IRN and e-way bill after the dates;
+                  Country / Place of Supply here only when there is no Shipped To. --}}
+            <div class="sm-cell sm-meta{{#unless view.hasDetailsRow}} is-empty{{/unless}}" data-testid="section" data-section="details">
+              <div class="sm-fields">
+                {{#each view.details}}
+                  <p class="sm-field sm-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="sm-field-label">{{label}}</span><span class="sm-field-value{{#if isNum}} sm-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                {{/each}}
+                {{#unless view.compliance.isBelowItems}}
+                  <span class="sm-compliance sm-meta-compliance" data-testid="section" data-section="compliance">
+                    {{#if view.compliance.showIrn}}
+                      <p class="sm-field sm-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}><span class="sm-field-label">{{view.compliance.irnLabel}}</span><span class="sm-field-value sm-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+                    {{/if}}
+                    {{#each view.compliance.rows}}
+                      <p class="sm-field sm-compliance-{{key}}"><span class="sm-field-label">{{label}}</span><span class="sm-field-value sm-num" data-testid="num">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </span>
+                {{/unless}}
+                {{#if view.supply}}{{#unless view.supplyInShipping}}
+                  <span class="sm-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                    {{#each view.supply.rows}}
+                      <p class="sm-field sm-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="sm-field-label">{{label}}</span><span class="sm-field-value">{{value}}</span></p>
+                    {{/each}}
+                  </span>
+                {{/unless}}{{/if}}
+              </div>
+            </div>
+            {{#with view.seller as |party|}}
+              <div class="sm-cell sm-party sm-seller" data-role="billed-by">
+                {{#if party.title}}<h2 class="sm-caption">{{party.title}}</h2>{{/if}}
+                <p class="sm-party-name sm-seller-name" dir="auto">{{party.name}}</p>
+                {{#if party.address}}<p class="sm-party-address" data-role="address">{{party.address}}</p>{{/if}}
+                {{#if party.fields.length}}
+                  <div class="sm-fields">
+                    {{#each party.fields}}
+                      <p class="sm-field"><span class="sm-field-label">{{label}}</span><span class="sm-field-value{{#if noWrap}} sm-num{{else if isEmail}} sm-email{{/if}}{{#if isToken}} sm-break{{/if}}">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                {{/if}}
+              </div>
+            {{/with}}
+            {{#with view.buyer as |party|}}
+              <div class="sm-cell sm-party sm-buyer" data-role="billed-to">
+                {{#if party.title}}<h2 class="sm-caption">{{party.title}}</h2>{{/if}}
+                <p class="sm-party-name" dir="auto">{{party.name}}</p>
+                {{#if party.address}}<p class="sm-party-address" data-role="address">{{party.address}}</p>{{/if}}
+                {{#if party.fields.length}}
+                  <div class="sm-fields">
+                    {{#each party.fields}}
+                      <p class="sm-field"><span class="sm-field-label">{{label}}</span><span class="sm-field-value{{#if noWrap}} sm-num{{else if isEmail}} sm-email{{/if}}{{#if isToken}} sm-break{{/if}}">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                {{/if}}
+              </div>
+            {{/with}}
+          </div>
+
+          {{#if view.hasLogistics}}
+          <div class="sm-box sm-row sm-row-logistics" data-testid="section" data-section="logistics">
+            {{#each view.dispatchParties}}
+              <div class="sm-cell sm-party sm-ship" data-role="{{role}}">
+                {{#if title}}<h2 class="sm-caption">{{title}}</h2>{{/if}}
+                <p class="sm-party-name" dir="auto">{{name}}</p>
+                {{#if address}}<p class="sm-party-address" data-role="address">{{address}}</p>{{/if}}
+                {{!-- The party's fields, then Country / Place of Supply under Shipped To (fixed
+                      decision, all templates), in one grid so the values line up. --}}
+                <div class="sm-fields">
+                  {{#each fields}}
+                    <p class="sm-field"><span class="sm-field-label">{{label}}</span><span class="sm-field-value{{#if noWrap}} sm-num{{else if isEmail}} sm-email{{/if}}{{#if isToken}} sm-break{{/if}}">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                  {{/each}}
+                  {{#if isShippedTo}}{{#if view.supply}}
+                    <span class="sm-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                      {{#each view.supply.rows}}
+                        <p class="sm-field sm-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="sm-field-label">{{label}}</span><span class="sm-field-value">{{value}}</span></p>
+                      {{/each}}
+                    </span>
+                  {{/if}}{{/if}}
+                </div>
+              </div>
+            {{/each}}
+            {{#if view.transport}}
+              <div class="sm-cell sm-party sm-transport" data-role="transport">
+                {{#if view.transport.title}}<h2 class="sm-caption">{{view.transport.title}}</h2>{{/if}}
+                <div class="sm-fields">
+                  {{#each view.transport.rows}}
+                    <p class="sm-field"><span class="sm-field-label sm-transport-{{key}}">{{label}}</span><span class="sm-field-value{{#if isNum}} sm-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                  {{/each}}
+                </div>
+              </div>
+            {{/if}}
+          </div>
+          {{/if}}
+
+          <section class="sm-items-section" data-testid="section" data-section="items">
+            <div class="sm-items-scroll" data-testid="items-scroll">
+              <table class="sm-items{{#if view.printTight}} is-print-tight{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--sm-figures: {{view.table.figureCount}}; --sm-serial-width: {{view.table.serialWidth}}px;">
+                <thead>
+                  <tr data-testid="items-header">
+                    {{!-- "#" over the serial numbers, as the Simple design heads them. --}}
+                    <th class="sm-col-serial" data-col="sr" style="width: {{view.table.serialShare}}%">{{view.table.serialLabel}}</th>
+                    {{#each view.table.header}}
+                      <th class="{{className}}" data-col="{{col}}"{{#if share}} style="width: {{share}}%"{{/if}}>
+                        {{#each labelParts}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}
+                      </th>
+                    {{/each}}
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each view.table.rows}}
+                    {{#if isGroupHeader}}
+                      <tr class="sm-group-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-row">
+                        <td colspan="{{colspan}}">
+                          <span class="sm-group-name">{{name}}</span>
+                          {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                        </td>
+                      </tr>
+                      {{#if originalImages.length}}
+                        <tr class="sm-image-row sm-group-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-image-row">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="sm-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{else}}
+                      {{#if nameRow}}
+                        <tr class="sm-name-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-name-row" data-item-index="{{itemIndex}}">
+                          <td class="sm-col-serial" data-col="sr" rowspan="2">{{#if serial}}<span class="sm-num" data-testid="num">{{serial}}</span>{{/if}}</td>
+                          <td colspan="{{detailColspan}}">
+                            <span class="sm-item-name">{{name}}</span>
+                            {{#if inlineCodes.length}}<span class="sm-item-codes">{{#each inlineCodes}}<span class="sm-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                      <tr class="sm-item-row{{#if isStripe}} is-stripe{{/if}}{{#if isRich}} is-rich{{/if}}{{#if isGroupTotal}} sm-group-total-row{{/if}}{{#if nameRow}} has-name-row{{/if}}" data-testid="item-row" data-item-index="{{itemIndex}}">
+                        {{#unless nameRow}}<td class="sm-col-serial" data-col="sr">{{#if serial}}<span class="sm-num" data-testid="num">{{serial}}</span>{{/if}}</td>{{/unless}}
+                        {{#each cells}}
+                          {{#if isName}}
+                            <td class="{{className}}" data-col="{{col}}">
+                              {{#if ../thumbnail}}
+                                <div class="sm-item-thumbnail">{{> CeresImage src=../thumbnail alt=../name class="sm-thumbnail" href=../thumbnail}}</div>
+                              {{/if}}
+                              {{#unless ../nameRow}}
+                                <span class="sm-item-name">{{../name}}</span>
+                                {{#if ../inlineCodes.length}}<span class="sm-item-codes">{{#each ../inlineCodes}}<span class="sm-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                              {{/unless}}
+                              {{#if ../hasDetail}}
+                                <div class="sm-item-detail" data-ceres-description-inline{{#if ../detailRow}} style="display: none;"{{/if}}>
+                                  {{#unless ../detailRow}}
+                                    <div data-ceres-description-content>
+                                      {{#if ../description}}<div class="sm-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData ../description) }}</div>{{/if}}
+                                      {{#if ../images.length}}{{> CeresImageGallery (prepareImageGallery ../images variant="thumbnail" alt=../name) }}{{/if}}
+                                    </div>
+                                  {{/unless}}
+                                </div>
+                              {{/if}}
+                            </td>
+                          {{else}}
+                            <td class="{{className}}" data-col="{{col}}" data-label="{{label}}">{{#if isNum}}<span class="sm-num" data-testid="num">{{value}}</span>{{else}}{{value}}{{/if}}</td>
+                          {{/if}}
+                        {{/each}}
+                      </tr>
+                      {{#if hasDetail}}
+                        {{!-- Full-width description row (isDescriptionFullWidth), kept for the live toggle. --}}
+                        <tr class="sm-detail-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}" data-ceres-description-row{{#unless detailRow}} style="display: none;"{{/unless}}>
+                          {{#unless detailSpansAll}}<td class="sm-col-serial"></td>{{/unless}}
+                          <td colspan="{{#if detailSpansAll}}{{colspan}}{{else}}{{detailColspan}}{{/if}}">
+                            <div class="sm-item-detail" data-ceres-description-full-width>
+                              {{#if detailRow}}
+                                <div data-ceres-description-content>
+                                  {{#if description}}<div class="sm-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData description) }}</div>{{/if}}
+                                  {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                                </div>
+                              {{/if}}
+                            </div>
+                          </td>
+                        </tr>
+                      {{/if}}
+                      {{#if imageRow}}
+                        {{!-- Original images: their own row under the item, across the whole table. --}}
+                        <tr class="sm-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="sm-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{/if}}
+                  {{/each}}
+                  {{!-- Stretch row: takes the spare height of a one-page printout, or of the preview's A4 sheet. --}}
+                  <tr class="sm-filler" aria-hidden="true"><td class="sm-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tbody>
+                {{#if view.table.footer.show}}
+                  <tbody class="sm-items-total">
+                    <tr class="sm-total-row" data-testid="items-total">
+                      <td class="sm-col-serial" data-col="sr">{{#if view.table.footer.labelInSerial}}{{view.table.footer.label}}{{/if}}</td>
+                      {{#each view.table.footer.cells}}
+                        <td class="{{className}}" data-col="{{col}}"{{#unless isName}} data-label="{{label}}"{{/unless}}>{{#if isName}}{{view.table.footer.label}}{{else if isNum}}<span class="sm-num" data-testid="num">{{value}}</span>{{/if}}</td>
+                      {{/each}}
+                    </tr>
+                  </tbody>
+                {{/if}}
+                {{!-- Print only: repeated at the foot of each page the table spans, it rounds the
+                      corners of the page's last row (styles.css, "corners at a page break"). --}}
+                <tfoot class="sm-items-corners" aria-hidden="true">
+                  <tr><td class="sm-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+
+          {{#if view.compliance.isBelowItems}}
+            <section class="sm-box sm-cards sm-logistics" data-testid="section" data-section="logistics-below">
+              <div class="sm-card sm-compliance sm-col-2{{#unless view.hasCompliance}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+                <div class="sm-compliance-text">
+                  {{#if view.compliance.title}}<h2 class="sm-card-title">{{view.compliance.title}}</h2>{{/if}}
+                  <div class="sm-kv">
+                    {{#if view.compliance.showIrn}}
+                      <span class="sm-kv-label sm-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}>{{view.compliance.irnLabel}}</span>
+                      <span class="sm-kv-value sm-irn-value"{{#unless view.compliance.irn}} style="display:none"{{/unless}} data-ceres-field="irn">{{view.compliance.irn}}</span>
+                    {{/if}}
+                    {{#each view.compliance.rows}}
+                      <span class="sm-kv-label">{{label}}</span>
+                      <span class="sm-kv-value sm-num" data-testid="num">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </div>
+                <div class="sm-qr-list">
+                  <div class="sm-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                  <div class="sm-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                  <div class="sm-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                </div>
+              </div>
+            </section>
+          {{/if}}
+
+          {{!--
+            The totals under the items, across the frame (Simple design): each row its label on the
+            right, its figure in a ruled cell at the end; the grand total larger. The shared
+            Subtotal widget's rows (computeSubtotalRows), its classes and data-ceres-* hooks, so the
+            live hideTotals / hideTaxes toggles and the widget's visibility CSS still apply.
+          --}}
+          <table class="sm-totals-table" data-testid="totals-table">
+            <tbody class="sm-totals ceres-subtotal" data-ceres-subtotal data-testid="section" data-section="totals">
+              {{#each view.totals.rows}}
+                <tr
+                  class="ceres-subtotal-row ceres-subtotal-row-{{emphasis}}{{#if isGrand}} sm-grand-row{{/if}}{{#if isExtra}} sm-extra-row{{/if}}{{#if view.totals.hidden}}{{#unless survivesHideTotals}} is-hidden-by-totals{{/unless}}{{/if}}{{#if isTaxRow}}{{#if view.totals.hideTaxes}} is-hidden-by-taxes{{/if}}{{/if}}"
+                  data-ceres-subtotal-row="{{key}}"
+                  {{#if isTaxRow}}data-ceres-subtotal-taxes{{/if}}
+                  {{#if survivesHideTotals}}data-ceres-subtotal-keep{{/if}}
+                >
+                  <th class="ceres-subtotal-label" scope="row">
+                    {{label}}
+                    {{#if note}}<div class="ceres-subtotal-note">{{note}}</div>{{/if}}
+                  </th>
+                  <td class="ceres-subtotal-value">
+                    <span class="sm-num"{{#if isNum}} data-testid="num"{{/if}}{{#if isGrand}} data-role="grand-total-row"{{/if}}>{{value}}</span>
+                    {{#if converted}}<div class="ceres-subtotal-converted">{{converted}}</div>{{/if}}
+                    {{#if extra}}
+                      <div class="ceres-subtotal-extra">
+                        {{extra.value}}
+                        {{#if extra.converted}}<div class="ceres-subtotal-converted">{{extra.converted}}</div>{{/if}}
+                      </div>
+                    {{/if}}
+                  </td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+
+          {{!-- The amount in words on a ruled line of its own: "<label>: <words>". --}}
+          {{#if view.words}}
+            <div class="sm-box sm-words ceres-subtotal-words{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}{{#if view.words.hiddenBySetting}} is-hidden-by-words-setting{{/if}}" data-ceres-total-in-words>
+              <p><span class="sm-words-label">{{view.words.label}}:</span> <span class="sm-words-value">{{view.words.value}}</span></p>
+            </div>
+          {{/if}}
+
+          <div class="sm-box sm-bottom">
+            {{!-- Left: terms, notes, additional information, attachments. --}}
+            <div class="sm-bottom-main">
+              {{#each view.terms}}
+                <section class="sm-card sm-terms" data-testid="section" data-section="terms">
+                  <h2 class="sm-card-title" data-role="title">{{title}}</h2>
+                  <ol class="sm-terms-list">
+                    {{#each items}}<li>{{this}}</li>{{/each}}
+                  </ol>
+                </section>
+              {{/each}}
+
+              {{#if view.notes}}
+                <section class="sm-card sm-notes" data-testid="section" data-section="notes">
+                  {{#if view.notes.title}}<h2 class="sm-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
+                  <div class="sm-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
+                </section>
+              {{/if}}
+
+              {{#if view.attachments}}
+                <section class="sm-card" data-testid="section" data-section="attachments">
+                  {{#if view.attachments.title}}<h2 class="sm-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}
+                  <ol class="sm-attachments">
+                    {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
+                  </ol>
+                </section>
+              {{/if}}
+
+              {{!-- Additional Information as a ruled table across the column (Simple design). --}}
+              {{#if view.additional}}
+                <section class="sm-card sm-additional" data-testid="section" data-section="additional">
+                  {{#if view.additional.title}}<h2 class="sm-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
+                  <div class="sm-kv">
+                    {{#each view.additional.rows}}
+                      <span class="sm-kv-label" data-role="ai-label">{{label}}</span>
+                      <span class="sm-kv-value{{#if isDate}} sm-num{{/if}}" data-role="ai-value">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </section>
+              {{/if}}
+            </div>
+
+            {{!-- Right: Bank and UPI details (the UPI ID under the bank rows, the QR on the right
+                  with "Scan To Pay" over it and the note under it), then the signature. --}}
+            <div class="sm-bottom-side">
+              {{#if view.bank.show}}
+                <section class="sm-card sm-bank" data-testid="section" data-section="bank">
+                  <div class="sm-bank-main">
+                    {{#if view.bank.title}}<h2 class="sm-card-title" data-role="title">{{view.bank.title}}</h2>{{/if}}
+                    {{#if view.bank.rows.length}}
+                      <div class="sm-kv sm-bank-rows">
+                        {{#each view.bank.rows}}
+                          <span class="sm-kv-label sm-bank-{{key}}">{{label}}</span>
+                          <span class="sm-kv-value{{#if isNum}} sm-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
+                        {{/each}}
+                      </div>
+                    {{/if}}
+                    {{#if view.bank.upi}}
+                      <div class="sm-upi-id-block">
+                        <h3 class="sm-card-title sm-upi-label">{{view.bank.upi.label}}</h3>
+                        <p class="sm-upi-id sm-num" data-testid="num">{{view.bank.upi.id}}</p>
+                      </div>
+                    {{/if}}
+                  </div>
+                  {{#if view.bank.upi.qr}}
+                    <figure class="sm-upi">
+                      <figcaption class="sm-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
+                      <img class="sm-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
+                      {{#if view.bank.upi.note}}<p class="sm-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                    </figure>
+                  {{/if}}
+                </section>
+              {{/if}}
+
+              {{!-- Only for a signature the document has (an image or a digital request). --}}
+              {{#if view.signature.show}}
+                <section class="sm-signature" data-testid="signature">
+                  <div class="sm-signature-mark">
+                    {{#if view.signature.image}}
+                      {{> CeresImage src=view.signature.image alt=view.signature.label class="sm-signature-image"}}
+                    {{else if view.signature.awaitingDigital}}
+                      <p class="sm-signature-banner">Awaiting Digital Signature</p>
+                    {{else if view.signature.signedDigital}}
+                      <p class="sm-signature-banner">
+                        Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+                        {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+                      </p>
+                    {{/if}}
+                  </div>
+                  {{#if view.signature.label}}<p class="sm-signature-label">{{view.signature.label}}</p>{{/if}}
+                </section>
+              {{/if}}
+            </div>
+          </div>
+
+          {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered
+                with their data, hidden while switched off (live toggles). --}}
+          <section class="sm-box sm-card sm-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+            {{#if view.hsn.title}}<h3 class="sm-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
+            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          <section class="sm-box sm-card sm-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
+            {{#if view.taxSummary.title}}<h3 class="sm-card-title" data-role="title">{{view.taxSummary.title}}</h3>{{/if}}
+            {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          {{#if view.stock}}
+            <section class="sm-box sm-card sm-widget-table" data-testid="section" data-section="stock-summary" data-ceres-batch-summary{{#if view.stock.hidden}} style="display: none;"{{/if}}>
+              {{#if view.stock.title}}<h3 class="sm-card-title" data-role="title">{{view.stock.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table sm-stock-table">
+                  <thead><tr>{{#each view.stock.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.stock.rows}}
+                      <tr>{{#each this}}<td{{#if isNum}} class="sm-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.payments.show}}
+            <section class="sm-box sm-card sm-widget-table" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
+              {{#if view.payments.title}}<h3 class="sm-card-title" data-role="title">{{view.payments.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table sm-payments-table">
+                  <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.payments.rows}}
+                      <tr data-testid="payment">
+                        {{#each this}}
+                          <td{{#unless isText}} class="sm-num"{{/unless}}>{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="sm-payment-converted">{{converted}}</span>{{/if}}</td>
+                        {{/each}}
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                  {{#if view.payments.total}}
+                    <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="sm-num">{{value}}</td>{{/each}}</tr></tfoot>
+                  {{/if}}
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.enquiry}}
+            <p class="sm-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="sm-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="sm-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
+          {{/if}}
+
+          {{> RefrensBranding @root.invoice}}
+          {{!-- On the last page only: the content's last block, so in print the content before it
+                goes over to a new page with it rather than leave it alone there. --}}
+          {{#unless view.footerEveryPage}}
+        <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer sm-letterhead-footer{{#if view.footerEveryPage}} sm-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+          {{#if @root.invoice.letterHeadFooter}}
+            <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+          {{else}}
+            <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+          {{/if}}
+        </div>
+          {{/unless}}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  {{!-- On every page: fixed to each printed page's foot (print rules), outside the frame. --}}
+  {{#if view.footerEveryPage}}
+  <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer sm-letterhead-footer{{#if view.footerEveryPage}} sm-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+    {{#if @root.invoice.letterHeadFooter}}
+      <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{else}}
+      <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
+{{/with}}

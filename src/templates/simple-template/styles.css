@@ -1,0 +1,2282 @@
+@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+
+/*
+ * Simple Template — Refrens' Simple layout (user's design, 2026-11-13): the whole document in
+ * one ruled frame, black text on white, grey 1 px rules. Header (logo | title, status,
+ * subtitle | QR), document details | Billed By | Billed To, Shipped From | Shipped To |
+ * Transport, the item table ruled both ways, the totals and the amount in words as ruled
+ * lines across the frame, then terms, notes and additional information | bank and UPI.
+ * Built on the Modern / Professional print engine (stretch, page-break fills, split totals,
+ * literal text scale, browser print and PDF service paths).
+ *
+ * Design canvas 1000 px, 20 px page padding. Every rule is scoped to .sm-doc; the page box and
+ * margins belong to the browser or the PDF service (no @page: it would break Lydia's Pageless
+ * PDF). Labels are the business's own text: no rule changes their case. Text sizes follow the
+ * document's text scale (--sm-text-scale); print is 1:1 with the screen.
+ */
+
+.sm-doc {
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -webkit-font-smoothing: antialiased;
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -moz-osx-font-smoothing: grayscale;
+
+  /* The theme colour (helpers.ts / Lydia's live picker): the Simple design is black and grey,
+     so it colours nothing but links; kept for the engine's contrast helper. */
+  --sm-accent: var(--primary-color, var(--sm-theme, #2d81f7));
+  --sm-on-accent: #fff;
+  --sm-accent-text: var(--sm-accent);
+
+  /* Colours sampled from the design (2026-11-13): rules #949494, text #22272f. */
+  --sm-ink: #22272f;
+  --sm-strong: #22272f;
+  --sm-muted: #5f6670;
+  --sm-caption: #22272f;
+  --sm-code: #22272f;
+  --sm-desc: #22272f;
+  --sm-label: #22272f;
+  --sm-paper: #fff;
+  --sm-card: var(--sm-paper);
+  --sm-fill: var(--sm-paper);
+  --sm-line: #949494;
+  --sm-zebra: var(--sm-paper);
+  --sm-head-tint: var(--sm-paper);
+  --sm-tint: var(--sm-paper);
+  --sm-rule: 1px solid var(--sm-line);
+  --sm-lh: 1.5; /* 12 px on 18 px (design) */
+  --sm-font: var(--subtitle-font, "Inter"), var(--sm-script-font, "Inter"), sans-serif;
+  --sm-title-font: var(--title-font, "Inter"), var(--sm-script-font, "Inter"), sans-serif;
+  --sm-table-font: var(--sm-font);
+  --sm-label-font: var(--sm-font);
+
+  /* Type scale (design): 12 px text, 13 px captions and section titles, 14 px names and the
+     grand total, 20 px title. */
+  --sm-font-size-code: 12px;
+  --sm-font-size-xs: 11px;
+  --sm-font-size-sm: 12px;
+  --sm-font-size-s: 12px;
+  --sm-font-size-base: 12px;
+  --sm-font-size-caption: 13px;
+  --sm-font-size-section: 13px;
+  --sm-font-size-name: 14px;
+  --sm-font-size-grand: 14px;
+  --sm-font-size-xl: 20px;
+  --sm-font-size-status: 11px;
+  --sm-gutter: 20px;
+  --sm-section-gap: 0px; /* the frame's parts meet on one rule */
+  --sm-pad: 8px; /* inside every ruled cell */
+
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(100vw, 1000px);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--sm-gutter);
+  background: var(--sm-paper);
+  color: var(--sm-ink);
+  font-family: var(--sm-font);
+  font-size: calc(var(--sm-font-size-base) * var(--sm-text-scale, 1));
+  font-weight: 400;
+  line-height: var(--sm-lh);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sm-doc,
+.sm-doc *,
+.sm-doc *::before,
+.sm-doc *::after {
+  box-sizing: border-box;
+}
+
+/* Flex children default to min-width:auto, which would let a wide table stretch the page. */
+.sm-doc > *,
+.sm-page-body > * {
+  min-width: 0;
+}
+
+/* The print frame (template.hbs) is transparent on screen. */
+.sm-page-frame,
+.sm-page-frame > tbody,
+.sm-page-frame > tbody > tr,
+.sm-page-frame-cell,
+.sm-page-frame-header,
+.sm-page-frame-header > tr,
+.sm-page-frame-header > tr > td,
+.sm-page-body {
+  display: contents;
+}
+
+.sm-page-frame-footer {
+  display: none;
+}
+
+/* The page margin rows of a browser's own print only (print rules below); the signature note
+   in Refrens' PDF only. */
+.sm-page-frame > * > tr.sm-signature-note,
+.sm-page-frame > * > tr.sm-page-margin,
+.sm-page-frame > * > tr.sm-stamp-room {
+  display: none;
+}
+
+.sm-doc p,
+.sm-doc h1,
+.sm-doc h2,
+.sm-doc h3,
+.sm-doc ol,
+.sm-doc ul,
+.sm-doc figure {
+  margin: 0;
+}
+
+/* Figures, codes, dates, IDs and phone numbers never wrap (user rule): the box holding one
+   widens to fit it instead — columns, cells and table cells alike. */
+.sm-num {
+  white-space: nowrap;
+}
+
+/* An email stays on one line while it fits and breaks only when its box is too narrow. */
+.sm-email {
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ letterhead */
+
+.sm-doc .invoice-letterhead,
+.sm-doc .invoice-letterhead-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.sm-doc .invoice-letterhead img,
+.sm-doc .invoice-letterhead-footer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sm-doc .invoice-letterhead.is-empty,
+.sm-doc .invoice-letterhead-footer.is-empty {
+  display: none;
+}
+
+.sm-doc .sm-letterhead,
+.sm-doc .sm-letterhead-footer {
+  width: auto;
+  margin-inline: calc(-1 * var(--sm-gutter));
+}
+
+/* The letterhead sits in the flow or in the print frame's header: either way, none, gutter. */
+.sm-doc:has(.sm-letterhead.is-empty) {
+  padding-top: var(--sm-gutter);
+}
+
+.sm-doc:has(.sm-letterhead-footer.is-empty:not(.sm-footer-spacer)) {
+  padding-bottom: var(--sm-gutter);
+}
+
+/* An image that failed to load prints nothing (helpers.ts registerSimpleImages). */
+.sm-doc img.is-broken,
+.sm-logo:has(> .is-broken, .sm-logo-image.is-broken) {
+  display: none;
+}
+
+/* ------------------------------------------------------------ the frame */
+
+/*
+ * Every part of the frame draws its own four rules; the next part sits one rule higher, so two
+ * parts meet on a single line. A part that starts a new page in print keeps its top rule (the
+ * negative margin is dropped at a page break), so every page's piece is closed.
+ */
+.sm-box {
+  border: var(--sm-rule);
+  background: var(--sm-paper);
+}
+
+.sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table) + :is(.sm-box, .sm-items-section, .sm-totals-table) {
+  margin-top: -1px;
+}
+
+/* Header: the logo | the title, status and subtitle (to the right) | the QR. */
+
+/* The logo keeps its own width; the title block takes the rest and wraps in it (a narrow page
+   ran the subtitle over a logo in a shrinking first column, A5 / text scale 1.2). */
+.sm-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0 12px;
+  align-items: start;
+  min-height: 136px;
+  padding: var(--sm-pad);
+}
+
+.sm-logo-cell {
+  align-self: center;
+  max-width: 200px;
+}
+
+.sm-logo {
+  line-height: 0;
+}
+
+/* The logo at its own size, up to 200 × 100. */
+.sm-doc .sm-logo .sm-logo-image {
+  display: block;
+  width: auto;
+  max-width: 200px;
+  height: auto;
+  max-height: 100px;
+  border: 0;
+  border-radius: 0;
+  object-fit: contain;
+}
+
+.sm-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  justify-self: end;
+  min-width: 0;
+  max-width: 420px;
+  text-align: end;
+}
+
+.sm-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.sm-title {
+  color: var(--sm-ink);
+  font-family: var(--sm-title-font);
+  font-size: calc(var(--sm-font-size-xl) * var(--sm-text-scale, 1));
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* The status tag as Refrens' Simple prints it (design: PAID, white capitals on solid green
+   #12b759, 20 px tall, 6 px corners); the status widget's kind picks the colour. */
+.sm-status {
+  line-height: 0;
+}
+
+.sm-doc .sm-status .invoice-tag {
+  --sm-status-fill: #12b759;
+
+  margin: 0;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--sm-status-fill);
+  color: var(--sm-paper);
+  font-size: calc(var(--sm-font-size-status) * var(--sm-text-scale, 1));
+  font-weight: 500;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.sm-doc .sm-status .invoice-tag.danger {
+  --sm-status-fill: #dc2626;
+}
+
+.sm-doc .sm-status .invoice-tag.warning {
+  --sm-status-fill: #d97706;
+}
+
+.sm-doc .sm-status .invoice-tag.info {
+  --sm-status-fill: #0284c7;
+}
+
+.sm-doc .sm-status .invoice-tag.devider {
+  --sm-status-fill: #6b7280;
+}
+
+.sm-doc .sm-status .invoice-tag.magenta {
+  --sm-status-fill: #c026d3;
+}
+
+.sm-doc .sm-subtitle,
+.sm-doc .sm-copy {
+  color: var(--sm-ink);
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.sm-head-qrs:not(:has(.sm-qr:not(.is-empty))) {
+  display: none;
+}
+
+/* Rows of three equal cells, a rule between cells, so the rows' rules line up. A cell is never
+   narrower than an unbreakable value in it (numbers never wrap). */
+.sm-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(min-content, 1fr));
+}
+
+.sm-cell {
+  min-width: 0;
+  padding: var(--sm-pad);
+}
+
+.sm-cell + .sm-cell {
+  border-inline-start: var(--sm-rule);
+}
+
+.sm-cell.is-empty {
+  display: none;
+}
+
+.sm-party {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* "Billed by", "Buyer", "Shipped From", … the business's labels, as written. */
+.sm-caption {
+  margin-bottom: 4px;
+  color: var(--sm-ink);
+  font-family: var(--sm-label-font);
+  font-size: calc(var(--sm-font-size-caption) * var(--sm-text-scale, 1));
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.sm-party-name {
+  color: var(--sm-ink);
+  font-family: var(--sm-title-font);
+  font-size: calc(var(--sm-font-size-name) * var(--sm-text-scale, 1));
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.sm-party-address {
+  color: var(--sm-ink);
+  overflow-wrap: break-word;
+  white-space: pre-line;
+}
+
+/* Fields: the label regular, the value bold, in two columns. */
+.sm-fields {
+  display: grid;
+  grid-template-columns: fit-content(50%) minmax(min-content, 1fr);
+  gap: 0 16px;
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+}
+
+.sm-field,
+.sm-fields > .sm-meta-compliance,
+.sm-fields > .sm-supply {
+  display: contents;
+}
+
+.sm-field-label {
+  color: var(--sm-ink);
+  font-weight: 400;
+  overflow-wrap: break-word;
+}
+
+.sm-field-value {
+  min-width: 0;
+  color: var(--sm-ink);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.sm-field-value.sm-break:not(.sm-num) {
+  overflow-wrap: anywhere;
+}
+
+.sm-irn-value {
+  overflow-wrap: anywhere;
+}
+
+/* The document details: label and value columns, the values bold (design). */
+.sm-meta > .sm-fields {
+  grid-template-columns: fit-content(55%) minmax(min-content, 1fr);
+  column-gap: 12px;
+}
+
+/* A party with no fields leaves no empty grid. */
+.sm-fields:not(:has(> *)) {
+  display: none;
+}
+
+/* Every QR is 120 px square; drawn as SVG, the e-invoice's code keeps sharp modules in print. */
+.sm-qr-list {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.sm-qr img {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+.sm-qr.is-empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------ compliance under the items */
+
+/* An E-Invoice block placed under the items (irnPosition BELOW_LINE_ITEMS): a ruled part. */
+.sm-cards > .sm-compliance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: start;
+  padding: var(--sm-pad);
+}
+
+.sm-compliance > .sm-compliance-text {
+  display: contents;
+}
+
+.sm-compliance > .sm-compliance-text > .sm-card-title {
+  grid-column: 1 / -1;
+}
+
+.sm-compliance > .sm-qr-list {
+  grid-column: 2;
+}
+
+.sm-cards:has(> .sm-compliance.is-empty:not(:has(.sm-irn-value:not(:empty), .sm-qr:not(.is-empty)))) {
+  display: none;
+}
+
+/* ------------------------------------------------------------ sections */
+
+.sm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* "Terms and Conditions", "Bank and UPI details", … 13 px semibold (design). */
+.sm-card-title {
+  color: var(--sm-ink);
+  font-family: var(--sm-label-font);
+  font-size: calc(var(--sm-font-size-section) * var(--sm-text-scale, 1));
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.sm-doc :is(strong, b),
+.sm-doc .toastui-editor-contents :is(strong, b) {
+  font-weight: 600;
+}
+
+/* Bank, additional information: a label column hugging the longest label, then the value. */
+.sm-kv {
+  display: grid;
+  grid-template-columns: fit-content(50%) minmax(min-content, 1fr);
+  gap: 0 12px;
+  color: var(--sm-ink);
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+  line-height: var(--sm-lh);
+}
+
+.sm-kv-label {
+  color: var(--sm-ink);
+  font-weight: 400;
+  overflow-wrap: break-word;
+}
+
+.sm-kv-value {
+  color: var(--sm-ink);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.sm-kv-value.sm-num {
+  overflow-wrap: normal;
+}
+
+/* ------------------------------------------------------------ items */
+
+.sm-items-section {
+  --sm-separator: 1px;
+  --sm-sep-color: var(--sm-line);
+
+  min-width: 0;
+}
+
+.sm-items-scroll {
+  max-width: 100%;
+  overflow: auto hidden; /* sideways only for a table wider than the page; never up and down */
+}
+
+/* Ruled both ways (design): a rule after every column and under every item; the frame's sides
+   are the first and last cells' outer rules. */
+.sm-items {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--sm-ink);
+  font-family: var(--sm-table-font);
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+  line-height: var(--sm-lh);
+  table-layout: auto;
+}
+
+.sm-items th,
+.sm-items td {
+  padding: 6px;
+  border: 0;
+  text-align: center;
+  vertical-align: top;
+}
+
+.sm-items > :is(thead, tbody) > tr > :is(th, td) {
+  border-inline-end: var(--sm-rule);
+}
+
+.sm-items > :is(thead, tbody) > tr > :is(th, td):first-child {
+  border-inline-start: var(--sm-rule);
+}
+
+/* An item's rows end on a rule (a border, never an inset shadow: PDF seams). */
+.sm-items > tbody > tr > td {
+  border-bottom: var(--sm-separator) solid var(--sm-sep-color);
+}
+
+/* Under a full-width name row the serial cell above spans this row: no start rule here. */
+.sm-items > tbody > tr.has-name-row > td:first-child {
+  border-inline-start: 0;
+}
+
+.sm-items > thead > tr > th {
+  padding-block: 2px;
+  border-top: var(--sm-rule);
+  border-bottom: var(--sm-rule);
+  background: var(--sm-paper);
+  color: var(--sm-ink);
+  font-family: var(--sm-label-font);
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+  font-weight: 400;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.sm-items .sm-col-serial {
+  white-space: nowrap;
+}
+
+.sm-items td.is-fixed,
+.sm-items td.is-word {
+  white-space: nowrap;
+}
+
+.sm-items td.sm-col-name,
+.sm-items .sm-name-row > td + td,
+.sm-items > thead > tr > th.sm-col-name {
+  text-align: start;
+  overflow-wrap: break-word;
+}
+
+.sm-items .sm-desc-min {
+  display: block;
+  height: 0;
+}
+
+/* The last item's rule is the table's foot (print: the corner footer draws it per page). */
+.sm-items > tbody:last-of-type > tr:last-child:not(.sm-filler) > td {
+  border-bottom: 1px solid var(--sm-close-line, var(--sm-line));
+}
+
+/* An item's name and its description (or images) read as one row: no rule between them.
+   (A detail row is in the page for the live "full width" toggle even while hidden.) */
+.sm-items > tbody > tr:is(.sm-name-row, .sm-item-row:has(+ :is(.sm-detail-row:not([style*="none"]), .sm-image-row)), .sm-item-row:has(+ .sm-detail-row[style*="none"] + .sm-image-row), .sm-detail-row:has(+ .sm-image-row)) > td {
+  border-bottom: 0;
+}
+
+.sm-items .sm-name-row > td,
+.sm-items .sm-item-row:has(+ :is(.sm-detail-row:not([style*="none"]), .sm-image-row)) > td,
+.sm-items .sm-item-row:has(+ .sm-detail-row[style*="none"] + .sm-image-row) > td {
+  padding-bottom: 0;
+}
+
+.sm-items .sm-detail-row > td,
+.sm-items .sm-image-row > td {
+  padding-top: 4px;
+}
+
+.sm-group-row > td {
+  font-weight: 600;
+  text-align: start;
+}
+
+.sm-group-total-row > td {
+  font-weight: 600;
+}
+
+/* The item's name bold (design). */
+.sm-item-name {
+  display: block;
+  font-weight: 600;
+}
+
+/* SKU, HSN/SAC, unit, batch under the name: lines of plain text (design). */
+.sm-item-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  margin-top: 4px;
+  color: var(--sm-code);
+  font-size: calc(var(--sm-font-size-code) * var(--sm-text-scale, 1));
+  line-height: var(--sm-lh);
+}
+
+/* The thumbnail at the name cell's end (design). */
+.sm-item-thumbnail {
+  float: inline-end;
+  margin-block-end: 4px;
+  margin-inline-start: 8px;
+}
+
+.sm-items .sm-thumbnail {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.sm-items.has-thumbnails td.sm-col-name {
+  min-width: 200px;
+}
+
+.sm-item-detail {
+  clear: both;
+}
+
+.sm-item-desc {
+  padding-top: 4px;
+  color: var(--sm-desc);
+  line-height: var(--sm-lh);
+}
+
+.sm-items .ceres-image-gallery {
+  clear: both;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.sm-items .ceres-image-gallery-thumbnail .ceres-image {
+  width: 64px;
+  height: 64px;
+}
+
+/* Item images print bare: no frame, square corners (the shared image widget draws a grey
+   border and 4 px corners, loaded after this file, so .sm-doc). */
+.sm-doc .sm-items :is(.sm-thumbnail, .ceres-image, .sm-large-image) {
+  border: 0;
+  border-radius: 0;
+}
+
+.sm-detail-row > td,
+.sm-image-row > td {
+  text-align: start;
+}
+
+.sm-large-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sm-large-image + .sm-large-image {
+  margin-top: 8px;
+}
+
+/* The column-sum row ("Total"): bold, ruled like the rows above. */
+.sm-total-row > td {
+  border-inline-end: var(--sm-rule);
+  border-bottom: var(--sm-rule);
+  background: var(--sm-paper);
+  font-weight: 600;
+}
+
+.sm-total-row > td:first-child {
+  border-inline-start: var(--sm-rule);
+}
+
+/* The stretch row (shown by .sm-doc.is-filled, below): empty, the column rules running through. */
+.sm-items .sm-filler {
+  display: none;
+}
+
+/* ------------------------------------------------------------ totals */
+
+/*
+ * The totals across the frame (design): each row a ruled line, its label on the right in bold,
+ * its figure in a cell at the frame's end, the grand total at 14 px. Hidden rows (the widget's
+ * display: none !important) take no room.
+ */
+.sm-totals-table {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--sm-ink);
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+  line-height: var(--sm-lh);
+}
+
+.sm-totals-table .sm-totals th,
+.sm-totals-table .sm-totals td {
+  padding: 1px var(--sm-pad);
+  border-bottom: var(--sm-rule);
+  font-weight: 600;
+  vertical-align: top;
+}
+
+.sm-totals-table .sm-totals tr:first-child > * {
+  border-top: var(--sm-rule);
+}
+
+/* The shared widget rules a line over the grand total: here the row above already ends on one. */
+.sm-totals-table .sm-totals tr:not(:first-child) > * {
+  border-top: 0;
+}
+
+.sm-totals-table .sm-totals .ceres-subtotal-label {
+  border-inline-start: var(--sm-rule);
+  text-align: end;
+  overflow-wrap: break-word;
+}
+
+.sm-totals-table .sm-totals .ceres-subtotal-value {
+  width: 1%;
+  min-width: 96px;
+  border-inline: var(--sm-rule);
+  white-space: nowrap;
+  text-align: end;
+}
+
+.sm-totals-table .sm-totals .sm-grand-row > * {
+  padding-block: 2px;
+  font-size: calc(var(--sm-font-size-grand) * var(--sm-text-scale, 1));
+  font-weight: 600;
+}
+
+.sm-totals-table .sm-totals .ceres-subtotal-note,
+.sm-totals-table .sm-totals .ceres-subtotal-converted,
+.sm-totals-table .sm-totals .ceres-subtotal-extra {
+  color: var(--sm-muted);
+  font-size: calc(var(--sm-font-size-xs) * var(--sm-text-scale, 1));
+  font-weight: 400;
+  line-height: var(--sm-lh);
+}
+
+.sm-totals-table .sm-totals .sm-extra-row > td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* A custom total's text value wraps; its figures, if any, do not. */
+.sm-totals-table .sm-totals .sm-extra-row .sm-num:not([data-testid="num"]) {
+  white-space: normal;
+}
+
+/* The words go with the totals: hidden while the grand total is (Lydia's live Hide Totals marks
+   only the totals rows; a render with Hide Totals leaves the words out itself). */
+.sm-doc:has(.sm-grand-row.is-hidden-by-totals) .sm-words {
+  display: none;
+}
+
+/* The amount in words: a ruled line, its label (design). */
+.sm-doc .sm-words {
+  padding: 2px var(--sm-pad);
+  color: var(--sm-ink);
+  overflow-wrap: break-word;
+}
+
+.sm-words-label {
+  font-weight: 400;
+}
+
+.sm-words-value {
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------ bottom */
+
+/* Terms, notes, additional information, attachments | bank and UPI, signature: two halves, a
+   rule between them (design). */
+.sm-bottom {
+  display: flex;
+  align-items: stretch;
+}
+
+.sm-bottom:not(:has(.sm-card, .sm-signature)) {
+  display: none;
+}
+
+.sm-bottom-main,
+.sm-bottom-side {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: min-content;
+}
+
+.sm-bottom-side {
+  border-inline-start: var(--sm-rule);
+}
+
+.sm-bottom-main:not(:has(> *)) {
+  display: none;
+}
+
+.sm-bottom-main:not(:has(> *)) + .sm-bottom-side {
+  border-inline-start: 0;
+}
+
+.sm-bottom-side:not(:has(> *)) {
+  flex: 1 1 0;
+}
+
+.sm-bottom .sm-card {
+  padding: var(--sm-pad);
+}
+
+/* Terms, notes and attachments take the column's width, never set it. */
+.sm-bottom-main > .sm-card:not(.sm-additional) {
+  contain: inline-size;
+}
+
+/* Additional Information: a ruled table across the column, at the column's foot (design). */
+.sm-bottom .sm-additional {
+  gap: 0;
+  margin-top: auto;
+  padding: 0;
+}
+
+.sm-additional > .sm-card-title {
+  padding: 2px var(--sm-pad);
+  border-top: var(--sm-rule);
+}
+
+.sm-additional > .sm-kv {
+  grid-template-columns: fit-content(40%) minmax(min-content, 1fr);
+  gap: 0;
+}
+
+.sm-additional .sm-kv-label,
+.sm-additional .sm-kv-value {
+  padding: 1px var(--sm-pad);
+  border-top: var(--sm-rule);
+}
+
+.sm-additional .sm-kv-value {
+  font-weight: 600;
+}
+
+/* A first part above the additional table keeps its own room. */
+.sm-bottom-main > .sm-additional:first-child {
+  margin-top: 0;
+}
+
+.sm-bottom-main > .sm-additional:first-child > .sm-card-title {
+  border-top: 0;
+}
+
+/* Bank and UPI: the rows and the UPI ID on the left, the QR on the right. */
+.sm-bank {
+  flex-flow: row wrap;
+  gap: 12px 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.sm-bank-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min-content;
+}
+
+.sm-upi-id-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.sm-upi-id {
+  color: var(--sm-ink);
+  overflow-wrap: break-word;
+}
+
+/* "Scan To Pay" over the QR, the note under it, centred (design). */
+.sm-upi {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  width: min-content;
+  min-width: 140px;
+  max-width: 100%;
+  text-align: center;
+}
+
+.sm-upi-caption {
+  color: var(--sm-ink);
+  font-size: calc(var(--sm-font-size-section) * var(--sm-text-scale, 1));
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Every QR is 120 px: document, e-invoice, UPI (user rule, 2026-10-24). */
+.sm-upi-qr {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+.sm-upi-note {
+  margin-top: 4px;
+  color: var(--sm-ink);
+  line-height: var(--sm-lh);
+}
+
+/* Terms numbered as Refrens numbers them. */
+.sm-terms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-inline-start: 1.5em;
+  color: var(--sm-ink);
+  line-height: var(--sm-lh);
+}
+
+.sm-terms-list > li {
+  overflow-wrap: anywhere;
+}
+
+.sm-note-body {
+  color: var(--sm-ink);
+  line-height: var(--sm-lh);
+  overflow-wrap: break-word;
+}
+
+/* A long file name is cut with an ellipsis; it never sets the column's width. */
+.sm-attachments {
+  contain: inline-size;
+  padding: 0;
+  list-style: none;
+  color: var(--sm-ink);
+  line-height: var(--sm-lh);
+}
+
+.sm-attachments > li + li {
+  margin-top: 4px;
+}
+
+.sm-attachments > li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-attachments a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* A payment in another currency: its business-currency amount under it. */
+.sm-payment-converted {
+  display: block;
+  color: var(--sm-muted);
+}
+
+/* ------------------------------------------------------------ signature */
+
+/* On the paper, no panel, centred, up to 110 px tall and 220 px wide, the label under it; a
+   rule above it when the bank details come first. */
+.sm-signature {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding: var(--sm-pad);
+  text-align: center;
+}
+
+.sm-bank + .sm-signature {
+  border-top: var(--sm-rule);
+}
+
+.sm-signature-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm-signature-mark .sm-signature-image {
+  display: block;
+  width: auto;
+  max-width: min(220px, 100%);
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+}
+
+.sm-signature-banner {
+  padding: 8px;
+  color: var(--sm-muted);
+}
+
+.sm-signature-banner a {
+  color: var(--sm-accent-text);
+}
+
+/* ------------------------------------------------------------ summaries (shared widgets) */
+
+/* HSN, tax, batch and payment summaries: ruled parts of the frame, the title, then the table
+   ruled both ways (as the item table). */
+.sm-widget-table {
+  gap: 0;
+}
+
+.sm-widget-table > .sm-card-title {
+  padding: 2px var(--sm-pad);
+}
+
+.sm-widget-table .ceres-table-section {
+  margin: 0;
+  overflow: clip;
+}
+
+/* HSN and Tax Summary: every column the same width. */
+.sm-widget-table:is([data-section="hsn"], [data-section="tax-summary"]) .ceres-table.is-even {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.sm-widget-table .ceres-table-heading {
+  display: none; /* the part's own title names the table */
+}
+
+.sm-widget-table .ceres-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--sm-ink);
+  font-family: var(--sm-table-font);
+  font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
+  line-height: var(--sm-lh);
+}
+
+.sm-widget-table .ceres-table th,
+.sm-widget-table .ceres-table td {
+  padding: 2px 6px;
+  border: 0;
+  border-top: var(--sm-rule);
+  border-inline-start: var(--sm-rule);
+  background: none;
+  color: var(--sm-ink);
+  white-space: nowrap;
+}
+
+.sm-widget-table .ceres-table :is(th, td):first-child {
+  border-inline-start: 0;
+}
+
+/* A summary wider than the page wraps its headings and text cells; figures never wrap. */
+.sm-widget-table .ceres-table thead th,
+.sm-widget-table .sm-stock-table td:not(.sm-num) {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.sm-widget-table .ceres-table thead th {
+  font-weight: 400;
+}
+
+.sm-widget-table .ceres-table tbody tr:nth-child(even) {
+  background: none;
+}
+
+.sm-widget-table .ceres-table tfoot td {
+  font-weight: 600;
+}
+
+.sm-widget-table .ceres-table .ceres-table-words {
+  font-size: inherit;
+  font-weight: 400;
+  white-space: normal;
+}
+
+.sm-doc[dir="rtl"] .sm-widget-table .ceres-table :is(th, td):first-child {
+  text-align: right;
+}
+
+.sm-doc[dir="rtl"] .sm-widget-table .ceres-table .ceres-table-words {
+  text-align: right !important;
+}
+
+/* A summary with no rows renders nothing: no empty part. */
+.sm-widget-table:not(:has(.ceres-table)) {
+  display: none;
+}
+
+/* Refrens' closing line from the document's contact details, under the frame. */
+.sm-enquiry {
+  margin-top: 12px;
+  color: var(--sm-ink);
+  text-align: center;
+  line-height: var(--sm-lh);
+}
+
+/* ------------------------------------------------------------ markdown (notes, descriptions) */
+
+/*
+ * The markdown viewer brings its own stylesheet, loaded after the template's; these selectors
+ * outrank it, so descriptions and notes read the same whichever loads first.
+ */
+.sm-doc .sm-item-desc .toastui-editor-contents,
+.sm-doc .sm-note-body .toastui-editor-contents {
+  max-width: 100%;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.sm-doc .sm-item-desc .toastui-editor-contents *:not(table),
+.sm-doc .sm-note-body .toastui-editor-contents *:not(table) {
+  line-height: inherit;
+}
+
+.sm-doc .sm-item-desc .toastui-editor-contents :is(p, ul, ol, li, h1, h2, h3, h4, h5, h6),
+.sm-doc .sm-note-body .toastui-editor-contents :is(p, ul, ol, li, h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.sm-doc
+  .sm-item-desc
+  .toastui-editor-contents
+  > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div),
+.sm-doc
+  .sm-note-body
+  .toastui-editor-contents
+  > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div) {
+  margin-top: 4px; /* paragraphs close, like list points */
+}
+
+.sm-doc .sm-item-desc .toastui-editor-contents li + li,
+.sm-doc .sm-note-body .toastui-editor-contents li + li {
+  margin-top: 4px;
+}
+
+/*
+ * Tables written into a description or note: ruled both ways in the frame's grey, square
+ * corners, the heading row bold on white (Simple design); 2 px 6 px in every cell.
+ */
+.sm-doc .sm-item-desc .toastui-editor-contents table,
+.sm-doc .sm-note-body .toastui-editor-contents table {
+  width: 100%; /* edge to edge (user rule, 2026-10-20) */
+  border: var(--sm-rule);
+  border-collapse: collapse;
+  background: var(--sm-paper);
+}
+
+.sm-doc .sm-item-desc .toastui-editor-contents :is(th, td),
+.sm-doc .sm-note-body .toastui-editor-contents :is(th, td) {
+  height: auto; /* the viewer's 32 px on top of the padding made every row 44 px tall */
+  padding: 2px 6px;
+  border: var(--sm-rule);
+  background: none;
+  color: var(--sm-ink);
+  text-align: start;
+}
+
+.sm-doc .sm-item-desc .toastui-editor-contents th,
+.sm-doc .sm-note-body .toastui-editor-contents th {
+  font-weight: 600;
+}
+
+/* List markers in the text's own colour (user request): the viewer greys both. */
+.sm-doc .sm-item-desc .toastui-editor-contents :is(ul, ol) > li::before,
+.sm-doc .sm-note-body .toastui-editor-contents :is(ul, ol) > li::before {
+  color: currentcolor;
+}
+
+/* The bullet is a dot painted with a background, not text. */
+.sm-doc .sm-item-desc .toastui-editor-contents ul > li::before,
+.sm-doc .sm-note-body .toastui-editor-contents ul > li::before {
+  background-color: currentcolor;
+}
+
+
+
+/* ------------------------------------------------------------ narrow screens */
+
+/*
+ * Narrow pages. The layout answers to its own width, not the screen's (a container query): a
+ * phone, an A5 page and A4 at a large print size all leave it under the design's widths. The
+ * container is .sm-doc on screen and the page body in print.
+ */
+.sm-doc {
+  container: sm-doc / inline-size;
+}
+
+@media screen and (width <= 720px) {
+  .sm-doc {
+    --sm-gutter: 12px;
+  }
+}
+
+/* Under 600 px: the rows' cells stack, a rule between them; the header's QR goes under the
+   title; the bottom's halves stack. */
+@container sm-doc (width < 600px) {
+  .sm-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sm-cell + .sm-cell {
+    border-inline-start: 0;
+    border-top: var(--sm-rule);
+  }
+
+  .sm-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .sm-head > .sm-logo-cell {
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
+  }
+
+  .sm-head > .sm-title-block {
+    align-items: flex-start;
+    text-align: start;
+  }
+
+  .sm-head .sm-title-row {
+    justify-content: flex-start;
+  }
+
+  .sm-bottom {
+    flex-direction: column;
+  }
+
+  .sm-bottom-side {
+    border-inline-start: 0;
+    border-top: var(--sm-rule);
+  }
+
+  .sm-bottom-main:not(:has(> *)) + .sm-bottom-side {
+    border-top: 0;
+  }
+
+  /* Headings wrap; a summary's first column is a date, a code or a rate, and never does. */
+  .sm-widget-table .ceres-table th {
+    white-space: normal;
+  }
+}
+
+/* Printed narrow (A5, or a large text scale): the stacked cells may break between each other,
+   each whole, so a row never takes a page of its own. */
+@media print {
+  @container sm-doc (width < 600px) {
+    .sm-row {
+      break-inside: auto;
+    }
+
+    .sm-row > .sm-cell {
+      break-inside: avoid;
+    }
+  }
+}
+
+/* Under 420 px (a phone): the logo up to 160 px wide. */
+@container sm-doc (width < 420px) {
+  .sm-doc .sm-logo .sm-logo-image {
+    max-width: 160px;
+  }
+
+  .sm-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------------ print / PDF */
+
+/*
+ * Print at the screen's size, as the E-commerce template does (user, 2026-11-02, after a day at
+ * Refrens' 75 %: the print preview read too small): 13 px body text prints at 13 px at text
+ * scale 1; 0.8, 0.9, 1.1 and 1.2 print at 80, 90, 110 and 120 % (user, 2026-11-02: Smaller
+ * printed as Normal), by the renderer's html zoom or, at 0.8 and unset, the template's own
+ * (helpers.ts mapPrint ownPrintZoom). The page fills the printable width with
+ * no gutter of its own (margins belong to the browser or the PDF service).
+ */
+@media print {
+  .sm-doc {
+    /* Every text size prints as on screen, headings too (user, 2026-10-21: print 1:1). */
+    --sm-gutter: 0px;
+
+    /*
+     * Nothing shrinks to fit the paper: every text, the tables' included, prints at the print
+     * size (zoomSize, the renderer's html zoom), and a table too wide for the page is cut off at
+     * its edge (.sm-items-scroll clips it); landscape gives it room (user, 2026-11-01).
+     */
+    zoom: var(--sm-print-scale, 1);
+    width: calc(100% / var(--sm-print-scale, 1));
+
+    /* Never wider than the paper's printable width (helpers.ts mapPrint): Refrens' PDF
+       service lays the page out in a window wider than the paper before it prints. */
+    max-width: calc(var(--sm-print-width, 100000px) / var(--sm-print-scale, 1));
+
+    /* Centred: a browser's own print keeps 1 cm margins, so a document set to wider ones
+       (xMargins 2) sits in the middle of the page rather than against its left edge. */
+    margin: 0 auto;
+  }
+
+  /* Refrens' PDF service (body.isDibella) lays the page out in its own window before it
+     prints, narrower than a landscape or A3 page: the document takes the paper's printable
+     width there, so the table is fitted to the paper and not to the window. */
+  [class~="isDibella"] .sm-doc {
+    width: calc(var(--sm-print-width, 100%) / var(--sm-print-scale, 1));
+    max-width: none;
+  }
+
+  /* A browser's own print: the paper's whole width, whichever way its dialog turns it (user,
+     2026-11-03: landscape kept the portrait width, the sides left empty). */
+  body:not([class~="isDibella"]) .sm-doc.is-browser-print {
+    max-width: none;
+  }
+
+  .sm-status.no-print {
+    display: none;
+  }
+
+  /* The columns keep the screen's shares of the table (template.hbs), so the printed table
+     reads as the design at any paper width. */
+
+  .sm-items-scroll,
+  .sm-widget-table {
+    overflow: clip;
+  }
+
+  /* Column headings repeat on every page a table spans; its totals print once, at the end. */
+  .sm-items > thead,
+  .sm-widget-table .ceres-table thead {
+    display: table-header-group;
+  }
+
+  .sm-widget-table .ceres-table tfoot {
+    display: table-row-group;
+  }
+
+  /* Summary-table rows stay whole. Each line item prints whole: its name, description and
+     image rows move to the next page together (user rule, 2026-10-19). */
+  .sm-widget-table .ceres-table tr,
+  .sm-items > tbody > tr {
+    break-inside: avoid;
+  }
+
+  /* A group's heading row goes with its first item: never left alone at a page's foot (user
+     rule: a heading stays with its content, 2026-10-24). */
+  .sm-items .sm-item-row.has-name-row,
+  .sm-items .sm-detail-row,
+  .sm-items .sm-image-row,
+  .sm-items .sm-group-row + tr {
+    break-before: avoid;
+  }
+
+  /* An item's original images never taller than 55 % of a page, in proportion, so an item
+     and its images print together on one page (user, 2026-10-19; as the Viraj template). */
+  .sm-large-image {
+    /* px cap: on a Pageless PDF's one tall page vh is the whole document. --sm-vh is the
+       page's vh while a browser's print is measured beforehand (prepareBrowserPrint). */
+    max-height: min(calc(55 * var(--sm-vh, 1vh)), 600px);
+
+    /* Never wider than its row: at the 600 px cap a wide photo ran 730 px on a 736 px Legal
+       page, past the table's room, and the whole table printed at 98 % to make way for it. */
+    max-width: 100%;
+    object-fit: contain;
+
+    /* Capped, the picture sits at the row's start, not in the middle of its box (user,
+       2026-11-12). */
+    object-position: left top;
+  }
+
+  .sm-doc[dir="rtl"] .sm-large-image {
+    object-position: right top;
+  }
+
+  /* A row cut by a page break (an item taller than what is left of the page) closes with a
+     rule at the page's foot, and every page's piece of the table with it (user rule,
+     2026-10-20): the item table's repeated footer (.sm-items-corners, below) draws that rule
+     and the rounded corners under each page's last row. The items wrapper draws no rule of
+     its own: a newer Chrome's print runs a box broken across pages down to the page's foot,
+     so its rule came out a second line under the table, apart from it (user, 2026-11-12).
+     Chrome 122 (the PDF service) ends the piece at the last row, where the footer is. */
+  .sm-doc.is-stretch .sm-items-scroll {
+    --sm-column-rule-width: 1px;
+  }
+
+  :where(.sm-doc.is-stretch .sm-items) > :where(thead, tbody, tfoot) {
+    background-color: var(--sm-paper);
+  }
+
+
+  /* A table in a description or note breaks between its rows, its headings repeated at the top
+     of every page it spans (user, 2026-10-19). */
+  .sm-doc :is(.sm-item-desc, .sm-note-body) .toastui-editor-contents thead {
+    display: table-header-group;
+  }
+
+  .sm-doc :is(.sm-item-desc, .sm-note-body) .toastui-editor-contents tr {
+    break-inside: avoid;
+  }
+
+
+  /* The totals stay together. */
+  .sm-totals-table {
+    break-inside: avoid;
+  }
+
+  /*
+   * A table split across pages would draw its outline down to the foot of the page; the
+   * cells draw it instead, so each page's table ends right under its last row.
+   */
+  .sm-items {
+    border: 0;
+  }
+
+  /* Short sections never split across pages; a heading stays with its content. The right
+     column (bank and UPI, signature) is as tall as the left one (the rule between them), so it
+     may break: its bank details and signature each stay whole; the left column carries its
+     terms and notes on line by line. */
+  .sm-card,
+  .sm-words,
+  .sm-signature,
+  .sm-doc .sm-letterhead-footer:not(.sm-footer-spacer) {
+    break-inside: avoid;
+  }
+
+  /* The last-page footer never starts a page by itself (a Legal or text-scale-1.2 PDF ended on
+     a page holding only the footer): the content before it goes over with it. */
+  .sm-page-body > .sm-letterhead-footer {
+    break-before: avoid-page;
+  }
+
+  .sm-card-title {
+    break-after: avoid-page;
+  }
+
+  /* The frame's header rows, the totals and the words line print whole; a row of three cells
+     never splits (on a narrow page its stacked cells may, see the container rules). */
+  .sm-head,
+  .sm-row,
+  .sm-words,
+  .sm-row > .sm-cell {
+    break-inside: avoid;
+  }
+
+  /* A table too wide for the page at the design's 12 px cell padding prints with 6 px
+     (helpers.ts printTight): the text keeps its size. */
+  .sm-items.is-print-tight > * > tr > :is(th, td) {
+    padding-inline: 6px;
+  }
+
+  /* The enquiry line never starts a page alone (user rule): the content before it comes along. */
+  .sm-doc .sm-enquiry {
+    break-before: avoid-page;
+  }
+
+  /*
+   * Terms and Conditions, Notes and Attachments carry on line by line across a page break
+   * (user rule), and so does the row that holds them; a list item still keeps its lines.
+   */
+  .sm-card:is(
+      [data-section="terms"],
+      [data-section="notes"],
+      [data-section="additional"],
+      [data-section="attachments"]
+    ) {
+    break-inside: auto;
+  }
+
+  /*
+   * Footer on every page (pdfOptions.footerOnLastPage off): the real footer is fixed to the
+   * foot of each printed page and the frame's repeating <tfoot> holds an invisible copy of it.
+   * Last page only: it follows the content, and helpers.ts sets it on the page's bottom edge.
+   */
+  .sm-page-frame {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .sm-page-frame > tbody {
+    display: table-row-group;
+  }
+
+  .sm-page-frame-header {
+    display: table-header-group;
+  }
+
+  /* The repeated letterhead keeps the 16 px section gap above each page's content. */
+  .sm-page-frame-header .sm-letterhead:not(.is-empty) {
+    margin-bottom: var(--sm-section-gap);
+  }
+
+  /*
+   * Chrome stops repeating a page header (and the footer's spacer) taller than about a quarter
+   * of the page: a full-width letterhead on a landscape page lost its copies after page 1
+   * (measured 2026-10-23, A4 / A5 / Letter landscape). The every-page copies keep within a
+   * fifth of the page height, scaled whole; portrait pages keep them at full width.
+   */
+  .sm-page-frame-header .sm-letterhead img,
+  .sm-letterhead-footer.sm-footer-fixed img,
+  .sm-footer-spacer img {
+    width: auto;
+    max-width: 100%;
+    max-height: calc(20 * var(--sm-vh, 1vh));
+  }
+
+  .sm-page-frame-footer {
+    display: table-footer-group;
+  }
+
+  .sm-page-frame > * > tr {
+    display: table-row;
+  }
+
+  .sm-page-frame > * > tr > td {
+    display: table-cell;
+    padding: 0;
+    vertical-align: top;
+  }
+
+  /*
+   * A browser's own print (Refrens' Print button, Ctrl+P): the page's top and bottom margins are
+   * 0 (helpers.ts applyBrowserPrintPage), which keeps Chrome from printing its date, title, URL
+   * and page-number stamps there (user, 2026-11-02). A row at the top and foot of the page frame,
+   * repeated on each page, gives every page its 1 cm back; an every-page letterhead or footer
+   * image sits on the page's edge instead, as the PDF service stamps it. Never in the PDF
+   * service (its own margins) nor on a Long PDF (one page, no @page rule).
+   */
+  .sm-page-frame > * > tr.sm-page-margin {
+    display: none;
+  }
+
+  body:not([class~="isDibella"]) .sm-doc:not(.is-pageless) .sm-page-frame > * > tr.sm-page-margin {
+    display: table-row;
+  }
+
+  .sm-page-frame > * > tr.sm-page-margin > td {
+    height: calc(1cm / var(--sm-page-zoom, 1));
+  }
+
+  /* The PDF service's stamped letterhead and footer, taller than their margins on a page wider
+     than A4 portrait: that much more room (helpers.ts placeStampRoom, user 2026-11-02). */
+  .sm-page-frame > * > tr.sm-stamp-room {
+    display: none;
+  }
+
+  body[class~="isDibella"] .sm-doc:not(.is-pageless) .sm-page-frame > * > tr.sm-stamp-room {
+    display: table-row;
+  }
+
+  .sm-page-frame > * > tr.sm-stamp-room.is-top > td {
+    height: var(--sm-stamp-top, 0);
+  }
+
+  .sm-page-frame > * > tr.sm-stamp-room.is-bottom > td {
+    height: var(--sm-stamp-bottom, 0);
+  }
+
+  /* The PDF service's own "electronically generated" line, as it prints it on Refrens'
+     templates: centred at the foot of every page, at the template's smallest size, 10 px
+     (helpers.ts ownSignatureNote). */
+  body[class~="isDibella"] .sm-doc:not(.is-pageless) .sm-page-frame > * > tr.sm-signature-note {
+    display: table-row;
+  }
+
+  .sm-page-frame > * > tr.sm-signature-note > td > p {
+    margin: 0;
+    padding-top: 12px;
+    color: var(--sm-ink);
+    font-size: calc(10px * var(--sm-text-scale, 1));
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  /* The stamped letterhead and footer reach into the page area there: the document's white
+     ground and the watermark painted over their edges (user, 2026-11-03). The paper is white;
+     the watermark keeps to the room between them (only where that room is added: A4 portrait
+     keeps its watermark as it was). */
+  body[class~="isDibella"] .sm-doc {
+    background: transparent;
+  }
+
+  /* The watermark setting's scale grows the box around its centre: the box is that much
+     smaller, so the scaled watermark still fits the room. */
+  :root[data-sm-stamp-room] body[class~="isDibella"]::after {
+    --sm-mark-room: calc(100% - var(--sm-stamp-page-top, 0px) - var(--sm-stamp-page-bottom, 0px));
+
+    /* A turned watermark reaches further: |cos| + |sin| of its angle (a square one). */
+    --sm-mark-cos: max(cos(var(--watermark-rotate, 0deg)), -1 * cos(var(--watermark-rotate, 0deg)));
+    --sm-mark-sin: max(sin(var(--watermark-rotate, 0deg)), -1 * sin(var(--watermark-rotate, 0deg)));
+    --sm-mark-turn: calc(var(--sm-mark-cos) + var(--sm-mark-sin));
+    --sm-mark-shrink: max(1, calc(var(--watermark-scale, 1) * var(--sm-mark-turn)));
+    --sm-mark-gap: calc((var(--sm-mark-room) - var(--sm-mark-room) / var(--sm-mark-shrink)) / 2);
+
+    top: calc(var(--sm-stamp-page-top, 0px) + var(--sm-mark-gap));
+    height: calc(var(--sm-mark-room) / var(--sm-mark-shrink));
+  }
+
+  body:not([class~="isDibella"]) .sm-doc:not(.is-pageless) .sm-page-frame-header:has(.sm-letterhead:not(.is-empty)) > tr.sm-page-margin,
+  body:not([class~="isDibella"]) .sm-doc:not(.is-pageless) .sm-page-frame-footer:has(.sm-footer-spacer:not(.is-empty)) > tr.sm-page-margin {
+    display: none;
+  }
+
+  /* The page body is the narrow-page container in print (see the container queries). The
+     letterhead, the template and the footer meet with no gap (user, 2026-11-12: a 16 px strip
+     under the letterhead in print and the PDF). */
+  .sm-doc {
+    container-type: normal;
+    row-gap: 0;
+  }
+
+  /* A browser's print: the frame's 1 cm top margin row is for the pages after the first; on
+     the first it fell under a first-page letterhead (already at the paper's top edge), a 1 cm
+     strip between it and the template. The frame starts under the letterhead instead. */
+  body:not([class~="isDibella"]) .sm-doc:not(.is-pageless) > .sm-letterhead:not(.is-empty) + .sm-page-frame {
+    margin-top: calc(-1cm / var(--sm-page-zoom, 1));
+  }
+
+  /* A plain block in print, its sections spaced by margins: as a flex column, Chrome 122
+     (Refrens' PDF service) moved the whole page body after a first-page letterhead to page 2 at
+     some sizes (text scale 0.9, 2026-11-06), leaving page 1 with the letterhead alone. */
+  .sm-page-body {
+    display: block;
+    container: sm-doc / inline-size;
+  }
+
+  /* Measured once more with the text a touch wider, as Chrome prints it a little wider than it
+     lays it out (helpers.ts stretchItemTable, flowBreakFills): on only while measuring. */
+  .sm-doc.is-flow-measure .sm-page-frame * {
+    letter-spacing: 0.02em;
+  }
+
+  .sm-doc.is-flow-measure .sm-items,
+  .sm-doc.is-flow-measure .sm-items * {
+    letter-spacing: calc(0.02em - 0.25px);
+  }
+
+  /* The enquiry line keeps its 12 px under the frame (the paragraph reset outranks it). */
+  .sm-doc .sm-page-body > .sm-enquiry {
+    margin-top: 12px;
+  }
+
+  .sm-footer-spacer {
+    padding-top: var(--sm-section-gap);
+    visibility: hidden;
+  }
+
+  .sm-doc .sm-footer-spacer.is-empty {
+    display: none;
+  }
+
+  .sm-letterhead-footer.sm-footer-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /*
+   * The PDF service draws an every-page letterhead and footer in its own page margins (from
+   * data-ceres-page-header / -footer, policy "all"), so those copies hide there; a first-page
+   * letterhead and a last-page footer stay in the document, as the other templates keep them.
+   */
+  body[class~="isDibella"]
+    .sm-doc
+    .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+    display: none;
+  }
+}
+
+/* A Long PDF is not laid out in print media: its stamped letterhead and footer hide there too
+   (user, 2026-11-02: printed twice). */
+body[class~="isDibella"]
+  .sm-doc.is-pageless
+  .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+  display: none;
+}
+
+/*
+ * The filler row (helpers.ts stretchItemTable), on screen and in print alike: in print when the
+ * business stretches its tables (.is-stretch), on screen whenever the preview's A4 sheet has
+ * room to fill (user, 2026-10-31). Stretched, the empty row closes the table: the corners move
+ * to it, and the last item's rule goes so the space reads as the table running on, not an empty
+ * box under it (user, 2026-10-26). On screen the Total row stays in the table under it.
+ */
+.sm-doc.is-filled .sm-items .sm-filler {
+  display: table-row;
+}
+
+.sm-doc.is-filled .sm-items > tbody > tr:is(:has(+ .sm-filler), :has(+ tr[style*="none"] + .sm-filler)) > td {
+  --sm-sep: 0 0 transparent;
+
+  border-bottom: 0;
+}
+
+/* Stretched, the space closes the table: its bottom rule is the outline's. */
+.sm-doc.is-filled .sm-items:not(:has(+ [data-sm-totals-split])) > tbody:last-of-type > tr.sm-filler:last-child > td {
+  --sm-sep: 0 0 transparent;
+
+  border-bottom: 1px solid var(--sm-close-line, var(--sm-line));
+}
+
+.sm-doc.is-filled .sm-items .sm-filler > td {
+  height: var(--sm-filler-height, 0);
+  padding-block: 0;
+}
+
+/* Not the table's end: the space carries no rule of its own (the separator is a border now,
+   2026-11-12) — an empty space row drew a 1 px line and took that pixel from a full page, a
+   line of the terms went over, and the last-page footer with it (quotation A00052-D). */
+.sm-doc.is-filled .sm-items .sm-filler:not(:last-child) > td {
+  border-bottom: 0;
+}
+
+/* A group's Sub total under the space: the separator above it, at the space's foot (the row
+   above the space gave its own up, so the page's fit is unchanged; user, 2026-11-13: no line
+   between the last item and the Sub total in the PDF). */
+.sm-doc.is-filled .sm-items .sm-filler:has(+ .sm-group-total-row) > td {
+  border-bottom: var(--sm-separator) solid var(--sm-sep-color);
+}
+
+/* A Sub total under the space (helpers.ts placeFiller) stays with it: the summary rows never
+   stretch, nor move to a page of their own (user, 2026-11-02). */
+@media print {
+  .sm-items .sm-filler + .sm-group-total-row {
+    break-before: avoid;
+  }
+}
+
+/* The space carries on the last item's zebra colour, so it reads as that row running on
+   (user, 2026-10-26). */
+.sm-doc.is-filled .sm-items > tbody > tr.is-stripe + .sm-filler > td,
+.sm-doc.is-filled .sm-items > tbody > tr.is-stripe + tr[style*="none"] + .sm-filler > td {
+  background: var(--sm-zebra);
+}
+
+.sm-doc.is-filled .sm-items > tbody > tr.is-stripe + .sm-filler > td:not(:last-child),
+.sm-doc.is-filled .sm-items > tbody > tr.is-stripe + tr[style*="none"] + .sm-filler > td:not(:last-child) {
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
+}
+
+/*
+ * A box split by a page break closes at the foot of the page and opens again at the top of the
+ * next: its border, corners and padding are drawn on each piece (user, 2026-10-19).
+ */
+@media print {
+  .sm-card,
+  .sm-box {
+    /* stylelint-disable-next-line property-no-vendor-prefix -- Chrome before 130 needs it */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* A card that can split (terms, notes, additional info, attachments) lays out as a block:
+     Chrome split a column flex card at its very start, leaving an empty box at the page's
+     foot. The 8 px between its parts moves from the gap to margins. */
+  .sm-bottom-main > .sm-card:not(.sm-bank) {
+    display: block;
+  }
+
+  .sm-bottom-main > .sm-card:not(.sm-bank) > * + * {
+    margin-top: 8px;
+  }
+}
+
+/* The page-break corners (below) are print only. */
+.sm-items-corners {
+  display: none;
+}
+
+/*
+ * Corners at a page break (user request, 2026-10-24): every page's piece of the item table is
+ * rounded, as the whole table is. Chrome 122 (Refrens' PDF service) does not round each piece
+ * of a box broken across pages, but it repeats a table's header and footer on every page:
+ * the header's end cells round its top corners, and an empty footer row draws the bottom
+ * corners over the page's last row, the curve in the rule's colour and the paper outside it.
+ * Where the totals follow the items (splitTotals), the items' last row keeps square corners
+ * (helpers.ts marks its edge cells is-joint-left / is-joint-right), as the totals close the
+ * table with their own.
+ */
+@media print {
+  .sm-items > .sm-items-corners {
+    display: table-footer-group;
+  }
+
+  .sm-items > .sm-items-corners td {
+    height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  /*
+   * The page piece's foot in one shape, over the rows (positioned, it paints after them): the
+   * curves, the side rules' ends and the rule between them, in the outline's colour. Drawn as
+   * a rule over each cell, the last row's own separator, painted later, showed instead (a light
+   * line at each page break, running out past the curves; user, 2026-11-13). Its shadow, spread
+   * outward and kept below its top by the clip, is the paper over the rows' square corners;
+   * drawn as shapes, never a radial-gradient (a PDF stores that as a picture, 2026-11-04).
+   * Where the Total row follows in its own table, that table, positioned after it, covers it
+   * with its own top rule.
+   */
+  .sm-items > .sm-items-corners > tr {
+    position: relative;
+  }
+
+  /* The table's last row draws no bottom rule of its own (the shape above draws it, on the same
+     spot): cell by cell, the rounded end cells and the square ones between them landed a hair
+     apart at a fractional print size, a stepped line under the last column (user, 2026-11-13).
+     Only a table with that shape: the split totals' table keeps its own. */
+  .sm-items:has(> .sm-items-corners) {
+    --sm-close-line: transparent;
+  }
+
+  .sm-items > .sm-items-corners > tr::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    box-sizing: border-box;
+    height: 1px;
+    border: 0 solid var(--sm-line);
+    border-width: 0 0 1px;
+    background: none;
+    content: "";
+    pointer-events: none;
+  }
+
+  /* The totals follow: the items' table ends square, a piece hung from the totals' top corners
+     (helpers.ts markJointCorners) drawn over the curve above: the last row's ground with the
+     table's side rule, down to the rule the two tables share. */
+  .sm-items[data-sm-totals-split] {
+    position: relative;
+  }
+
+  .sm-items[data-sm-totals-split]:is(.is-joint-left, .is-joint-right)::before,
+  .sm-items[data-sm-totals-split].is-joint-right::after {
+    position: absolute;
+    z-index: 1;
+    top: -9px;
+    box-sizing: border-box;
+    width: 9px;
+    height: 9px;
+    border: 0 solid var(--sm-line);
+    background: var(--sm-joint-bg, var(--sm-paper));
+    content: none;
+    pointer-events: none;
+  }
+
+  /* Square corners in the Simple design: no corner pieces at the joint. */
+}
+
+/*
+ * In print the totals sit in a table of their own under the items (helpers.ts splitTotals), so a
+ * page holding only them repeats no item headings. It overlaps the item table by one rule, so
+ * the two meet on a single line.
+ */
+@media print {
+  /* Over the item table's bottom rule by exactly its width, drawing it again as their own top
+     edge (helpers.ts markJointCorners measures it): one line where they meet, and a top edge
+     when the totals start a page. Overlapping by a fixed pixel left the rule covered at one print
+     size and doubled at another (user, 2026-11-03). */
+  .sm-items[data-sm-totals-split] {
+    /* Two rules up: its ground covers the page-break corner row's rule, which lands a hair off
+       the same spot on the last piece (a doubled line), and its own rule is the one drawn. */
+    margin-top: calc(-2 * var(--sm-joint-rule, 1px));
+  }
+
+  /* The totals' ground and top edge are the table's, in one piece: painted cell by cell, some
+     PDF viewers drew each cell's edge as a faint vertical line in the Total row (user,
+     2026-11-03). */
+  .sm-items[data-sm-totals-split] {
+    box-shadow: inset 0 var(--sm-joint-rule, 1px) 0 var(--sm-sep-color);
+  }
+
+  .sm-items[data-sm-totals-split] > :is(thead, tbody, tfoot),
+  .sm-items[data-sm-totals-split] > :is(thead, tbody, tfoot) > tr,
+  .sm-items[data-sm-totals-split] > tbody > tr > td {
+    background: none;
+    box-shadow: none;
+  }
+
+  .sm-items td.is-joint-row {
+    --sm-sep: 0 0 transparent;
+
+    border-bottom-color: transparent;
+  }
+
+
+  /* One solid ground under the totals: painted cell by cell, the hairline seams between their
+     empty cells let the stretch column rules (columnRules) show through. */
+
+  /* In the Total row's tint, with the table's rounded foot: the hairline seams between its cells
+     (fractional column widths) showed the paper as vertical lines (user, 2026-11-03). */
+  .sm-items[data-sm-totals-split] {
+    background-color: var(--sm-paper);
+  }
+
+}
+
+/* ------------------------------------------------------------ phones and tablets */
+
+/*
+ * On a phone or tablet screen the item table reads as on refrens.com's own invoice pages (user
+ * requests, 2026-10-20 and 2026-10-24). fitItemsToScreen (helpers.ts) chooses: on a screen
+ * narrower than 576 px each item reads as a card (is-cards): its number and name across the
+ * top, its codes and description under them, then each column's heading and figure in two
+ * aligned columns (as Bank Details), the last one (the amount) bold. Narrower than an A4 page
+ * (794 px) the headings stay in a row and each item's name and description run across the
+ * table above its figures (is-grid); the columns are shared by every row and sized to their
+ * figures (numbers never wrap), and the table scrolls sideways only when they cannot fit.
+ * Print keeps the table as it is.
+ */
+@media screen {
+  .sm-doc .sm-items-scroll:has(> .sm-items.is-cards) {
+    overflow-x: visible;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid),
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > :is(thead, tbody),
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr,
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr > :is(th, td) {
+    display: block;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr > :is(th, td) {
+    --sm-sep: 0 0 transparent;
+
+    border: 0;
+    text-align: start;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr + tr,
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > tbody + tbody > tr:first-child,
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > thead + tbody > tr:first-child {
+    border-top: var(--sm-separator) solid var(--sm-sep-color);
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-desc-min,
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-filler {
+    display: none;
+  }
+
+  /* An item card: number and name, codes and description, then a line per figure. */
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > thead {
+    display: none;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > tbody > tr {
+    padding: 8px 12px;
+  }
+
+  /* The zebra tint fills the item's whole band, gaps included. */
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > tbody > tr.is-stripe {
+    background: var(--sm-zebra);
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) > tbody > tr > td {
+    background: none;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-name-row, .sm-total-row) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px 8px;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-name-row, .sm-total-row) > td {
+    grid-column: 1 / -1;
+    padding: 0;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-name-row) > .sm-col-serial {
+    grid-column: 1;
+    font-weight: 600;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-name-row) > :is(.sm-col-name, .sm-col-serial + td) {
+    grid-column: 2;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-total-row) > td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    text-align: start;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-total-row) > td[data-label]::before {
+    content: attr(data-label);
+    color: var(--sm-muted);
+    text-align: start;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-total-row) > td[data-label]:empty {
+    display: none;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-total-row) > td[data-label]:last-child {
+    font-weight: 600;
+  }
+
+  /* The name on a line of its own above the figures (Item Name Full Width), the
+     description and the large images under them: the same card, no rule between. */
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-name-row + .sm-item-row,
+  .sm-doc .sm-items:is(.is-cards, .is-grid) :is(.sm-item-row, .sm-detail-row) + :is(.sm-detail-row, .sm-image-row) {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-detail-row > .sm-col-serial,
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-total-row > .sm-col-serial:empty {
+    display: none;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-group-row {
+    font-weight: 600;
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-total-row {
+    background: var(--sm-fill);
+  }
+
+  .sm-doc .sm-items:is(.is-cards, .is-grid) .sm-total-row > .sm-col-name {
+    font-weight: 600;
+  }
+
+  /* is-grid: one grid for the whole table, every row on its columns (subgrid): the serial,
+     then one column per figure, as wide as its widest figure or heading word and sharing what
+     is left; each item's name and description run across the figure columns above them.
+     Anchored on .sm-items-scroll to outrank the card rules above. */
+  .sm-doc .sm-items-scroll:has(> .sm-items.is-grid) {
+    overflow: auto hidden;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid {
+    display: grid;
+    grid-template-columns: var(--sm-serial-width, 32px) repeat(var(--sm-figures, 1), minmax(min-content, 1fr));
+    width: auto;
+    min-width: min-content; /* wider than the screen only when the figures need it */
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > :is(thead, tbody) {
+    display: contents;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > :is(thead, tbody) > tr {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    gap: 0;
+    padding: 0;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > :is(thead, tbody) > :is(.sm-filler, tr[style*="none"]) {
+    display: none;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > :is(thead, tbody) > tr > :is(th, td) {
+    grid-column: auto;
+    padding: 6px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* The headings' widths are set on each heading for the table's own layout; on the grid each
+     heading takes its column instead, wrapping at its spaces ("GST / Rate") as refrens.com's do. */
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > thead > tr > th {
+    width: auto !important;
+    white-space: normal;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > thead > tr > .sm-col-name {
+    display: none;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid tr > .sm-col-serial {
+    grid-column: 1;
+  }
+
+  /* What runs across the figures: the item's name, its description and images, group rows.
+     Size containment keeps it from widening the figure columns. */
+  .sm-doc .sm-items-scroll > .sm-items.is-grid :is(.sm-item-row, .sm-name-row, .sm-total-row) > :is(.sm-col-name, .sm-col-serial + td) {
+    grid-column: 2 / -1;
+    contain: inline-size;
+    text-align: start;
+    white-space: normal;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid :is(.sm-detail-row, .sm-image-row, .sm-group-row) > td:not(.sm-col-serial) {
+    grid-column: 2 / -1;
+    contain: inline-size;
+    padding: 6px 8px;
+    text-align: start;
+    white-space: normal;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid > tbody > tr.sm-group-row > td:not(.sm-col-serial) {
+    grid-column: 1 / -1;
+  }
+
+  /* The first figure under the first heading; the rest follow in order. */
+  .sm-doc .sm-items-scroll > .sm-items.is-grid tr > :nth-child(1 of :not(.sm-col-serial, .sm-col-name)) {
+    grid-column-start: 2;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid :is(.sm-item-row, .sm-total-row) > td[data-label] {
+    display: block;
+    text-align: center;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid :is(.sm-item-row, .sm-total-row) > td[data-label]::before {
+    content: none;
+  }
+
+  .sm-doc .sm-items-scroll > .sm-items.is-grid :is(.sm-item-row, .sm-total-row) > td[data-label]:empty,
+  .sm-doc .sm-items-scroll > .sm-items.is-grid .sm-total-row > .sm-col-serial:empty {
+    display: block;
+  }
+}
+
+
+/*
+ * The totals on a phone screen come straight after the items (user request, 2026-10-24): the
+ * right column's boxes join the bottom's own column, the totals first, then the cards, then the
+ * signature. Print keeps the totals beside or under the cards (an A5 page is as narrow).
+ */
+@media screen {
+  @container sm-doc (width < 600px) {
+    .sm-bottom-side {
+      display: contents;
+    }
+
+    .sm-bottom-side > .sm-totals-table {
+      order: -1;
+    }
+  }
+}
+
+/*
+ * The summaries on a phone screen (user request, 2026-10-24): fitItemsToScreen (helpers.ts)
+ * marks them is-stacked under 576 px and gives each cell its column's heading. Each row of the
+ * table reads as heading | figure pairs, one per column, one under another, in the table's own
+ * design: the title above it as on a wide screen, each heading cell in the theme colour with
+ * white medium text and the header's light rules (as the table's header row), each figure as
+ * a body cell, the footer's Total across the box in the totals' fill, the words row last.
+ * Rounded corners, no grey rule beside the theme-coloured headings. Print keeps the tables as
+ * they are.
+ */
+@media screen {
+  .sm-doc .sm-widget-table.is-stacked .ceres-table,
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > :is(tbody, tfoot),
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr {
+    display: block;
+    width: 100%;
+  }
+
+  /* The outline on the figures' side and under the box; the headings' side has none. */
+  .sm-doc .sm-widget-table.is-stacked .ceres-table-section > .ceres-table {
+    border: 1px solid var(--sm-line);
+    border-top: 0;
+    border-inline-start: 0;
+  }
+
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > thead {
+    display: none;
+  }
+
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td {
+    display: block;
+    padding: 6px 8px;
+    border: 0;
+    border-top: 1px solid var(--sm-line);
+    border-radius: 0;
+    text-align: center;
+  }
+
+  /* Heading | figure, two halves; a long figure widens its half. */
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td[data-label] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 8px;
+    align-items: center;
+    padding: 0 8px 0 0;
+  }
+
+  /* The heading cell as the table's header: the 20 % tint, theme-coloured text, light rules. */
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td[data-label]::before {
+    content: attr(data-label);
+    align-self: stretch;
+    margin-top: -1px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--sm-line);
+    color: var(--sm-ink);
+    font-weight: 400;
+    white-space: normal;
+  }
+
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > tbody:first-of-type > tr:first-child > td[data-label]:first-child::before {
+    border-top-color: var(--sm-line);
+  }
+
+  /* The footer's Total across the box, in the totals' fill. */
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > tfoot > tr > td:not([data-label], .ceres-table-words) {
+    font-weight: 600;
+  }
+
+  /* A payment's amount in the business's currency, under the amount. */
+  .sm-doc .sm-widget-table.is-stacked td[data-label] > .sm-payment-converted {
+    grid-column: 2;
+  }
+
+  .sm-doc .sm-widget-table.is-stacked td[data-label]:has(> .sm-payment-converted)::before {
+    grid-row: span 2;
+  }
+
+  .sm-doc .sm-widget-table.is-stacked :is(.sm-stock-table, .sm-payments-table) td:not(.sm-num) {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .sm-doc .sm-widget-table.is-stacked .ceres-table .ceres-table-words {
+    text-align: start;
+  }
+
+  /* An empty cell (the footer under a rate, a batch with no maker) prints no line. */
+  .sm-doc .sm-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td:empty {
+    display: none;
+  }
+}
+
