@@ -855,21 +855,27 @@
    one, else the last item's last visible row (the stretch row and a hidden live-toggle
    detail row never count on screen) — only while the stretch row is the table's last: when a
    group's Sub total follows it, the Sub total closes the table and the item above stays
-   square (user, 2026-11-12: two curves). In print the Total row is a table of its own under the
+   square (user, 2026-11-12: two curves). The row above the space closes only while the space is
+   not shown: written as one selector, this outranked the .is-filled rules handing the corners
+   to the space, and the stretched space showed as a box of its own under a closed table (user,
+   2026-11-13). In print the Total row is a table of its own under the
    items (splitTotals): the corners are its, the items' last row stays square. */
-.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td:first-child {
+.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:last-child:not(.mo-filler) > td:first-child,
+.mo-doc:not(.is-filled) .mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td:first-child {
   border-end-start-radius: 8px;
 }
 
-.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td:last-child {
+.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:last-child:not(.mo-filler) > td:last-child,
+.mo-doc:not(.is-filled) .mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td:last-child {
   border-end-end-radius: 8px;
 }
 
 /* That last row's bottom rule is the table's edge: the outline's 1 px, not a separator. */
-.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:last-child:not(.mo-filler), :has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td {
+.mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:last-child:not(.mo-filler) > td,
+.mo-doc:not(.is-filled) .mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr:is(:has(+ .mo-filler:last-child), :has(+ tr[style*="none"] + .mo-filler:last-child)) > td {
   --mo-sep: 0 0 transparent;
 
-  border-bottom: 1px solid var(--mo-line);
+  border-bottom: 1px solid var(--mo-close-line, var(--mo-line));
 }
 
 /* Zebra rows as refrens.com's Modern: the first item white, the second tinted, and so on;
@@ -2271,7 +2277,7 @@ body[class~="isDibella"]
 .mo-doc.is-filled .mo-items:not(:has(+ [data-mo-totals-split])) > tbody:last-of-type > tr.mo-filler:last-child > td {
   --mo-sep: 0 0 transparent;
 
-  border-bottom: 1px solid var(--mo-line);
+  border-bottom: 1px solid var(--mo-close-line, var(--mo-line));
 }
 
 .mo-doc.is-filled .mo-items .mo-filler > td {
@@ -2284,6 +2290,13 @@ body[class~="isDibella"]
    line of the terms went over, and the last-page footer with it (quotation A00052-D). */
 .mo-doc.is-filled .mo-items .mo-filler:not(:last-child) > td {
   border-bottom: 0;
+}
+
+/* A group's Sub total under the space: the separator above it, at the space's foot (the row
+   above the space gave its own up, so the page's fit is unchanged; user, 2026-11-13: no line
+   between the last item and the Sub total in the PDF). */
+.mo-doc.is-filled .mo-items .mo-filler:has(+ .mo-group-total-row) > td {
+  border-bottom: var(--mo-separator) solid var(--mo-sep-color);
 }
 
 /* A Sub total under the space (helpers.ts placeFiller) stays with it: the summary rows never
@@ -2355,8 +2368,11 @@ body[class~="isDibella"]
     background: var(--mo-head-tint);
   }
 
-  .mo-items > thead > tr > th:not(:last-child) {
-    box-shadow: 1px 0 0 var(--mo-head-tint);
+  /* The seams are covered by the middle headings, each over both its neighbours: a rounded end
+     heading's shadow, shifted a pixel, showed past its own curve (a notch at the table's top
+     corner, user 2026-11-13). */
+  .mo-items > thead > tr > th:not(:first-child, :last-child) {
+    box-shadow: 1px 0 0 var(--mo-head-tint), -1px 0 0 var(--mo-head-tint);
   }
 
   .mo-items > thead > tr > th:first-child {
@@ -2367,67 +2383,80 @@ body[class~="isDibella"]
     border-start-end-radius: 8px;
   }
 
+  /*
+   * The heading's outline in one shape over the row, not cell by cell: at a fractional print
+   * size Chrome snaps a square cell's border to the pixel grid but draws a rounded one as a
+   * curve, so the top rule stepped where the corner cells met the others and ran on past the
+   * curves (user, 2026-11-13). Drawn on every page's repeated heading.
+   */
+  .mo-items > thead > tr {
+    position: relative;
+  }
+
+  .mo-items > thead > tr > th {
+    border-color: transparent;
+  }
+
+  .mo-items > thead > tr::after {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--mo-line);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    content: "";
+    pointer-events: none;
+  }
+
   .mo-items > .mo-items-corners {
     display: table-footer-group;
   }
 
-  /* The rule under the page's last row too: an item cut between its text and its images has
-     none of its own there (where it has, the two coincide). */
   .mo-items > .mo-items-corners td {
     height: 0;
     padding: 0;
     border: 0;
     background: none;
-    box-shadow: 0 -0.5px 0 0.5px var(--mo-line);
+    box-shadow: none;
   }
 
-  /* Where the Total row follows in its own table, this rule is the line between the last item
-     and it: a separator, at its 0.5 px (the totals draw the same line, laid over it). */
-  .mo-items:has(+ [data-mo-totals-split]) > .mo-items-corners td {
-    box-shadow: 0 calc(-0.5 * var(--mo-separator)) 0 calc(0.5 * var(--mo-separator)) var(--mo-sep-color);
-  }
-
-  .mo-items > .mo-items-corners td:is(:first-child, :last-child) {
+  /*
+   * The page piece's foot in one shape, over the rows (positioned, it paints after them): the
+   * curves, the side rules' ends and the rule between them, in the outline's colour. Drawn as
+   * a rule over each cell, the last row's own separator, painted later, showed instead (a light
+   * line at each page break, running out past the curves; user, 2026-11-13). Its shadow, spread
+   * outward and kept below its top by the clip, is the paper over the rows' square corners;
+   * drawn as shapes, never a radial-gradient (a PDF stores that as a picture, 2026-11-04).
+   * Where the Total row follows in its own table, that table, positioned after it, covers it
+   * with its own top rule.
+   */
+  .mo-items > .mo-items-corners > tr {
     position: relative;
   }
 
-  /* Drawn as shapes, not a radial-gradient: a PDF stores a gradient as a small picture, and a
-     viewer zoomed in showed its square edges as a faint outline in the corner (user,
-     2026-11-04). The piece's own border is the curve, in the rule's colour; its shadow, spread
-     outward and kept to the outside by its clip, is the paper over the row's square corner. */
-  .mo-items > .mo-items-corners td:first-child::before,
-  .mo-items > .mo-items-corners td:last-child::after {
+  /* The table's last row draws no bottom rule of its own (the shape above draws it, on the same
+     spot): cell by cell, the rounded end cells and the square ones between them landed a hair
+     apart at a fractional print size, a stepped line under the last column (user, 2026-11-13).
+     Only a table with that shape: the split totals' table keeps its own. */
+  .mo-items:has(> .mo-items-corners) {
+    --mo-close-line: transparent;
+  }
+
+  .mo-items > .mo-items-corners > tr::after {
     position: absolute;
+    right: 0;
     bottom: 0;
+    left: 0;
     box-sizing: border-box;
-    width: 8px;
-    height: 10px; /* its side line starts above the curve, over the table's own */
+    height: 10px; /* the side rules start above the curves, over the table's own */
     border: 0 solid var(--mo-line);
-    border-bottom-width: 1px;
+    border-width: 0 1px 1px;
+    border-radius: 0 0 8px 8px;
     background: none;
     box-shadow: 0 0 0 8px var(--mo-paper);
+    clip-path: inset(2px -8px -8px -8px);
     content: "";
     pointer-events: none;
-  }
-
-  .mo-items > .mo-items-corners td:first-child::before,
-  .mo-doc[dir="rtl"] .mo-items > .mo-items-corners td:last-child::after {
-    right: auto;
-    left: 0;
-    border-right-width: 0;
-    border-left-width: 1px;
-    border-radius: 0 0 0 8px;
-    clip-path: inset(2px 0 -8px -8px);
-  }
-
-  .mo-items > .mo-items-corners td:last-child::after,
-  .mo-doc[dir="rtl"] .mo-items > .mo-items-corners td:first-child::before {
-    right: 0;
-    left: auto;
-    border-right-width: 1px;
-    border-left-width: 0;
-    border-radius: 0 0 8px;
-    clip-path: inset(2px -8px -8px 0);
   }
 
   /* The totals follow: the items' table ends square, a piece hung from the totals' top corners
