@@ -30,9 +30,13 @@
   /* Colours sampled from the design (2026-11-13): rules #949494, text #22272f. */
   --sm-ink: #22272f;
   --sm-strong: #22272f;
-  --sm-muted: #5f6670;
+
+  /* One grey for secondary text, dark enough to read easily (user, 2026-11-13): the subtitle,
+     an item's codes, converted amounts, notes under totals. */
+  --sm-grey: #555b64;
+  --sm-muted: var(--sm-grey);
   --sm-caption: #22272f;
-  --sm-code: #22272f;
+  --sm-code: var(--sm-grey);
   --sm-desc: #22272f;
   --sm-label: #22272f;
   --sm-paper: #fff;
@@ -51,7 +55,7 @@
 
   /* Type scale (design): 12 px text, 13 px captions and section titles, 14 px names and the
      grand total, 20 px title. */
-  --sm-font-size-code: 12px;
+  --sm-font-size-code: 11px; /* SKU, HSN/SAC, unit under an item (user, 2026-11-13) */
   --sm-font-size-xs: 11px;
   --sm-font-size-sm: 12px;
   --sm-font-size-s: 12px;
@@ -61,7 +65,7 @@
   --sm-font-size-name: 14px;
   --sm-font-size-grand: 14px;
   --sm-font-size-xl: 20px;
-  --sm-font-size-status: 11px;
+  --sm-font-size-status: 12px; /* 0.6 of the title, as Refrens' tag */
   --sm-gutter: 20px;
   --sm-section-gap: 0px; /* the frame's parts meet on one rule */
   --sm-pad: 8px; /* inside every ruled cell */
@@ -195,7 +199,7 @@
   background: var(--sm-paper);
 }
 
-.sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table) + :is(.sm-box, .sm-items-section, .sm-totals-table) {
+.sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) {
   margin-top: -1px;
 }
 
@@ -213,7 +217,7 @@
 }
 
 .sm-logo-cell {
-  align-self: center;
+  align-self: start; /* from the top (user, 2026-11-13) */
   max-width: 200px;
 }
 
@@ -261,49 +265,50 @@
   overflow-wrap: anywhere;
 }
 
-/* The status tag as Refrens' Simple prints it (design: PAID, white capitals on solid green
-   #12b759, 20 px tall, 6 px corners); the status widget's kind picks the colour. */
+/* The status tag as Refrens' own templates print it (enterprise PDF of this design, measured
+   2026-11-13; user: tags exactly as Refrens'): the status word as written ("Paid"), bold, white
+   on a solid fill from Ant Design's tag palette (Refrens' app is built on it: success #52c41a),
+   0.6 of the title's size, small round corners. The status widget's kind picks the colour. */
 .sm-status {
   line-height: 0;
 }
 
 .sm-doc .sm-status .invoice-tag {
-  --sm-status-fill: #12b759;
+  --sm-status-fill: #52c41a;
 
   margin: 0;
-  padding: 3px 7px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
   background: var(--sm-status-fill);
   color: var(--sm-paper);
   font-size: calc(var(--sm-font-size-status) * var(--sm-text-scale, 1));
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.3;
-  text-transform: uppercase;
 }
 
 .sm-doc .sm-status .invoice-tag.danger {
-  --sm-status-fill: #dc2626;
+  --sm-status-fill: #f5222d;
 }
 
 .sm-doc .sm-status .invoice-tag.warning {
-  --sm-status-fill: #d97706;
+  --sm-status-fill: #faad14;
 }
 
 .sm-doc .sm-status .invoice-tag.info {
-  --sm-status-fill: #0284c7;
+  --sm-status-fill: #1890ff;
 }
 
 .sm-doc .sm-status .invoice-tag.devider {
-  --sm-status-fill: #6b7280;
+  --sm-status-fill: #8c8c8c;
 }
 
 .sm-doc .sm-status .invoice-tag.magenta {
-  --sm-status-fill: #c026d3;
+  --sm-status-fill: #eb2f96;
 }
 
 .sm-doc .sm-subtitle,
 .sm-doc .sm-copy {
-  color: var(--sm-ink);
+  color: var(--sm-grey);
   font-size: calc(var(--sm-font-size-s) * var(--sm-text-scale, 1));
   overflow-wrap: anywhere;
   white-space: pre-line;
@@ -595,21 +600,15 @@
   border-bottom: 1px solid var(--sm-close-line, var(--sm-line));
 }
 
-/* An item's name and its description (or images) read as one row: no rule between them.
-   (A detail row is in the page for the live "full width" toggle even while hidden.) */
-.sm-items > tbody > tr:is(.sm-name-row, .sm-item-row:has(+ :is(.sm-detail-row:not([style*="none"]), .sm-image-row)), .sm-item-row:has(+ .sm-detail-row[style*="none"] + .sm-image-row), .sm-detail-row:has(+ .sm-image-row)) > td {
+/* A name on a row of its own (Item Name Full Width) reads with the figures under it: no rule
+   between them. A full-width description and the original images are rows of their own under
+   the item's figures, a rule above each (user, 2026-11-13: the line was missing). */
+.sm-items > tbody > tr.sm-name-row > td {
   border-bottom: 0;
 }
 
-.sm-items .sm-name-row > td,
-.sm-items .sm-item-row:has(+ :is(.sm-detail-row:not([style*="none"]), .sm-image-row)) > td,
-.sm-items .sm-item-row:has(+ .sm-detail-row[style*="none"] + .sm-image-row) > td {
+.sm-items .sm-name-row > td {
   padding-bottom: 0;
-}
-
-.sm-items .sm-detail-row > td,
-.sm-items .sm-image-row > td {
-  padding-top: 4px;
 }
 
 .sm-group-row > td {
@@ -811,84 +810,157 @@
 
 /* ------------------------------------------------------------ bottom */
 
-/* Terms, notes, additional information, attachments | bank and UPI, signature: two halves, a
-   rule between them (design). */
+/*
+ * Terms, notes, attachments | bank and UPI, and Additional Information | signature: each one
+ * table (template.hbs sm-lines), two equal halves. Each left line is a row whose cell draws the
+ * part's left edge, the rule between the halves and (::after, across the right half) the right
+ * edge; the bank or signature sits in a borderless cell spanning every row; the footer row draws
+ * the bottom rule. A page break falls between rows and the footer row repeats at each page's foot,
+ * so every page's piece closes (user, 2026-11-13).
+ */
 .sm-bottom {
-  display: flex;
-  align-items: stretch;
+  min-width: 0;
 }
 
-.sm-bottom:not(:has(.sm-card, .sm-signature)) {
+.sm-bottom:not(:has(.sm-line-title, .sm-card, .sm-signature)) {
   display: none;
 }
 
-.sm-bottom-main,
-.sm-bottom-side {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-width: min-content;
+.sm-lines {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--sm-ink);
+  line-height: var(--sm-lh);
 }
 
-.sm-bottom-side {
-  border-inline-start: var(--sm-rule);
+.sm-lines > colgroup > col {
+  width: 50%;
 }
 
-.sm-bottom-main:not(:has(> *)) {
-  display: none;
+.sm-lines td {
+  padding: 2px var(--sm-pad);
+  vertical-align: top;
 }
 
-.sm-bottom-main:not(:has(> *)) + .sm-bottom-side {
-  border-inline-start: 0;
+.sm-lines .sm-line-cell {
+  position: relative;
+  border-inline: var(--sm-rule);
 }
 
-.sm-bottom-side:not(:has(> *)) {
-  flex: 1 1 0;
+/* The part's right edge, drawn row by row across the right half: from the cell's padding box,
+   twice its width plus its two borders, less the rule's own pixel. */
+.sm-lines .sm-line-cell::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: calc(200% + 2px);
+  width: 1px;
+  background: var(--sm-line);
+  content: "";
+}
+
+/* The part's top rule: its first row. */
+.sm-lines .sm-line-start > td {
+  height: 0;
+  padding: 0;
+  border-top: var(--sm-rule);
+}
+
+.sm-lines .sm-line-end > td {
+  height: var(--sm-pad);
+  padding: 0;
+}
+
+.sm-lines > .sm-lines-foot td {
+  height: 0;
+  padding: 0;
+  border-top: var(--sm-rule);
+}
+
+.sm-lines .sm-bottom-side {
+  padding: 0;
+}
+
+.sm-lines .sm-line-title > td {
+  padding-top: var(--sm-pad);
+  padding-bottom: 4px;
 }
 
 .sm-bottom .sm-card {
   padding: var(--sm-pad);
 }
 
-/* Terms, notes and attachments take the column's width, never set it. */
-.sm-bottom-main > .sm-card:not(.sm-additional) {
-  contain: inline-size;
+/* Terms numbered 1, 2, … in each group, as Refrens numbers them; the text hangs after it. */
+.sm-lines .sm-terms {
+  counter-reset: sm-term;
 }
 
-/* Additional Information: a ruled table across the column, at the column's foot (design). */
-.sm-bottom .sm-additional {
-  gap: 0;
-  margin-top: auto;
-  padding: 0;
+.sm-term-row {
+  display: flex;
+  gap: 0.4em;
 }
 
-.sm-additional > .sm-card-title {
-  padding: 2px var(--sm-pad);
+.sm-term-no {
+  flex: none;
+  min-width: 1.1em;
+  text-align: end;
+}
+
+.sm-term-no::before {
+  counter-increment: sm-term;
+  content: counter(sm-term) ".";
+}
+
+.sm-term-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sm-lines .sm-attachment > td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-lines .sm-attachment a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Additional Information: a ruled row each, the label a third of the half, the value bold. */
+.sm-closing .sm-line-title > td {
+  padding-block: 2px;
+}
+
+.sm-closing .sm-kv-row > td {
+  padding-block: 1px;
   border-top: var(--sm-rule);
 }
 
-.sm-additional > .sm-kv {
-  grid-template-columns: fit-content(40%) minmax(min-content, 1fr);
-  gap: 0;
+.sm-closing .sm-line-end > td {
+  height: 0;
 }
 
-.sm-additional .sm-kv-label,
-.sm-additional .sm-kv-value {
-  padding: 1px var(--sm-pad);
-  border-top: var(--sm-rule);
+.sm-kv-line {
+  display: grid;
+  grid-template-columns: 36% minmax(0, 1fr);
+  gap: 0 var(--sm-pad);
 }
 
-.sm-additional .sm-kv-value {
+.sm-kv-line > .sm-kv-label {
+  overflow-wrap: break-word;
+}
+
+.sm-kv-line > .sm-kv-value {
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-/* A first part above the additional table keeps its own room. */
-.sm-bottom-main > .sm-additional:first-child {
-  margin-top: 0;
-}
-
-.sm-bottom-main > .sm-additional:first-child > .sm-card-title {
-  border-top: 0;
+/* The signature at the right half's foot. */
+.sm-closing .sm-bottom-side {
+  vertical-align: bottom;
 }
 
 /* Bank and UPI: the rows and the UPI ID on the left, the QR on the right. */
@@ -1004,25 +1076,26 @@
 
 /* ------------------------------------------------------------ signature */
 
-/* On the paper, no panel, centred, up to 110 px tall and 220 px wide, the label under it; a
-   rule above it when the bank details come first. */
+/* The closing part's right half (user, 2026-11-13): the signature at its foot, to the end, up to
+   110 px tall and 220 px wide, the label under it. */
 .sm-signature {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: flex-end;
   margin-top: auto;
   padding: var(--sm-pad);
-  text-align: center;
-}
-
-.sm-bank + .sm-signature {
-  border-top: var(--sm-rule);
+  text-align: end;
 }
 
 .sm-signature-mark {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.sm-signature-label {
+  font-weight: 600;
 }
 
 .sm-signature-mark .sm-signature-image {
@@ -1051,9 +1124,7 @@
   gap: 0;
 }
 
-.sm-widget-table > .sm-card-title {
-  padding: 2px var(--sm-pad);
-}
+/* No title over the summaries (user, 2026-11-13). */
 
 .sm-widget-table .ceres-table-section {
   margin: 0;
@@ -1079,19 +1150,29 @@
   line-height: var(--sm-lh);
 }
 
+/* The summaries draw their own rules, outline included, cell by cell: a piece broken across
+   pages closes on its last row's rule and opens on the repeated headings' (user, 2026-11-13). */
+.sm-widget-table.sm-box {
+  border: 0;
+}
+
 .sm-widget-table .ceres-table th,
 .sm-widget-table .ceres-table td {
   padding: 2px 6px;
   border: 0;
-  border-top: var(--sm-rule);
-  border-inline-start: var(--sm-rule);
+  border-inline-end: var(--sm-rule);
+  border-bottom: var(--sm-rule);
   background: none;
   color: var(--sm-ink);
   white-space: nowrap;
 }
 
 .sm-widget-table .ceres-table :is(th, td):first-child {
-  border-inline-start: 0;
+  border-inline-start: var(--sm-rule);
+}
+
+.sm-widget-table .ceres-table > thead > tr:first-child > th {
+  border-top: var(--sm-rule);
 }
 
 /* A summary wider than the page wraps its headings and text cells; figures never wrap. */
@@ -1101,8 +1182,9 @@
   overflow-wrap: break-word;
 }
 
+/* The summaries' heading rows bold (user, 2026-11-13). */
 .sm-widget-table .ceres-table thead th {
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .sm-widget-table .ceres-table tbody tr:nth-child(even) {
@@ -1113,9 +1195,10 @@
   font-weight: 600;
 }
 
+/* The summaries' "Total Tax In Words" line bold (user, 2026-11-13). */
 .sm-widget-table .ceres-table .ceres-table-words {
   font-size: inherit;
-  font-weight: 400;
+  font-weight: 600;
   white-space: normal;
 }
 
@@ -1272,17 +1355,26 @@
     justify-content: flex-start;
   }
 
-  .sm-bottom {
-    flex-direction: column;
+  /* The bottom parts stack: the bank (or signature) over the lines, ruled at both sides. */
+  .sm-lines,
+  .sm-lines > tbody,
+  .sm-lines > tfoot,
+  .sm-lines tr,
+  .sm-lines td {
+    display: block;
+    width: 100%;
   }
 
-  .sm-bottom-side {
-    border-inline-start: 0;
-    border-top: var(--sm-rule);
+  .sm-lines > colgroup {
+    display: none;
   }
 
-  .sm-bottom-main:not(:has(> *)) + .sm-bottom-side {
-    border-top: 0;
+  .sm-lines .sm-line-cell::after {
+    content: none;
+  }
+
+  .sm-lines .sm-bottom-side {
+    border-inline: var(--sm-rule);
   }
 
   /* Headings wrap; a summary's first column is a date, a code or a rate, and never does. */
@@ -1794,23 +1886,12 @@ body[class~="isDibella"]
  * next: its border, corners and padding are drawn on each piece (user, 2026-10-19).
  */
 @media print {
-  .sm-card,
-  .sm-box {
-    /* stylelint-disable-next-line property-no-vendor-prefix -- Chrome before 130 needs it */
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-  }
+  /* No border copy on a box broken across pages: Chrome 122 then drops the box's side rules
+     altogether. The page frame's rules close and open each piece (sm-page-rule). */
 
   /* A card that can split (terms, notes, additional info, attachments) lays out as a block:
      Chrome split a column flex card at its very start, leaving an empty box at the page's
      foot. The 8 px between its parts moves from the gap to margins. */
-  .sm-bottom-main > .sm-card:not(.sm-bank) {
-    display: block;
-  }
-
-  .sm-bottom-main > .sm-card:not(.sm-bank) > * + * {
-    margin-top: 8px;
-  }
 }
 
 /* The page-break corners (below) are print only. */
@@ -1947,6 +2028,84 @@ body[class~="isDibella"]
     background-color: var(--sm-paper);
   }
 
+}
+
+/*
+ * A part cut by a page break closes at the page's foot and opens again at the next page's top
+ * (user, 2026-11-13). Chrome 122 (Refrens' PDF service) copies no border onto a box broken across
+ * pages; it does repeat the page frame's header (template.hbs): a rule over the first pixel of
+ * every page's content, falling on a part's own top rule where a page starts with one. The
+ * closing rule at the foot is the planner's (flowCloseFills, below).
+ */
+.sm-page-frame > * > tr.sm-page-rule {
+  display: none;
+}
+
+@media print {
+  .sm-page-frame > * > tr.sm-page-rule {
+    display: table-row;
+  }
+
+  .sm-page-frame > * > tr.sm-page-rule > td {
+    position: relative;
+    height: 0;
+    padding: 0;
+  }
+
+  /* Over the content (a part's white ground hid it). */
+  .sm-page-frame > * > tr.sm-page-rule > td::after {
+    position: absolute;
+    z-index: 3;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--sm-line);
+    content: "";
+  }
+
+  .sm-page-frame > * > tr.sm-page-rule.is-top > td::after {
+    top: 0;
+  }
+
+  /* The bottom parts break between their rows (template.hbs sm-lines); a title stays with
+     its first line. */
+  .sm-lines > tbody > tr {
+    break-inside: avoid;
+  }
+
+  /* Notes are one row and may run longer than a page (invoice 0030): they break inside, the
+     row's cell keeping its edges on each page. */
+  .sm-lines > tbody > tr.sm-notes {
+    break-inside: auto;
+  }
+
+  .sm-lines .sm-line-title {
+    break-after: avoid;
+  }
+}
+
+/*
+ * Where two parts of the frame meet, print draws one rule: the earlier part's bottom rule. On
+ * screen the next part sits a pixel higher over it; at a fractional print size (Text Scale) that
+ * pixel no longer lands on the rule and the two showed side by side as a thick line (user,
+ * 2026-11-13). In print the next part drops its own top rule instead; one that starts a page
+ * gets its top rule from the page frame (sm-page-rule).
+ */
+@media print {
+  .sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) {
+    margin-top: 0;
+  }
+
+  .sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + .sm-box {
+    border-top-width: 0;
+  }
+
+  .sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + .sm-items-section .sm-items > thead > tr:first-child > th,
+  .sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + .sm-totals-table .sm-totals > tr:first-child > *,
+  .sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + .sm-bottom .sm-line-start > td,
+  .sm-page-body > :is(.sm-box, .sm-items-section, .sm-totals-table, .sm-bottom) + .sm-widget-table .ceres-table > thead > tr:first-child > th {
+    border-top-width: 0;
+  }
 }
 
 /* ------------------------------------------------------------ phones and tablets */
@@ -2176,17 +2335,7 @@ body[class~="isDibella"]
  * right column's boxes join the bottom's own column, the totals first, then the cards, then the
  * signature. Print keeps the totals beside or under the cards (an A5 page is as narrow).
  */
-@media screen {
-  @container sm-doc (width < 600px) {
-    .sm-bottom-side {
-      display: contents;
-    }
 
-    .sm-bottom-side > .sm-totals-table {
-      order: -1;
-    }
-  }
-}
 
 /*
  * The summaries on a phone screen (user request, 2026-10-24): fitItemsToScreen (helpers.ts)

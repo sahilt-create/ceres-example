@@ -182,7 +182,7 @@ describe("Simple Template — render", () => {
     // Totals across the frame under the items (Simple design), the grand total last.
     const side = html.slice(
       html.indexOf('data-testid="totals-table"'),
-      html.indexOf('class="sm-box sm-bottom"')
+      html.indexOf('data-section="bottom"')
     );
     ["Sub Total", "Discount", "CGST", "SGST"].forEach((label) =>
       expect(side).toMatch(
@@ -197,10 +197,10 @@ describe("Simple Template — render", () => {
     expect(html).toContain("Ten Lakh Twenty One Thousand");
     // Terms keep every line (no Payment Terms card here), numbered; bank rows.
     expect(html).toContain(
-      "<li>Price validity: 10 days from the date of submission.</li>"
+      '<span class="sm-term-text">Price validity: 10 days from the date of submission.</span>'
     );
     expect(html).toContain(
-      "<li>90% Advance along with order and before delivery of materials</li>"
+      '<span class="sm-term-text">90% Advance along with order and before delivery of materials</span>'
     );
     expect(html).not.toContain("sm-pay-card");
     expect(html).toMatch(
@@ -749,7 +749,7 @@ describe("Simple Template — boolean settings", () => {
     expect(noParties).toMatch(/sm-transport-vehicleNumber[\s\S]*?WB01AB1234/);
   });
 
-  it("totals and words across the frame; terms, notes, attachments, additional info on the left, bank and UPI on the right; the summaries last", () => {
+  it("totals and words across the frame; terms, notes, attachments | bank and UPI; the summaries; additional info | signature last", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
       invoice.attachments = ["https://example.com/drawing.pdf"];
@@ -763,22 +763,23 @@ describe("Simple Template — boolean settings", () => {
     expect(html.slice(html.indexOf('class="sm-bottom-side"'))).toMatch(
       /^[^]*?data-section="bank"/
     );
-    // Every summary table at the end (user request, 2026-10-27); only the enquiry line follows.
+    // The summary tables after terms, notes, attachments and bank (user request, 2026-10-27);
+    // then Additional Information | signature closes the document (user, 2026-11-13).
     const order = [
       "totals",
+      "bank",
       "terms",
       "notes",
       "attachments",
-      "additional",
-      "bank",
       "hsn",
       "tax-summary",
+      "additional",
       "enquiry",
     ].map((section) => html.indexOf(`data-section="${section}"`));
     expect(order.every((at) => at > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(html.indexOf('data-section="totals"')).toBeLessThan(
-      html.indexOf('class="sm-box sm-bottom"')
+      html.indexOf('data-section="bottom"')
     );
     expect(html).toContain(">drawing.pdf<");
     expect(html).toMatch(/ai-label">Site<[\s\S]*?Block 1/);
@@ -1106,16 +1107,14 @@ describe("Simple Template — files and CSS", () => {
       /\.sm-attachments \{\s*contain: inline-size;\s*padding: 0;\s*list-style: none;/
     );
     // The two halves under the totals are never narrower than their content.
-    expect(source).toMatch(
-      /\.sm-bottom-main,\s*\.sm-bottom-side \{[^}]*min-width: min-content;/
-    );
+    expect(source).toMatch(/\.sm-lines \{[^}]*table-layout: fixed;/);
   });
 
   it("draws every part of the frame with its own rules, meeting the next on one line", () => {
     expect(source).toMatch(/\.sm-box \{\s*border: var\(--sm-rule\);/);
     expect(source).toMatch(/--sm-rule: 1px solid var\(--sm-line\);/);
     expect(source).toMatch(
-      /\.sm-page-body > :is\(\.sm-box, \.sm-items-section, \.sm-totals-table\) \+ :is\(\.sm-box, \.sm-items-section, \.sm-totals-table\) \{\s*margin-top: -1px;/
+      /\.sm-page-body > :is\(\.sm-box, \.sm-items-section, \.sm-totals-table, \.sm-bottom\) \+ :is\(\.sm-box, \.sm-items-section, \.sm-totals-table, \.sm-bottom\) \{\s*margin-top: -1px;/
     );
     // Square corners throughout (Simple design).
     expect(source).not.toMatch(/radius: 8px/);
@@ -1255,8 +1254,8 @@ describe("Simple Template — the platform's other settings, under every alias",
     expect(tagWith(html, "data-ceres-batch-summary")).not.toContain(
       "display: none"
     );
-    // Refrens calls it "Batch Summary" (it has no Stock Summary).
-    expect(html).toContain("Batch Summary");
+    // No title line over the summary tables in this template (user, 2026-11-13).
+    expect(html).not.toContain("Batch Summary");
     expect(html).toContain("B-12");
     expect(html).toContain("Mar 31, 2027");
     // A column no batch fills (Mfg Date) is left out.
@@ -1424,9 +1423,7 @@ describe("Simple Template — frames hug long values", () => {
     // The rows take their content's width (figures never wrap) and the QR moves under them.
     expect(source).toMatch(/\.sm-bank \{[^}]*flex-flow: row wrap;/);
     expect(source).toMatch(/\.sm-bank-main \{[^}]*min-width: min-content;/);
-    expect(source).toMatch(
-      /\.sm-bottom-main,\s*\.sm-bottom-side \{[^}]*min-width: min-content;/
-    );
+    expect(source).toMatch(/\.sm-lines \{[^}]*table-layout: fixed;/);
   });
 });
 
@@ -1500,7 +1497,7 @@ describe("Simple Template — unbroken field values", () => {
       );
     });
     expect(css).toMatch(/\.sm-num \{\s*white-space: nowrap;/);
-    expect(css).toMatch(/\.sm-bottom-side \{[^}]*min-width: min-content;/);
+    expect(css).toMatch(/\.sm-bank-main \{[^}]*min-width: min-content;/);
   });
 });
 
@@ -1627,7 +1624,7 @@ describe("Simple Template — Refrens match (2026-10-19)", () => {
       ];
     });
     expect(html).toMatch(/<th>Notes<\/th>[\s\S]*?Hi sweet/);
-    expect(html).toContain(
+    expect(html).not.toContain(
       '<h3 class="sm-card-title" data-role="title">Payments</h3>'
     );
   });
@@ -1664,12 +1661,35 @@ describe("Simple Template — boxes split by a page break", () => {
       path.join(TEMPLATE_DIR, "styles.css"),
       "utf8"
     );
-    const print = source.slice(
-      source.indexOf("A box split by a page break closes")
+    // Chrome 122 drops a cloned box's side rules: the page frame draws a rule at the top of
+    // every page's content, and the planner a closing rule under the last line of a part a page
+    // break cuts (user, 2026-11-13).
+    expect(source).not.toMatch(/box-decoration-break: clone/);
+    const hbs = fs.readFileSync(
+      path.join(TEMPLATE_DIR, "template.hbs"),
+      "utf8"
     );
-    expect(print).toMatch(
-      /\.sm-card,\s*\.sm-box \{[^}]*box-decoration-break: clone;/
+    expect(hbs).toMatch(
+      /<tr class="sm-page-rule is-top"[^>]*><td><\/td><\/tr>\s*<\/thead>/
     );
+    // The bottom part's lines are table rows; the table's footer row, repeated at each page's
+    // foot in Chrome 122 too, draws the part's bottom rule there.
+    expect(hbs).toMatch(
+      /<table class="sm-lines" role="presentation">\s*<colgroup>[\s\S]*?<\/colgroup>\s*<tfoot class="sm-lines-foot"/
+    );
+    expect(source).toMatch(
+      /\.sm-lines > \.sm-lines-foot td \{[^}]*border-top: var\(--sm-rule\);/
+    );
+  });
+
+  it("labels the exchange-rate row Applied Exchange Rate", () => {
+    const html = render((invoice) => {
+      invoice.currency = "USD";
+      invoice.businessCurrency = "INR";
+      invoice.conversionRates = { INR: 96.326 };
+      invoice.advanceOptions.showExchangeRateOnPdf = true;
+    });
+    expect(html).not.toMatch(/>\s*Conversion Rate\s*</);
   });
 });
 
@@ -1860,7 +1880,7 @@ describe("Simple Template — review round 2 (2026-10-23)", () => {
 
   it("rules the summary tables both ways inside their frame part, square", () => {
     expect(css()).toMatch(
-      /\.sm-widget-table \.ceres-table td \{[^}]*border-top: var\(--sm-rule\);\s*border-inline-start: var\(--sm-rule\);/
+      /\.sm-widget-table \.ceres-table td \{[^}]*border-inline-end: var\(--sm-rule\);\s*border-bottom: var\(--sm-rule\);/
     );
     expect(css()).toMatch(
       /\.sm-widget-table \.ceres-table-section \{[^}]*overflow: clip;\s*\}/
@@ -1944,9 +1964,9 @@ describe("Simple Template — review round 6 (2026-10-24)", () => {
     ).toMatch(/\/\\d\/\.test\(value\)\s*\?\s*" has-digits"/);
   });
 
-  it("puts the totals straight after the items on a phone", () => {
+  it("stacks the bottom parts on a phone, the bank over the lines", () => {
     expect(css()).toMatch(
-      /@container sm-doc \(width < 600px\) \{\s*\.sm-bottom-side \{\s*display: contents;[^}]*\}\s*\.sm-bottom-side > \.sm-totals-table \{\s*order: -1;/
+      /@container sm-doc \(width < 600px\) \{[\s\S]*?\.sm-lines,\s*\.sm-lines > tbody,[\s\S]*?display: block;/
     );
   });
 });
@@ -1973,7 +1993,7 @@ describe("Simple Template — review round 5 (2026-10-24)", () => {
       /\.sm-bottom \.sm-card \{\s*padding: var\(--sm-pad\);/
     );
     expect(css()).toMatch(
-      /\.sm-bottom-side \{\s*border-inline-start: var\(--sm-rule\);/
+      /\.sm-lines \.sm-line-cell \{\s*position: relative;\s*border-inline: var\(--sm-rule\);/
     );
   });
 });
@@ -2131,9 +2151,9 @@ describe("Simple Template — Simple design (2026-11-13)", () => {
       'data-section="items"',
       'data-section="totals"',
       "data-ceres-total-in-words",
+      'data-section="bank"',
       'data-section="terms"',
       'data-section="notes"',
-      'data-section="bank"',
     ].map((marker) => html.indexOf(marker));
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -2209,13 +2229,9 @@ describe("Simple Template — Simple design (2026-11-13)", () => {
     expect(css()).not.toMatch(/background: var\(--sm-accent\)/);
   });
 
-  it("sets capitals only on the status tag (as Refrens' Simple prints it); never above weight 600", () => {
+  it("sets no capitals by stylesheet (the status tag reads as Refrens writes it); never above weight 600", () => {
     const sheet = css();
-    const blocks =
-      sheet.match(/[^{}]+\{[^{}]*text-transform: uppercase;[^{}]*\}/g) || [];
-    expect(blocks.map((block) => block.split("{")[0].trim())).toEqual([
-      ".sm-doc .sm-status .invoice-tag",
-    ]);
+    expect(sheet).not.toMatch(/text-transform: uppercase/);
     expect(sheet).not.toMatch(/font-weight: (700|800|900|bold)/);
   });
 });
@@ -2271,6 +2287,26 @@ describe("Simple Template — description tables edge to edge", () => {
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     expect(css).toMatch(
       /\.sm-item-desc \.toastui-editor-contents table,\s*\.sm-doc \.sm-note-body \.toastui-editor-contents table \{\s*width: 100%;/
+    );
+  });
+});
+
+describe("Simple Template — summary tables without titles (2026-11-13)", () => {
+  it("prints the HSN, tax, batch and payment tables with no title line above them", () => {
+    const html = render();
+    ["hsn", "tax-summary"].forEach((section) => {
+      const start = html.indexOf(`data-section="${section}"`);
+      const part = html.slice(start, html.indexOf("</section>", start));
+      expect(part).not.toContain("sm-card-title");
+    });
+    expect(html).not.toMatch(/>\s*HSN Summary\s*</);
+    expect(html).not.toMatch(/>\s*Tax Summary\s*</);
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.sm-widget-table \.ceres-table thead th \{\s*font-weight: 600;/
+    );
+    expect(css).toMatch(
+      /\.sm-widget-table \.ceres-table \.ceres-table-words \{[^}]*font-weight: 600;/
     );
   });
 });

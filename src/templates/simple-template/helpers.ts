@@ -3769,10 +3769,16 @@ export const mapTotals = (
   );
   const ctx = formatContext(invoice);
   // "BGN 1 = ₹57.22": the unit side stays a whole 1, whatever the decimal places.
+  // Its label reads "Applied Exchange Rate" (user, 2026-11-13; the default for every new
+  // template), unless the business named the row itself.
   const unitRate = (row: SubtotalRow): SubtotalRow =>
     row.key === "conversionRate"
       ? {
           ...row,
+          label:
+            row.label === "Conversion Rate"
+              ? "Applied Exchange Rate"
+              : row.label,
           value: row.value.replace(
             /^.*? = /,
             `${formatCurrency(
@@ -5966,6 +5972,8 @@ const flowUnits = (
   };
   // A display: contents box (the card grid's sections) lays its children out in its parent's
   // place: they are measured as the parent's own.
+  // A display: contents box (the card grid's sections) lays its children out in its parent's
+  // place: they are measured as the parent's own.
   const flatChildren = (parent: Element): Element[] =>
     Array.from(parent.children).flatMap((child) =>
       getComputedStyle(child).display === "contents" &&
@@ -6076,8 +6084,20 @@ const flowUnits = (
         const main = row.find((el) =>
           el.classList.contains("sm-bottom-main")
         ) as Element;
+        // Level with what the column beside holds, not its box: the right column stretches to
+        // the left one's height (Simple's bottom part), and as a box it joined every line of
+        // the terms into one block.
         const besideBottom = Math.max(
-          ...row.filter((el) => el !== main).map((el) => box(el).bottom)
+          ...row
+            .filter((el) => el !== main)
+            .map((el) => {
+              const shown = Array.from(el.children).filter(
+                (part) => getComputedStyle(part).display !== "none"
+              );
+              return shown.length
+                ? Math.max(...shown.map((part) => box(part).bottom))
+                : box(el).top;
+            })
         );
         const before = units.length;
         walk(main);
