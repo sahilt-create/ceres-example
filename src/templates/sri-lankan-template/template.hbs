@@ -9,7 +9,7 @@
   </header>
 
   <section class="invoice-meta two-column-row">
-    <div><span class="label">{{sri.documentMeta.dateLabel}}:</span> {{formateShortDateWithOffset sri.documentMeta.date invoice.ownerOffset}}</div>
+    <div><span class="label">{{sri.documentMeta.dateLabel}}:</span> {{sriDate sri.documentMeta.date invoice.ownerOffset}}</div>
     <div><span class="label">{{sri.documentMeta.numberLabel}}:</span> {{sri.documentMeta.number}}</div>
   </section>
 
@@ -27,7 +27,7 @@
   </section>
 
   {{#if sri.documentRows}}<section class="document-details detail-grid">
-    {{#each sri.documentRows}}<div class="detail-row"{{#if supplyField}} data-ceres-{{supplyField}}{{/if}}><span class="label">{{label}}:</span><span>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</span></div>{{/each}}
+    {{#each sri.documentRows}}<div class="detail-row"{{#if supplyField}} data-ceres-{{supplyField}}{{/if}}><span class="label">{{label}}:</span><span>{{#if isDate}}{{sriDate value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</span></div>{{/each}}
   </section>{{/if}}
 
   {{#if mapped.visibility.showShippingParties}}<section class="shipping-grid{{#if mapped.visibility.singleShippingParty}} is-single{{/if}}">
@@ -36,7 +36,7 @@
   </section>{{/if}}
 
   {{#if sri.transportRows}}<section class="detail-panel transport-panel"><h2>Transport Details</h2><div class="detail-grid">
-    {{#each sri.transportRows}}<div class="detail-row"><span class="label">{{label}}:</span> {{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else}}{{value}}{{/if}}</div>{{/each}}
+    {{#each sri.transportRows}}<div class="detail-row"><span class="label">{{label}}:</span> {{#if isDate}}{{sriDate value ../invoice.ownerOffset}}{{else}}{{value}}{{/if}}</div>{{/each}}
   </div></section>{{/if}}
 
   <section class="compliance-strip">
@@ -68,7 +68,7 @@
               {{else if (isQuantityColumn column)}}{{quantityWithUnit item ../../invoice ../../mapped.visibility.showUnitInQuantity}}
               {{else if (isUnitColumn column)}}{{itemUnit item ../../invoice}}
               {{else if (isCurrencyColumn column)}}{{formatSriCurrency (itemColumnValue item column) ../../invoice}}
-              {{else if (isDateColumn column)}}{{formateShortDateWithOffset (itemColumnValue item column) ../../invoice.ownerOffset}}
+              {{else if (isDateColumn column)}}{{sriDate (itemColumnValue item column) ../../invoice.ownerOffset}}
               {{else if (isPercentageColumn column)}}{{itemColumnValue item column}}%
               {{else if (isBooleanColumn column)}}{{formatBoolean (itemColumnValue item column)}}
               {{else}}{{itemColumnValue item column}}{{/if}}
