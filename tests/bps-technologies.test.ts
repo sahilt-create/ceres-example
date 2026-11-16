@@ -24,6 +24,8 @@ import {
   resolveSettings,
   notesLabels,
   minusSubsidy,
+  isInvisibleSymbol,
+  withMoneyDefaults,
 } from "../src/templates/bps-technologies/helpers";
 import taxSummaryPartial from "../src/widgets/tax-summary/TaxSummaryTable.hbs";
 import hsnSummaryPartial from "../src/widgets/hsn-summary/HsnSummaryTable.hbs";
@@ -2349,7 +2351,7 @@ describe("BPS Technologies — the client's four pages (brief, 2026-11-16)", () 
     );
   });
 
-  it("starts the items (page 2) on a new page in print; every terms group stays in the box beside the signature", () => {
+  it("keeps the items on page 1 under the parties box; every terms group stays in the box beside the signature", () => {
     const html = render((invoice) => {
       invoice.terms = [
         { label: "Payments Terms", terms: ["10% Advance Booking Amount."] },
@@ -2357,7 +2359,7 @@ describe("BPS Technologies — the client's four pages (brief, 2026-11-16)", () 
       ];
     });
     expect(html).toContain(
-      'class="bp-items-section bp-page-start" data-testid="section" data-section="items"'
+      'class="bp-items-section" data-testid="section" data-section="items"'
     );
     expect(html).not.toContain("terms-more");
     const box = html.slice(
@@ -2648,15 +2650,6 @@ describe("BPS Technologies — bank labels (user, 2026-11-16)", () => {
   });
 });
 
-describe("BPS Technologies — items on screen (user, 2026-11-16)", () => {
-  it("joins the item table to the box above it on screen, no gap", () => {
-    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
-    expect(css).toMatch(
-      /@media screen \{\s*\.bp-page-body > \.bp-items-section\.bp-page-start\.bp-page-start \{\s*margin-top: -1px;/
-    );
-  });
-});
-
 describe("BPS Technologies — notes labels, client's case (user, 2026-11-16)", () => {
   it("prints a bold line between two note tables as a label; plain or in-table text stays", () => {
     const table =
@@ -2694,5 +2687,109 @@ describe("BPS Technologies — bank rows as the client's quotation (user, 2026-1
       "Bank Name",
       "IFSC Code",
     ]);
+  });
+});
+
+describe("BPS Technologies — fixed pages type (user, 2026-11-16)", () => {
+  it("sets the fixed pages in the template's sizes, marked with the client's ➢ arrowhead", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp-fixed-title \{[^}]*font-size: calc\(var\(--bp-font-size-section\)/
+    );
+    expect(css).toMatch(
+      /\.bp-fixed \.bp-fixed-list \{[^}]*font-size: calc\(var\(--bp-font-size-base\)/
+    );
+    expect(css).toMatch(
+      /\.bp-fixed \.bp-fixed-list > li::before \{[^}]*data:image\/svg\+xml/
+    );
+  });
+});
+
+describe("BPS Technologies — page-top rule (user, 2026-11-16)", () => {
+  it("prints no page-top rule over the unboxed header", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp-head,\s*\.bp-plain,\s*\.bp-doc \.bp-enquiry \{\s*position: relative;\s*z-index: 4;\s*background: var\(--bp-paper\);/
+    );
+  });
+});
+
+describe("BPS Technologies — no page-top rule (user, 2026-11-16)", () => {
+  it("hides the engine's page-top rule in print; the item table draws its own top line", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /@media print \{\s*\.bp-page-frame > \* > tr\.bp-page-rule \{\s*display: none;/
+    );
+    expect(css).toMatch(
+      /\.bp-doc \.bp-page-body > \.bp-items-section \.bp-items > thead > tr:first-child > th \{\s*border-top-width: 1px;/
+    );
+  });
+});
+
+describe("BPS Technologies — page breaks between parts, closed (user, 2026-11-16)", () => {
+  it("keeps the frame joined (no gaps); in print each part keeps its own top rule one pixel up", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).not.toMatch(
+      /:is\(\.bp-totals-table, \.bp-bank, \.bp-bottom\) \{\s*margin-top: 14px;/
+    );
+    expect(css).toMatch(
+      /@media print \{\s*\.bp-doc \.bp-page-body > :is\(\.bp-box, \.bp-items-section, \.bp-totals-table, \.bp-bottom\) \+ :is\(\.bp-box, \.bp-items-section, \.bp-totals-table, \.bp-bottom\) \{\s*margin-top: -1px;/
+    );
+  });
+});
+
+describe("BPS Technologies — invisible currency symbol (user, 2026-11-16)", () => {
+  it("knows a symbol made only of invisible characters", () => {
+    ["\u3164", "\u200b", "\u2800", " ", "\u00a0", "\u115f\u1160"].forEach(
+      (value) => expect(isInvisibleSymbol(value)).toBe(true)
+    );
+    ["₹", "Rs", "", undefined].forEach((value) =>
+      expect(isInvisibleSymbol(value)).toBe(false)
+    );
+  });
+
+  it("prints figures with no symbol and no box: the hidden mark is never a missing glyph", () => {
+    // Through the template's own data step, as the renderer runs it.
+    const html = template(
+      withMoneyDefaults(
+        state((invoice) => {
+          invoice.customCurrencySymbol = "\u3164";
+        })
+      )
+    );
+    expect(html).not.toContain("\u3164");
+    expect(html).toContain("\u2060");
+  });
+});
+
+describe("BPS Technologies — Pageless PDF (user, 2026-11-16)", () => {
+  it("adds no page breaks in a Pageless PDF: the fixed pages follow after a gap", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /@media print \{\s*\.bp-doc\.is-pageless \.bp-page-body > \.bp-page-start\.bp-page-start \{\s*margin-top: 24px;\s*break-before: auto;/
+    );
+    const html = render((invoice) => {
+      invoice.template = { pdfOptions: { pageless: true } };
+    });
+    expect(html).toMatch(/class="bp-doc[^"]*is-pageless/);
+  });
+});
+
+describe("BPS Technologies — space under a notes label (user, 2026-11-16)", () => {
+  it("starts a table under a notes label as far below as under the notes' title", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.toastui-editor-contents > :is\(h1, h2, h3, h4, h5, h6\) \+ table \{\s*margin-top: 20px;/
+    );
+  });
+});
+
+describe("BPS Technologies — ampersand (user, 2026-11-16)", () => {
+  it("draws '&' upright as Cambria does: PT Serif for that one character, Caladea for the rest", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toContain("family=PT+Serif:wght@400;700&text=%26");
+    expect(css).toMatch(
+      /--bp-font: var\(--subtitle-font, "PT Serif", "Caladea"\)/
+    );
   });
 });

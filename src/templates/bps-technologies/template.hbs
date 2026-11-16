@@ -219,8 +219,8 @@
           </div>
           {{/if}}
 
-          {{!-- Page 2 starts with the items and their pricing (client brief: four pages). --}}
-          <section class="bp-items-section bp-page-start" data-testid="section" data-section="items">
+          {{!-- The items join the box above them, on page 1 (user, 2026-11-16, as the client's PDF). --}}
+          <section class="bp-items-section" data-testid="section" data-section="items">
             <div class="bp-items-scroll" data-testid="items-scroll">
               <table class="bp-items{{#if view.printTight}} is-print-tight{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--bp-figures: {{view.table.figureCount}}; --bp-serial-width: {{view.table.serialWidth}}px;">
                 <thead>
