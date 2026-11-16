@@ -23,6 +23,7 @@ import {
   registerBpsHelpers,
   resolveSettings,
   notesLabels,
+  minusSubsidy,
 } from "../src/templates/bps-technologies/helpers";
 import taxSummaryPartial from "../src/widgets/tax-summary/TaxSummaryTable.hbs";
 import hsnSummaryPartial from "../src/widgets/hsn-summary/HsnSummaryTable.hbs";
@@ -203,15 +204,17 @@ describe("BPS Technologies — render", () => {
     expect(html).toContain(
       '<span class="bp-term-text">Price validity: 10 days from the date of submission.</span>'
     );
-    // The second group ("Payment Terms") follows the box, arrow-bulleted.
+    // Every terms group sits in the box beside the signature, numbered.
     expect(html).toContain(
-      "<li>90% Advance along with order and before delivery of materials</li>"
+      '<span class="bp-term-text">90% Advance along with order and before delivery of materials</span>'
     );
     expect(html).not.toContain("bp-pay-card");
     expect(html).toMatch(
-      /bp-kv-label bp-bank-bankName">Bank<[\s\S]*?Sample Bank/
+      /bp-kv-label bp-bank-bankName">Bank Name<[\s\S]*?Sample Bank/
     );
-    expect(html).toMatch(/bp-kv-label bp-bank-ifsc">IFSC<[\s\S]*?SMPL0000123/);
+    expect(html).toMatch(
+      /bp-kv-label bp-bank-ifsc">IFSC Code<[\s\S]*?SMPL0000123/
+    );
   });
 
   it("prints the account's columns in its order, money with the currency symbol", () => {
@@ -229,10 +232,10 @@ describe("BPS Technologies — render", () => {
           .replace(/\s+/g, " ")
           .trim()
     );
-    // The serial heading prints the business's label (Simple design: "#").
-    expect(header).toMatch(/data-col="sr"[^>]*>#<\/th>/);
+    // The serial heading: "Sl.No" (BPS design) unless the business names it.
+    expect(header).toMatch(/data-col="sr"[^>]*>Sl\.No<\/th>/);
     expect(labels).toEqual([
-      "#",
+      "Sl.No",
       "Product Description",
       "Location",
       "Remote Type",
@@ -775,7 +778,6 @@ describe("BPS Technologies — boolean settings", () => {
       "terms",
       "notes",
       "attachments",
-      "terms-more",
       "enquiry",
     ].map((section) => html.indexOf(`data-section="${section}"`));
     expect(order.every((at) => at > 0)).toBe(true);
@@ -1047,10 +1049,10 @@ describe("BPS Technologies — view model", () => {
     );
   });
 
-  it("sizes the table from the design's 958 px table with a 30 px serial column, as shares of the table", () => {
+  it("sizes the table from the design's 958 px table with a 52 px serial column, as shares of the table", () => {
     const s = state();
     const table = mapItemTable(s, formatContext(s.invoice));
-    expect(table.serialWidth).toBe(30);
+    expect(table.serialWidth).toBe(52);
     const rate = table.header.find((cell: Json) => cell.key === "rate");
     expect(rate?.width).toBeGreaterThanOrEqual(70);
     expect(rate?.share).toBeCloseTo(((rate?.width as number) / 958) * 100, 2);
@@ -2347,32 +2349,24 @@ describe("BPS Technologies — the client's four pages (brief, 2026-11-16)", () 
     );
   });
 
-  it("starts the items (page 2) and each terms group after the first (pages 3, 4 …) on a new page in print", () => {
+  it("starts the items (page 2) on a new page in print; every terms group stays in the box beside the signature", () => {
     const html = render((invoice) => {
       invoice.terms = [
         { label: "Payments Terms", terms: ["10% Advance Booking Amount."] },
-        {
-          label: "BPS Energy Premium Services:",
-          terms: ["Expert Installation Services"],
-        },
-        {
-          label: "Terms & Conditions",
-          terms: ["Prices quoted are valid until the proposal's expiry date."],
-        },
+        { label: "Delivery", terms: ["Within 45 days."] },
       ];
     });
     expect(html).toContain(
       'class="bp-items-section bp-page-start" data-testid="section" data-section="items"'
     );
-    expect(
-      html.match(
-        /bp-terms-more bp-page-start" data-testid="section" data-section="terms-more"/g
-      )
-    ).toHaveLength(2);
-    // The groups follow the notes, so page 2 keeps the editable notes.
-    expect(html.indexOf('data-section="terms-more"')).toBeGreaterThan(
-      html.indexOf('data-section="notes"')
+    expect(html).not.toContain("terms-more");
+    const box = html.slice(
+      html.indexOf('data-section="bottom"'),
+      html.indexOf("</table>", html.indexOf('data-section="bottom"'))
     );
+    expect(box).toContain(">Payments Terms<");
+    expect(box).toContain(">Delivery<");
+    expect(box).toContain("Within 45 days.");
     expect(
       fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8")
     ).toMatch(
@@ -2380,35 +2374,28 @@ describe("BPS Technologies — the client's four pages (brief, 2026-11-16)", () 
     );
   });
 
-  it("prints no built-in terms text: pages 3 and 4 come from the document's terms groups", () => {
+  it("prints the client's fixed last two pages on quotations, as written, each on a new page", () => {
     const html = render((invoice) => {
       invoice.terms = [{ label: "Payments Terms", terms: ["10% Advance."] }];
     });
-    expect(html).not.toContain("BPS Energy Premium Services");
-    expect(html).not.toContain('data-section="terms-more"');
-  });
-});
-
-describe("BPS Technologies — terms groups (user, 2026-11-16)", () => {
-  it("puts only the first terms group beside the signature; later groups follow the box with arrow bullets", () => {
-    const html = render((invoice) => {
-      invoice.terms = [
-        { label: "Payments Terms", terms: ["10% Advance Booking Amount."] },
-        { label: "Delivery", terms: ["Within 45 days."] },
-      ];
-    });
-    const box = html.slice(
-      html.indexOf('data-section="bottom"'),
-      html.indexOf("</table>", html.indexOf('data-section="bottom"'))
-    );
-    expect(box).toContain(">Payments Terms<");
-    expect(box).toContain("10% Advance Booking Amount.");
-    expect(box).not.toContain(">Delivery<");
     expect(html).toMatch(
-      /data-section="terms-more"[\s\S]*?>Delivery<[\s\S]*?<ul class="bp-fixed-list bp-terms-list">\s*<li>Within 45 days\.<\/li>/
+      /bp-fixed bp-page-start"[^>]*data-section="fixed-services"[\s\S]*?BPS Energy Premium Services:[\s\S]*?<strong>5 years preventive and corrective maintenance,<\/strong> at no extra cost—to keep your solar system performing at its best all year round\./
     );
-    expect(html.indexOf('data-section="terms-more"')).toBeGreaterThan(
-      html.indexOf('data-section="bottom"')
+    expect(html).toMatch(
+      /bp-fixed bp-page-start"[^>]*data-section="fixed-terms"[\s\S]*?Terms &amp; Conditions[\s\S]*?Prices quoted are valid until the proposal’s expiry date\./
+    );
+    expect(html.match(/<li>/g)?.length).toBeGreaterThanOrEqual(10);
+    const invoice = render((doc) => {
+      doc.billType = "INVOICE";
+    });
+    expect(invoice).not.toContain('data-section="fixed-services"');
+    expect(invoice).not.toContain('data-section="fixed-terms"');
+  });
+
+  it("leaves out the page's own logo, tagline and document QR (the letterhead carries them)", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp-head-side,\s*\.bp-head \.bp-logo,\s*\.bp-head \.bp-tagline,\s*\.bp-head \.bp-doc-qr \{\s*display: none;/
     );
   });
 });
@@ -2468,7 +2455,7 @@ describe("BPS Technologies — subsidy and Net Payable (user, 2026-11-16)", () =
   it("prints the subsidy and the Net Effective Price under the totals, never in Project Details", () => {
     const html = render(subsidy);
     expect(html).toMatch(
-      /bp-grand-row[\s\S]*?bp-subsidy-row[\s\S]*?Subsidy \(The Amount will be credited to customer’s bank account\)[\s\S]*?\(₹78,000\.00\)[\s\S]*?bp-effective-row[\s\S]*?Net Effective Price/
+      /bp-grand-row[\s\S]*?bp-subsidy-row[\s\S]*?Subsidy \(The Amount will be credited to customer’s bank account\)[\s\S]*?>-₹78,000\.00<[\s\S]*?bp-effective-row[\s\S]*?Net Effective Price/
     );
     const additional = html.slice(
       html.indexOf('data-section="additional"'),
@@ -2515,5 +2502,197 @@ describe("BPS Technologies — subsidy and Net Payable (user, 2026-11-16)", () =
       invoice.showTotalsRow = false;
     });
     expect(grand).toMatch(/data-role="grand-total-row"[\s\S]*?bp-net-payable/);
+  });
+});
+
+describe("BPS Technologies — subsidy, every way it is entered (user, 2026-11-16)", () => {
+  const oneItem = (invoice: Json) => {
+    invoice.items = invoice.items
+      .filter((item: Json) => !item.group)
+      .slice(0, 1);
+  };
+
+  it.each([
+    ["text", "78,000"],
+    ["number", 78000],
+    ["currency", { currency: "INR", amount: 78000 }],
+  ])("reads a %s custom field", (_kind, value) => {
+    const { rows } = view((invoice) => {
+      invoice.customFields = [{ label: "Subsidy Amount", value }];
+      invoice.finalTotal.total = 340000;
+    }).totals;
+    expect(rows.find((row: Json) => row.key === "bpNetEffective")?.value).toBe(
+      "₹2,62,000.00"
+    );
+  });
+
+  it("marks Net Payable for a subsidy entered as a deduction, adding no rows of its own", () => {
+    const html = render((invoice) => {
+      oneItem(invoice);
+      invoice.additionalCharges = [
+        {
+          label:
+            "Subsidy (The Amount will be credited to customer's bank account)",
+          amount: 78000,
+          amountType: "FIXED_AMOUNT",
+          multiplier: -1,
+        },
+      ];
+    });
+    expect(html).toMatch(/data-testid="item-row"[\s\S]*?bp-net-payable/);
+    expect(html).not.toContain("bp-subsidy-row");
+    expect(html).not.toContain("bp-effective-row");
+  });
+});
+
+describe("BPS Technologies — UPI (user, 2026-11-16)", () => {
+  it("prints no UPI limit note under the QR", () => {
+    const html = render((invoice) => {
+      invoice.paymentOptions.upi = true;
+      invoice.upiId = "bps@okbank";
+      invoice.status = "UNPAID";
+      invoice.finalTotal.total = 340000;
+    });
+    expect(html).not.toContain("bp-upi-note");
+    expect(html).not.toMatch(/Maximum of 1 lakh/i);
+  });
+});
+
+describe("BPS Technologies — note tables (user, 2026-11-16)", () => {
+  it("spreads a note table's columns evenly", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp-doc \.bp-note-body \.toastui-editor-contents table \{\s*table-layout: fixed;/
+    );
+  });
+});
+
+describe("BPS Technologies — totals figure column (user, 2026-11-16)", () => {
+  it("lines the totals' figure column up with the item table's columns, as E-commerce", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp-totals-table\.is-aligned \.bp-totals \.ceres-subtotal-value \{\s*width: var\(--bp-value-share\);\s*min-width: 0;/
+    );
+    const source = fs.readFileSync(
+      path.join(TEMPLATE_DIR, "helpers.ts"),
+      "utf8"
+    );
+    expect(source).toMatch(/alignTotalsColumn\(root\);\n\};/);
+  });
+});
+
+describe("BPS Technologies — details order (user, 2026-11-16)", () => {
+  it("prints the document date first, then the document number", () => {
+    const keys = view().details.map((row: Json) => row.key);
+    expect(keys.indexOf("invoiceDate")).toBe(0);
+    expect(keys.indexOf("invoiceNumber")).toBe(1);
+    const html = render();
+    expect(html.indexOf("bp-meta-invoiceDate")).toBeLessThan(
+      html.indexOf("bp-meta-invoiceNumber")
+    );
+  });
+});
+
+describe("BPS Technologies — customer phone label (user, 2026-11-16)", () => {
+  it("labels the customer's phone Mobile Number; the seller's phone keeps its label", () => {
+    const html = render((invoice) => {
+      invoice.billedTo.phone = "+919966410605";
+      invoice.billedTo.phoneShowInInvoice = true;
+    });
+    const buyer = html.slice(html.indexOf('data-role="billed-to"'));
+    expect(buyer).toMatch(/bp-field-label">Mobile Number<\/span>/);
+    expect(buyer).not.toMatch(/bp-field-label">Phone<\/span>/);
+    const seller = html.slice(
+      html.indexOf('data-role="billed-by"'),
+      html.indexOf('data-section="details"')
+    );
+    expect(seller).not.toContain("Mobile Number");
+  });
+});
+
+describe("BPS Technologies — subsidy sign (user, 2026-11-16)", () => {
+  it("writes a subsidy with a minus sign, not brackets, from a field or a Refrens deduction", () => {
+    expect(
+      minusSubsidy({ label: "Subsidy (The Amount…)", value: "(₹78,000.00)" })
+        .value
+    ).toBe("-₹78,000.00");
+    expect(minusSubsidy({ label: "Discount", value: "(₹10.00)" }).value).toBe(
+      "(₹10.00)"
+    );
+    const field = render((invoice) => {
+      invoice.customFields = [{ label: "Subsidy Amount", value: "78000" }];
+    });
+    expect(field).toMatch(/bp-subsidy-row[\s\S]*?>-₹78,000\.00</);
+    const deduction = render((invoice) => {
+      invoice.additionalCharges = [
+        {
+          label: "Subsidy (credited to customer)",
+          amount: 78000,
+          amountType: "FIXED_AMOUNT",
+          multiplier: -1,
+        },
+      ];
+    });
+    expect(deduction).not.toMatch(/\(₹78,000\.00\)/);
+  });
+});
+
+describe("BPS Technologies — bank labels (user, 2026-11-16)", () => {
+  it("labels the account holder 'Account Holder Name'", () => {
+    const html = render((invoice) => {
+      invoice.bankAccount.name = "BPS ENERGY";
+    });
+    expect(html).toMatch(
+      /bp-bank-accountHolderName">Account Holder Name<[\s\S]*?BPS ENERGY/
+    );
+  });
+});
+
+describe("BPS Technologies — items on screen (user, 2026-11-16)", () => {
+  it("joins the item table to the box above it on screen, no gap", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /@media screen \{\s*\.bp-page-body > \.bp-items-section\.bp-page-start\.bp-page-start \{\s*margin-top: -1px;/
+    );
+  });
+});
+
+describe("BPS Technologies — notes labels, client's case (user, 2026-11-16)", () => {
+  it("prints a bold line between two note tables as a label; plain or in-table text stays", () => {
+    const table =
+      "| Components | Years |\n| --- | --- |\n| Inverter | 8 Years |";
+    expect(
+      notesLabels(`${table}\n**Components Warranty**\n${table}`)
+    ).toContain("\n### Components Warranty\n");
+    expect(notesLabels("**Components Warranty**:")).toContain(
+      "### Components Warranty"
+    );
+    expect(notesLabels("Components Warranty")).toBe("Components Warranty");
+    expect(notesLabels("| **Inverter** | 8 Years |")).toBe(
+      "| **Inverter** | 8 Years |"
+    );
+  });
+});
+
+describe("BPS Technologies — bank rows as the client's quotation (user, 2026-11-16)", () => {
+  it("lists Account Holder Name, Account Number, Bank Name, IFSC Code in that order", () => {
+    const html = render((invoice) => {
+      invoice.bankAccount = {
+        name: "BPS ENERGY",
+        accountNo: "258099997699",
+        bank: "Indusind bank ltd",
+        ifsc: "INDB0000231",
+      };
+    });
+    const labels = Array.from(
+      html.matchAll(/bp-kv-label bp-bank-[A-Za-z]+">([^<]+)</g),
+      (m) => m[1]
+    );
+    expect(labels.slice(0, 4)).toEqual([
+      "Account Holder Name",
+      "Account Number",
+      "Bank Name",
+      "IFSC Code",
+    ]);
   });
 });

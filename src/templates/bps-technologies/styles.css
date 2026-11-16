@@ -2608,12 +2608,6 @@ body[class~="isDibella"]
   }
 }
 
-/* Terms groups after the first (the first sits beside the signature): full width, arrow
-   bullets as the fixed pages (.bp-fixed-list); the text pre-wrapped as typed. */
-.bp-terms-list > li {
-  overflow-wrap: anywhere;
-  white-space: pre-line;
-}
 
 /* ------------------------------------------------------------ subsidy (user, 2026-11-16) */
 
@@ -2630,4 +2624,112 @@ body[class~="isDibella"]
   padding-block: 6px;
   font-size: calc(var(--bp-font-size-grand) * var(--bp-text-scale, 1));
   font-weight: 700;
+}
+
+/* ------------------------------------------------------------ the fixed last two pages */
+
+/*
+ * Premium Services and Terms & Conditions as the client's pages (user, 2026-11-16): a larger
+ * bold underlined title, arrow points indented under it, each service's name bold on its own
+ * line, the text justified with open line spacing.
+ */
+.bp-fixed {
+  gap: 16px;
+}
+
+.bp-fixed-title {
+  color: var(--bp-ink);
+  font-family: var(--bp-label-font);
+
+  /* As the client's pages print: a 16 pt title, 12 pt text (at the 0.8 print size). */
+  font-size: calc(27px * var(--bp-text-scale, 1));
+  font-weight: 700;
+  line-height: 1.3;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.bp-fixed .bp-fixed-list {
+  gap: 2px;
+  padding-inline-start: 40px;
+  font-size: calc(20px * var(--bp-text-scale, 1));
+}
+
+.bp-fixed .bp-fixed-list > li {
+  padding-inline-start: 42px;
+  line-height: 1.95;
+}
+
+.bp-fixed .bp-fixed-list > li::before {
+  top: 0.62em;
+  inset-inline-start: 4px;
+  width: 0.75em;
+  height: 0.75em;
+}
+
+.bp-fixed-lead {
+  display: block;
+  font-weight: 700;
+}
+
+.bp-fixed-text {
+  display: block;
+}
+
+.bp-fixed-text > strong {
+  font-weight: 700;
+}
+
+/* The page's own logo, tagline and document QR are left out (user, 2026-11-16): the business's
+   letterhead carries the logo and tagline. */
+.bp-head-side,
+.bp-head .bp-logo,
+.bp-head .bp-tagline,
+.bp-head .bp-doc-qr {
+  display: none;
+}
+
+.bp-head {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+
+.bp-head-main {
+  grid-column: 1;
+}
+
+.bp-head-qrs {
+  grid-column: 1;
+  justify-self: end;
+}
+
+/* Tables in the notes share their width equally between columns (user, 2026-11-16). */
+.bp-doc .bp-note-body .toastui-editor-contents table {
+  table-layout: fixed;
+}
+
+.bp-doc .bp-note-body .toastui-editor-contents :is(th, td) {
+  width: auto;
+  overflow-wrap: break-word;
+}
+
+/* The figure column lined up with the item table's last column (helpers.ts alignTotalsColumn):
+   its width a share of the frame, no floor of its own. */
+.bp-totals-table.is-aligned .bp-totals .ceres-subtotal-value {
+  width: var(--bp-value-share);
+  min-width: 0;
+}
+
+/* While measured: each figure cell at its content's width. */
+.bp-totals-table.is-measuring .bp-totals .ceres-subtotal-value {
+  width: 1%;
+  min-width: 0;
+}
+
+/* On screen the items join the box above them, no gap (user, 2026-11-16); in print they still
+   start page 2. */
+@media screen {
+  .bp-page-body > .bp-items-section.bp-page-start.bp-page-start {
+    margin-top: -1px;
+  }
 }
