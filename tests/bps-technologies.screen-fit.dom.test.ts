@@ -1,7 +1,10 @@
 /**
  * @jest-environment jsdom
  */
-import { fitItemsToScreen } from "../src/templates/bps-technologies/helpers";
+import {
+  fitItemsToScreen,
+  removeHiddenSymbol,
+} from "../src/templates/bps-technologies/helpers";
 
 const media = (print: boolean) => {
   window.matchMedia = ((query: string) => ({
@@ -110,5 +113,13 @@ describe("BPS Technologies — summary tables on a phone screen", () => {
     media(true);
     fitItemsToScreen();
     expect(section.classList.contains("is-stacked")).toBe(false);
+  });
+});
+
+describe("BPS Technologies — invisible currency symbol on the page (user, 2026-11-16)", () => {
+  it("takes the hidden mark and its space out of every figure", () => {
+    document.body.innerHTML = `<div class="bp-doc"><span>\u2060 3,12,213.00</span><span>-\u2060 78,000.00</span></div>`;
+    removeHiddenSymbol();
+    expect(document.body.textContent).toBe("3,12,213.00-78,000.00");
   });
 });
