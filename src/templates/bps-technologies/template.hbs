@@ -477,7 +477,7 @@
                 <figure class="bp-upi">
                   <img class="bp-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
                   <figcaption class="bp-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
-                  {{#if view.bank.upi.note}}<p class="bp-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                  {{!-- No UPI limit note under the QR (user, 2026-11-16). --}}
                 </figure>
               {{/if}}
             </section>
@@ -515,12 +515,12 @@
                 </section>
               {{/if}}
                 </td></tr>
-                {{!-- Only the FIRST terms group sits beside the signature (the client's "Payments
-                      Terms"; user, 2026-11-16); later groups follow the box, full width. --}}
-                {{#each view.terms}}{{#if @first}}
+                {{!-- Every terms group sits beside the signature, one after another (user,
+                      2026-11-16: "T&C groups yahi pe aana chahiye"). --}}
+                {{#each view.terms}}
                   <tr class="bp-line bp-line-title bp-terms" data-testid="section" data-section="terms"><td class="bp-line-cell"><h2 class="bp-card-title" data-role="title">{{title}}</h2></td></tr>
                   {{#each items}}<tr class="bp-line bp-term"><td class="bp-line-cell"><div class="bp-term-row"><span class="bp-term-no" aria-hidden="true"></span><span class="bp-term-text">{{this}}</span></div></td></tr>{{/each}}
-                {{/if}}{{/each}}
+                {{/each}}
                 <tr class="bp-line bp-line-end"><td class="bp-line-cell"></td></tr>
               </tbody>
             </table>
@@ -544,17 +544,40 @@
             </section>
           {{/if}}
 
-          {{!-- Terms groups after the first: each starts a new page (pages 3, 4 …), unboxed,
-                full width, arrow bullets (the client's Premium Services / Terms & Conditions
-                pages, entered as Refrens terms groups; user, 2026-11-16). --}}
-          {{#each view.terms}}{{#unless @first}}
-            <section class="bp-plain bp-terms-more bp-page-start" data-testid="section" data-section="terms-more">
-              <h2 class="bp-plain-title" data-role="title">{{title}}</h2>
-              <ul class="bp-fixed-list bp-terms-list">
-                {{#each items}}<li>{{this}}</li>{{/each}}
+          {{!--
+            The last two pages: the client's fixed text, copied as written (user, 2026-11-16: "ye
+            content last ke do pages pe fix rahega"). Each starts a new page. Quotations only.
+          --}}
+          {{#if view.fixedPages}}
+            <section class="bp-plain bp-fixed bp-page-start" data-testid="section" data-section="fixed-services">
+              <h2 class="bp-fixed-title">BPS Energy Premium Services:</h2>
+              <ul class="bp-fixed-list">
+                <li><strong class="bp-fixed-lead">Comprehensive Maintenance Package</strong><span class="bp-fixed-text"><strong>5 years preventive and corrective maintenance,</strong> at no extra cost—to keep your solar system performing at its best all year round.</span></li>
+                <li><strong class="bp-fixed-lead">Complete Civil Work &amp; Chemical Anchoring</strong><span class="bp-fixed-text">We manage all necessary civil work and use chemical anchoring techniques to ensure a strong, secure, and long-lasting foundation.</span></li>
+                <li><strong class="bp-fixed-lead">Expert Installation Services</strong><span class="bp-fixed-text">Our experienced team delivers precise, high-quality installations that meet the highest industry standards.</span></li>
+                <li><strong class="bp-fixed-lead">Prompt Service Support</strong><span class="bp-fixed-text">We provide quick, responsive service, addressing your concerns on priority to ensure uninterrupted performance.</span></li>
+                <li><strong class="bp-fixed-lead">Timely Project Completion</strong><span class="bp-fixed-text">From initiation to handover, we commit to completing your project within 45 days, ensuring timely and efficient delivery.</span></li>
+                <li><strong class="bp-fixed-lead">Flexible Financing Options</strong><span class="bp-fixed-text">Benefit from EMI options via PSU banks at attractive interest rates, making solar adoption more affordable and accessible. T&amp;C apply</span></li>
+                <li><strong class="bp-fixed-lead">Enhanced Safety Measures</strong><span class="bp-fixed-text">Safety comes first—our systems include three-point earthing and lightning protection, ensuring total peace of mind.</span></li>
               </ul>
             </section>
-          {{/unless}}{{/each}}
+
+            <section class="bp-plain bp-fixed bp-page-start" data-testid="section" data-section="fixed-terms">
+              <h2 class="bp-fixed-title">Terms &amp; Conditions</h2>
+              <ul class="bp-fixed-list">
+                <li>Please note that additional charges may apply for any changes related to your electricity bill, such as load enhancement, name correction, or phase conversion.</li>
+                <li>To initiate your application, you must provide all required documents, including a PAN card, Aadhaar card, and a recent electricity bill.</li>
+                <li>Customers opting for financing may be required to submit additional documentation as per lender requirements.</li>
+                <li>Prices quoted are valid until the proposal’s expiry date.</li>
+                <li>The offer price is subject to revision following a detailed site survey or any change in site conditions.</li>
+                <li>The customer must provide access to electricity and water supply during installation and commissioning.</li>
+                <li>A safe and secure storage space must be made available for materials during the installation period.</li>
+                <li>The customer shall arrange necessary tools and equipment such as ladders, stools, or high stools wherever required.</li>
+                <li>A working internet connection (Wi-Fi or LAN) and auxiliary power supply must be available for the data logger.</li>
+                <li>The customer must ensure unrestricted access for service personnel to the rooftop, meter board, or any other relevant areas for maintenance and support.</li>
+              </ul>
+            </section>
+          {{/if}}
 
           {{#if view.enquiry}}
             <p class="bp-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="bp-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="bp-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>

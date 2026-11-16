@@ -127,8 +127,9 @@ const formatNumber = (
  * tables or paragraphs, is a label: it becomes a heading, styled as the notes' own title (user,
  * 2026-11-16). Bold words inside a sentence, a list item or a table cell stay as they are.
  */
-const BOLD_LINE = /^\s*(\*\*|__)(.+?)\1\s*$/;
-const BOLD_HTML_LINE = /^\s*<(strong|b)>(.+?)<\/\1>\s*$/i;
+// A colon typed after the bold text still makes a label ("**Components Warranty**:").
+const BOLD_LINE = /^\s*(\*\*|__)(.+?)\1\s*:?\s*$/;
+const BOLD_HTML_LINE = /^\s*<(strong|b)>(.+?)<\/\1>\s*:?\s*$/i;
 
 export const notesLabels = (body: string): string => {
   let fenced = false;
@@ -1764,6 +1765,43 @@ export const orderByConfig = <T extends { key: string; label: string }>(
   return [...ordered, ...remaining];
 };
 
+/*
+ * A subsidy figure with a minus sign, not in brackets: "-₹78,000.00" (the client's quotation;
+ * user, 2026-11-16), whether the template prints the row or Refrens' deduction does.
+ */
+export const minusSubsidy = <T extends { label: string; value: string }>(
+  row: T
+): T => {
+  const bracketed = /^\s*\((.+)\)\s*$/.exec(row.value);
+  return /subsid/i.test(row.label) && bracketed
+    ? { ...row, value: `-${bracketed[1]}` }
+    : row;
+};
+
+/* The customer's phone row labelled "Mobile Number" (BPS design). */
+export const withMobileLabel = <T>(party: T): T => {
+  if (!party) return party;
+  const record = asRecord(party);
+  return {
+    ...record,
+    fields: asArray(record.fields).map((field) =>
+      asRecord(field).isPhone === true
+        ? { ...asRecord(field), label: "Mobile Number" }
+        : field
+    ),
+  } as T;
+};
+
+/* The document date moved in front of the document number (BPS design). */
+export const dateFirst = <T extends { key: string }>(rows: T[]): T[] => {
+  const date = rows.findIndex((row) => row.key === "invoiceDate");
+  const number = rows.findIndex((row) => row.key === "invoiceNumber");
+  if (date < 0 || number < 0 || date < number) return rows;
+  const ordered = rows.filter((_, index) => index !== date);
+  ordered.splice(number, 0, rows[date]);
+  return ordered;
+};
+
 export const mapMeta = (state: UnknownRecord, transportRows: LabelValue[]) => {
   const invoice = asRecord(state.invoice);
   const labels = asRecord(invoice.customLabels);
@@ -1921,8 +1959,10 @@ export const mapSupply = (state: UnknownRecord) => {
  */
 const SUBSIDY_LABEL = /subsid/i;
 
+// Any field type: text "78,000", number 78000, currency { currency, amount }, or { value }.
 const subsidyAmount = (entry: UnknownRecord): number => {
-  const raw = isRecord(entry.value) ? asRecord(entry.value).value : entry.value;
+  const value = isRecord(entry.value) ? asRecord(entry.value) : null;
+  const raw = value ? firstText(value.amount, value.value) : entry.value;
   const amount = Number(String(raw ?? "").replace(/[^0-9.]/g, ""));
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
 };
@@ -1932,11 +1972,29 @@ const isSubsidyField = (entry: UnknownRecord): boolean =>
   subsidyAmount(entry) > 0;
 
 export const mapSubsidy = (state: UnknownRecord): number => {
-  const field = asArray(asRecord(state.invoice).customFields)
+  const invoice = asRecord(state.invoice);
+  const field = [
+    ...asArray(invoice.customFields),
+    ...asArray(invoice.customHeaders),
+  ]
     .map(asRecord)
     .find(isSubsidyField);
   return field ? subsidyAmount(field) : 0;
 };
+
+/*
+ * A subsidy entered as a Refrens deduction instead ("Subsidy …" additional charge): Refrens
+ * prints that row itself and its total is already less the subsidy, so the template only marks
+ * the amount before it, the item's or the items' Total, "(Net Payable)".
+ */
+export const hasSubsidyDeduction = (state: UnknownRecord): boolean =>
+  asArray(asRecord(state.invoice).additionalCharges)
+    .map(asRecord)
+    .some(
+      (charge) =>
+        SUBSIDY_LABEL.test(firstText(charge.label, charge.name)) &&
+        toAmount(charge.amount) !== 0
+    );
 
 export const mapAdditionalInfo = (state: UnknownRecord, ctx: FormatContext) => {
   const invoice = asRecord(state.invoice);
@@ -2658,8 +2716,8 @@ const isRealItem = (item: UnknownRecord) =>
  */
 /* 960 px of content less the table's own 1 px outline on each side. */
 const DESIGN_TABLE_WIDTH = 958; // the 1000 px canvas less 2 × 20 px, less the table's 1 px edges (Simple design)
-/* The serial column: "01" with 6 px either side. */
-const SERIAL_WIDTH = 30;
+/* The serial column: "Sl.No" in bold with 6 px either side. */
+const SERIAL_WIDTH = 52;
 // The most figure columns a tablet lays out side by side under the item's name (styles.css).
 const TABLET_FIGURE_COLUMNS = 8;
 const MIN_DESCRIPTION_SHARE = 0.22;
@@ -3168,7 +3226,8 @@ export const mapItemTable = (
     manyFigures:
       columns.filter((column) => column.kind !== "name").length >
       TABLET_FIGURE_COLUMNS,
-    serialLabel: labelOr(labels, "serialNumber", "#"),
+    // "Sl.No", as the client's quotation heads it (user, 2026-11-16); the business's own label wins.
+    serialLabel: labelOr(labels, "serialNumber", "Sl.No"),
     serialWidth: SERIAL_WIDTH,
     serialShare: Math.round((SERIAL_WIDTH / DESIGN_TABLE_WIDTH) * 1e5) / 1e3,
     mergeUnit,
@@ -3484,13 +3543,14 @@ export const mapBank = (state: UnknownRecord) => {
   };
   const upiQr = text(asRecord(asRecord(state.mapped).qr).upi);
 
-  // In the order and wording of Refrens' bank account form: Account Name, Account Number,
-  // IFSC (with IBAN / SWIFT / Sort Code beside it), Account Type, Bank, Branch, then the rest.
+  // In the client's order and wording (its quotation, 2026-11-16): Account Holder Name, Account
+  // Number, Bank Name, IFSC Code; then IBAN / SWIFT / Sort Code, Account Type, Branch, the rest.
   const rows: LabelValue[] = visibility.showBankAccount
     ? [
         {
           key: "accountHolderName",
-          label: labelOr(labels, "accountHolderName", "Account Name"),
+          // "Account Holder Name", as the client's quotation (user, 2026-11-16).
+          label: labelOr(labels, "accountHolderName", "Account Holder Name"),
           value: firstText(bank.name, bank.accountHolderName),
         },
         {
@@ -3502,9 +3562,16 @@ export const mapBank = (state: UnknownRecord) => {
           ),
           value: firstText(bank.accountNo, bank.accountNumber),
         },
+        // Bank Name and IFSC Code next, as the client's quotation lists and names them (user,
+        // 2026-11-16).
+        {
+          key: "bankName",
+          label: labelOr(labels, "bankName", "Bank Name"),
+          value: firstText(bank.bank, bank.bankName),
+        },
         {
           key: "ifsc",
-          label: firstText(labels.ifsc, labels.ifscCode, "IFSC"),
+          label: firstText(labels.ifsc, labels.ifscCode, "IFSC Code"),
           value: firstText(bank.ifsc, bank.ifscCode),
         },
         {
@@ -3529,11 +3596,6 @@ export const mapBank = (state: UnknownRecord) => {
           value: text(bank.accountType)
             .toLowerCase()
             .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-        },
-        {
-          key: "bankName",
-          label: labelOr(labels, "bankName", "Bank"),
-          value: firstText(bank.bank, bank.bankName),
         },
         {
           key: "branch",
@@ -4464,15 +4526,16 @@ export const buildBpsView = (root: unknown) => {
   // subsidy: under the one item's amount, else under the items' Total row, else under the
   // grand total.
   const subsidy = mapSubsidy(state);
+  const deduction = !subsidy && hasSubsidyDeduction(state);
   const grandTotal = toAmount(asRecord(invoice.finalTotal).total);
   const itemRows = asArray(table.rows)
     .map(asRecord)
-    .filter((row) => !row.isGroupHeader && !row.isGroupTotal);
+    .filter((row) => !row.isGroupHeader && !row.isGroupTotal && !row.isFiller);
   let netPayableAt = "";
-  if (subsidy && itemRows.length === 1) {
+  if ((subsidy || deduction) && itemRows.length === 1) {
     netPayableAt = "item";
     itemRows[0].netPayable = true;
-  } else if (subsidy && asRecord(table.footer).show) {
+  } else if ((subsidy || deduction) && asRecord(table.footer).show) {
     netPayableAt = "footer";
     asRecord(table.footer).netPayable = true;
   } else if (subsidy) netPayableAt = "grand";
@@ -4506,13 +4569,19 @@ export const buildBpsView = (root: unknown) => {
     // The band (Simple design): the seller beside the logo, Billed To on the right.
     seller:
       parties.find((party) => asRecord(party).role === "billed-by") || null,
-    buyer:
-      parties.find((party) => asRecord(party).role === "billed-to") || null,
+    // The customer's phone reads "Mobile Number" (the client's quotation; user, 2026-11-16).
+    buyer: withMobileLabel(
+      parties.find((party) => asRecord(party).role === "billed-to") || null
+    ),
     // BPS design: the customer's lines in the details list, "Customer Name: …", "Address: …".
+    // The client's fixed last two pages (Premium Services, Terms & Conditions), copied as the
+    // client wrote them; quotations only (user, 2026-11-16).
+    fixedPages: text(invoice.billType).toUpperCase() === "QUOTATION",
     customerLabel: "Customer Name",
     addressLabel: "Address",
     // The band's details strip: the document details, then what is due.
-    details: meta,
+    // The document date first, then its number (the client's quotation; user, 2026-11-16).
+    details: dateFirst(meta),
     // Country / Place of Supply print under Shipped To (fixed decision, all templates); in the
     // document details only when the document has no Shipped To.
     supplyInShipping: shippedTo !== null,
@@ -4549,12 +4618,14 @@ export const buildBpsView = (root: unknown) => {
       // One list in the side column: the totals, the grand total between its rules, then
       // what was paid and what is due.
       rows: [
-        ...totals.main.map((row) =>
-          row.isGrand && subsidy && netPayableAt === "grand"
-            ? { ...row, netPayable: true }
-            : row
-        ),
-        ...totals.extra.map((row) => ({
+        ...totals.main
+          .map(minusSubsidy)
+          .map((row) =>
+            row.isGrand && subsidy && netPayableAt === "grand"
+              ? { ...row, netPayable: true }
+              : row
+          ),
+        ...totals.extra.map(minusSubsidy).map((row) => ({
           ...row,
           isExtra: true,
           emphasis: "normal",
@@ -4566,7 +4637,7 @@ export const buildBpsView = (root: unknown) => {
                 key: "bpSubsidy",
                 label:
                   "Subsidy (The Amount will be credited to customer’s bank account)",
-                value: formatMoney(-subsidy, ctx),
+                value: `-${formatMoney(subsidy, ctx)}`,
                 isNum: true,
                 emphasis: "normal",
                 isBpSubsidy: true,
@@ -6728,6 +6799,63 @@ export const fitDetails = (root: ParentNode = document): void => {
   });
 };
 
+/*
+ * The totals' figure column lines up with the item table's last column (user, 2026-11-16: "as
+ * the E-commerce template"): its left rule falls on the rule before that column. A figure wider
+ * than the column takes the last two (or more) columns instead, so the rule still lands on one
+ * of the item table's. Set as a share of the width, so it holds at every print size; measured
+ * again with every fit (screen, the PDF service, a browser's print).
+ */
+export const alignTotalsColumn = (root: ParentNode = document): void => {
+  root.querySelectorAll<HTMLElement>(".bp-doc").forEach((doc) => {
+    const items = doc.querySelector<HTMLTableElement>(".bp-items");
+    const totals = doc.querySelector<HTMLTableElement>(".bp-totals-table");
+    if (!items || !totals) return;
+    const clear = () => {
+      totals.style.removeProperty("--bp-value-share");
+      totals.classList.remove("is-aligned");
+    };
+    const head = items.querySelector("thead > tr");
+    const cells = head ? (Array.from(head.children) as HTMLElement[]) : [];
+    const table = items.getBoundingClientRect();
+    if (
+      cells.length < 2 ||
+      table.width <= 0 ||
+      items.classList.contains("is-cards") ||
+      items.classList.contains("is-grid")
+    ) {
+      clear();
+      return;
+    }
+    // The figures' own width: the column at its narrowest.
+    totals.classList.remove("is-aligned");
+    totals.classList.add("is-measuring");
+    const needed = Math.max(
+      0,
+      ...Array.from(
+        totals.querySelectorAll<HTMLElement>(".ceres-subtotal-value")
+      )
+        .filter((cell) => cell.offsetParent !== null)
+        .map((cell) => cell.getBoundingClientRect().width)
+    );
+    totals.classList.remove("is-measuring");
+    const box = totals.getBoundingClientRect();
+    if (box.width <= 0) {
+      clear();
+      return;
+    }
+    // From the rule before the last column (the previous cell's end rule), leftwards.
+    let span = 1;
+    const ruleAt = (count: number) =>
+      cells[cells.length - count].getBoundingClientRect().left - 1;
+    while (span < cells.length - 1 && table.right - ruleAt(span) < needed - 0.5)
+      span += 1;
+    const share = ((box.right - ruleAt(span)) / box.width) * 100;
+    totals.style.setProperty("--bp-value-share", `${share.toFixed(4)}%`);
+    totals.classList.add("is-aligned");
+  });
+};
+
 export const fitItemsToScreen = (root: ParentNode = document): void => {
   fitDetails(root);
   const printing =
@@ -6760,6 +6888,7 @@ export const fitItemsToScreen = (root: ParentNode = document): void => {
       !printing && document.documentElement.clientWidth < PHONE_WIDTH
     );
   });
+  alignTotalsColumn(root);
 };
 
 /* Runs the after-render fixes each time the renderer draws the document or the window resizes. */
