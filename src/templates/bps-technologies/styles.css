@@ -2819,3 +2819,15 @@ body[class~="isDibella"]
 .bp-doc .bp-note-body .toastui-editor-contents > :is(h1, h2, h3, h4, h5, h6) + table {
   margin-top: 20px;
 }
+
+/* The UPI QR and its caption sit at the bank box's foot, the caption on the last bank row's
+   line (user, 2026-11-16, as the client's "SCAN & PAY"). Stacked under 600 px it stays centred. */
+.bp-bank > .bp-upi {
+  align-self: flex-end;
+}
+
+@container bp-doc (width < 600px) {
+  .bp-bank > .bp-upi {
+    align-self: center;
+  }
+}

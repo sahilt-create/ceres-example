@@ -2793,3 +2793,10 @@ describe("BPS Technologies — ampersand (user, 2026-11-16)", () => {
     );
   });
 });
+
+describe("BPS Technologies — UPI at the bank box's foot (user, 2026-11-16)", () => {
+  it("aligns the UPI QR and caption to the bottom of the bank box", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(/\.bp-bank > \.bp-upi \{\s*align-self: flex-end;/);
+  });
+});
