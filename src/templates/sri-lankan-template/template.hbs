@@ -29,7 +29,7 @@
   </header>
 
   <section class="invoice-meta two-column-row">
-    <div><span class="label">{{sri.document.dateLabel}}:</span> {{formateShortDateWithOffset sri.document.date invoice.ownerOffset}}</div>
+    <div><span class="label">{{sri.document.dateLabel}}:</span> {{sriDate sri.document.date invoice.ownerOffset}}</div>
     <div><span class="label">{{sri.document.numberLabel}}:</span> {{sri.document.number}}</div>
   </section>
 
@@ -49,7 +49,7 @@
   </section>
 
   {{#if sri.documentRows}}<section class="document-details detail-grid">
-    {{#each sri.documentRows}}<div class="detail-row"{{#if supplyField}} data-ceres-{{supplyField}}{{/if}}><span class="label">{{label}}:</span><span>{{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</span></div>{{/each}}
+    {{#each sri.documentRows}}<div class="detail-row"{{#if supplyField}} data-ceres-{{supplyField}}{{/if}}><span class="label">{{label}}:</span><span>{{#if isDate}}{{sriDate value ../invoice.ownerOffset}}{{else if isCountry}}{{formatCountryName value}}{{else if isPlace}}{{formatCountryName value}}{{else}}{{value}}{{/if}}</span></div>{{/each}}
   </section>{{/if}}
 
   {{#if mapped.visibility.showShippingParties}}<section class="shipping-grid{{#if mapped.visibility.singleShippingParty}} is-single{{/if}}">
@@ -66,7 +66,7 @@
   </section>{{/if}}
 
   {{#if sri.transportRows}}<section class="detail-panel transport-panel"><h2>Transport Details</h2><div class="detail-grid">
-    {{#each sri.transportRows}}<div class="detail-row"><span class="label">{{label}}:</span> {{#if isDate}}{{formateShortDateWithOffset value ../invoice.ownerOffset}}{{else}}{{value}}{{/if}}</div>{{/each}}
+    {{#each sri.transportRows}}<div class="detail-row"><span class="label">{{label}}:</span> {{#if isDate}}{{sriDate value ../invoice.ownerOffset}}{{else}}{{value}}{{/if}}</div>{{/each}}
   </div></section>{{/if}}
 
   <section class="compliance-strip">
@@ -99,7 +99,7 @@
               {{else if (isQuantityColumn column)}}{{quantityWithUnit item ../../invoice ../../mapped.visibility.showUnitInQuantity}}
               {{else if (isUnitColumn column)}}{{itemUnit item ../../invoice}}
               {{else if (isCurrencyColumn column)}}{{#if (hasValue (itemColumnValue item column))}}{{formatSriCurrency (itemColumnValue item column) ../../invoice}}{{/if}}
-              {{else if (isDateColumn column)}}{{#if (hasValue (itemColumnValue item column))}}{{formateShortDateWithOffset (itemColumnValue item column) ../../invoice.ownerOffset}}{{/if}}
+              {{else if (isDateColumn column)}}{{#if (hasValue (itemColumnValue item column))}}{{sriDate (itemColumnValue item column) ../../invoice.ownerOffset}}{{/if}}
               {{else if (isPercentageColumn column)}}{{formatSriPercentage (itemColumnValue item column)}}
               {{else if (isBooleanColumn column)}}{{formatBoolean (itemColumnValue item column)}}
               {{else}}{{itemColumnValue item column}}{{/if}}
@@ -144,12 +144,21 @@
     <div class="summary-table-wrap">
       <table class="ceres-table batch-summary-table">
         <thead><tr>{{#each sri.widgets.batchSummary.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
-        <tbody>{{#each sri.widgets.batchSummary.rows}}<tr>{{#each cells}}<td class="{{#if isNumeric}}number-cell{{/if}}">{{#if isDate}}{{formatDate value}}{{else}}{{value}}{{/if}}</td>{{/each}}</tr>{{/each}}</tbody>
+        <tbody>{{#each sri.widgets.batchSummary.rows}}<tr>{{#each cells}}<td class="{{#if isNumeric}}number-cell{{/if}}">{{#if isDate}}{{sriDate value ../../invoice.ownerOffset}}{{else}}{{value}}{{/if}}</td>{{/each}}</tr>{{/each}}</tbody>
       </table>
     </div>
   </section>
   <section class="summary-section" data-ceres-payment-table{{#unless sri.showPayments}} style="display: none;"{{/unless}}>
-    {{> PaymentTable sri.widgets.paymentTable ownerOffset=invoice.ownerOffset heading=sri.summaryLabels.payments}}
+    {{#with sri.widgets.paymentTable}}{{#if hasRows}}
+<div class="ceres-table-section{{#if extraClass}} {{extraClass}}{{/if}}">
+  <h3 class="ceres-table-heading">{{#if ../sri.summaryLabels.payments}}{{../sri.summaryLabels.payments}}{{else}}Payments{{/if}}</h3>
+  <table class="ceres-table">
+    <thead><tr><th>Date</th><th>Mode</th><th>Amount Received</th><th>Payment Account</th>{{#if showTds}}<th>TDS</th>{{/if}}{{#if showTransactionCharge}}<th>Transaction Charge</th>{{/if}}</tr></thead>
+    <tbody>{{#each payments}}<tr><td>{{sriDate paymentDate ../../invoice.ownerOffset}}</td><td>{{paymentMethodLabel}}</td><td>{{formatCurrency amount}}{{#if ../showBizAmount}}{{#if amountInBizCurrencyFormatted}}<br/><small>({{amountInBizCurrencyFormatted}})</small>{{/if}}{{/if}}</td><td>{{paymentAccountName}}</td>{{#if ../showTds}}<td>{{formatCurrency tds}}</td>{{/if}}{{#if ../showTransactionCharge}}<td>{{formatCurrency transactionCharge}}</td>{{/if}}</tr>{{/each}}</tbody>
+    <tfoot><tr><td><strong>Total</strong></td><td></td><td><strong>{{formatCurrency totalAmount}}</strong></td><td></td>{{#if showTds}}<td><strong>{{formatCurrency totalTds}}</strong></td>{{/if}}{{#if showTransactionCharge}}<td><strong>{{formatCurrency totalTransactionCharge}}</strong></td>{{/if}}</tr></tfoot>
+  </table>
+</div>
+{{/if}}{{/with}}
   </section>
 
   {{#if mapped.visibility.showBankUpiSection}}<section class="payment-details-grid">

@@ -82,8 +82,32 @@ const isDateColumn = (column: any): boolean => {
   );
 };
 
+const pad2 = (value: number): string => String(value).padStart(2, "0");
+
+// Every date in this template prints as DD/MM/YYYY, in the owner's time zone.
+const formatSriDate = (value: any, offset?: any): string => {
+  if (value === null || value === undefined || String(value).trim() === "")
+    return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const match = String(offset ?? "+05:30").match(
+    /^([+-]?)(\d{1,2}):?(\d{2})?$/
+  );
+  const minutes = match
+    ? (match[1] === "-" ? -1 : 1) *
+      (parseInt(match[2], 10) * 60 + parseInt(match[3] || "0", 10))
+    : 330;
+  const shifted = new Date(date.getTime() + minutes * 60000);
+  return `${pad2(shifted.getUTCDate())}/${pad2(
+    shifted.getUTCMonth() + 1
+  )}/${shifted.getUTCFullYear()}`;
+};
+
 const hb = (window as any).Handlebars;
 if (hb) {
+  hb.registerHelper("sriDate", (value: any, offset: any) =>
+    formatSriDate(value, typeof offset === "object" ? undefined : offset)
+  );
   hb.registerHelper("partyAddressLines", getPartyAddressLines);
   hb.registerHelper("formatCountryName", formatCountryName);
   hb.registerHelper("itemColumnValue", getItemColumnValue);

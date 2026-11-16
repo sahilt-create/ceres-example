@@ -192,7 +192,11 @@ describe("Sri Lankan template print boundaries", () => {
     expect(template).toContain("{{sri.summaryLabels.tax}}");
     expect(template).toContain("{{sri.summaryLabels.hsn}}");
     expect(template).toContain("{{sri.summaryLabels.batch}}");
-    expect(template).toContain("heading=sri.summaryLabels.payments");
+    expect(template).toContain("{{../sri.summaryLabels.payments}}");
+    expect(template).not.toMatch(/formateShortDateWithOffset|formatDate /);
+    expect(template).toContain(
+      "{{sriDate paymentDate ../../invoice.ownerOffset}}"
+    );
     expect(template).toContain("{{#each sri.widgets.batchSummary.columns}}");
     expect(template).toContain("{{#each sri.widgets.batchSummary.rows}}");
     expect(template).toContain("{{#if sri.isVatTax}}");
