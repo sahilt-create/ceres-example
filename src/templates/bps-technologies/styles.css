@@ -351,6 +351,14 @@
   grid-template-columns: repeat(3, minmax(min-content, 1fr));
 }
 
+/* Shipped From | Shipped To (| Transport Details): however many cells print, they share the
+   width evenly, so two cells are halves, not two thirds with an empty third (user 17 Nov). */
+.bp-row-logistics {
+  grid-template-columns: none;
+  grid-auto-columns: minmax(min-content, 1fr);
+  grid-auto-flow: column;
+}
+
 /* The seller | the details and the customer: the seller a little wider (the client's box). */
 .bp-row-parties {
   grid-template-columns: minmax(min-content, 55fr) minmax(min-content, 45fr);
@@ -385,6 +393,13 @@
   line-height: 1.4;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* Shipped From / Shipped To: plain, no underline, in the weight of the address under them
+   (user, 2026-11-17). */
+.bp-ship .bp-caption {
+  font-weight: 400;
+  text-decoration: none;
 }
 
 /* The seller's name bold and underlined, the address and fields plain under it. */
@@ -1378,8 +1393,10 @@
 /* Under 600 px: the rows' cells stack, a rule between them; the header's QR goes under the
    title; the bottom's halves stack. */
 @container bp-doc (width < 600px) {
-  .bp-row {
+  .bp-row,
+  .bp-row-logistics {
     grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
   }
 
   .bp-cell + .bp-cell {
@@ -2667,19 +2684,43 @@ body[class~="isDibella"]
   line-height: 1.8;
 }
 
-/* ➢, drawn: an arrowhead outlined in ink, its lower half filled (the client's Word bullet). */
-.bp-fixed .bp-fixed-list > li::before {
-  top: calc(0.9em - 0.42em);
-  inset-inline-start: 0;
-  width: 0.84em;
-  height: 0.84em;
-  background: center / contain no-repeat
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M1.5 1.5 18.5 10 1.5 18.5 6 10Z' fill='%23fff' stroke='%23000' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M6 10H18.5L1.5 18.5Z' fill='%23000'/%3E%3C/svg%3E");
-  clip-path: none;
+/* ➢, drawn: an arrowhead outlined in ink, its lower half filled (the client's Word bullet). Two
+   vector shapes (clip-path), the ink arrowhead and its white upper inside over it: a background
+   image was snapped to whole pixels box by box, so the arrows came out in different sizes (user,
+   17 Nov). */
+.bp-fixed .bp-fixed-list > li::before,
+.bp-fixed .bp-fixed-list > li::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  content: "";
+  pointer-events: none;
+
+  /* A whole-pixel box scaled to 0.84em (the list's text is 14px × the text scale) and moved to
+     the first line's middle: a transform is never snapped, so every arrow is the same size. */
+  transform: translateY(calc(0.9em - 0.42em)) scale(calc(0.588 * var(--bp-text-scale, 1)));
+  transform-origin: 0 0;
 }
 
-.bp-doc[dir="rtl"] .bp-fixed .bp-fixed-list > li::before {
-  transform: scaleX(-1);
+.bp-fixed .bp-fixed-list > li::before {
+  background: var(--bp-ink);
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 30% 50%);
+}
+
+.bp-fixed .bp-fixed-list > li::after {
+  background: var(--bp-paper);
+  clip-path: polygon(23.6% 21.9%, 79.9% 50%, 40.5% 50%);
+}
+
+.bp-doc[dir="rtl"] .bp-fixed .bp-fixed-list > li::before,
+.bp-doc[dir="rtl"] .bp-fixed .bp-fixed-list > li::after {
+  right: 0;
+  left: auto;
+  transform: translateY(calc(0.9em - 0.42em))
+    scale(calc(-0.588 * var(--bp-text-scale, 1)), calc(0.588 * var(--bp-text-scale, 1)));
+  transform-origin: 100% 0;
 }
 
 .bp-fixed-lead {

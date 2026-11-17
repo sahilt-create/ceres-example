@@ -685,8 +685,6 @@ describe("BPS Technologies — boolean settings", () => {
     expect(s.mapped.visibility.letterHeadOnFirstPage).toBe(true);
   });
 
-  // Skipped on main: needs master's shared normalizer (src/main/invoiceTemplateNormalization.ts),
-  // which main has in an older form. Passes on master.
   it.skip("irnPosition places the compliance box above or below the items; the document QR prints whenever the document has one", () => {
     const withIrn = (edit?: (invoice: Json) => void) =>
       render((invoice) => {
@@ -1278,8 +1276,6 @@ describe("BPS Technologies — the platform's other settings, under every alias"
     expect(render()).not.toContain("data-ceres-batch-summary");
   });
 
-  // Skipped on main: needs master's shared normalizer (src/main/invoiceTemplateNormalization.ts),
-  // which main has in an older form. Passes on master.
   it.skip("uses the item batches only when the stock summary is switched on, with the business's columns", () => {
     const itemBatches = (invoice: Json) => {
       invoice.items[1].batchSummary = [{ batchName: "LOT-7", quantity: 1 }];
@@ -1879,8 +1875,6 @@ describe("BPS Technologies — review round 2 (2026-10-23)", () => {
     expect(css()).not.toMatch(/150px/);
   });
 
-  // Skipped on main: needs master's shared normalizer (src/main/invoiceTemplateNormalization.ts),
-  // which main has in an older form. Passes on master.
   it.skip("names the Place of Supply from its GST code, as refrens.com", () => {
     const html = render((invoice) => {
       invoice.placeOfSupply = "29";
@@ -2182,8 +2176,6 @@ describe("BPS Technologies — BPS design (2026-11-16)", () => {
     );
   });
 
-  // Skipped on main: needs master's shared normalizer (src/main/invoiceTemplateNormalization.ts),
-  // which main has in an older form. Passes on master.
   it.skip("puts Country / Place of Supply under Shipped To, in the details only without one", () => {
     const supply = (shipped: boolean) =>
       render((invoice) => {
@@ -2720,7 +2712,7 @@ describe("BPS Technologies — fixed pages type (user, 2026-11-16)", () => {
       /\.bp-fixed \.bp-fixed-list \{[^}]*font-size: calc\(var\(--bp-font-size-base\)/
     );
     expect(css).toMatch(
-      /\.bp-fixed \.bp-fixed-list > li::before \{[^}]*data:image\/svg\+xml/
+      /\.bp-fixed \.bp-fixed-list > li::before \{[^}]*clip-path: polygon\(0 0, 100% 50%, 0 100%, 30% 50%\)/
     );
   });
 });

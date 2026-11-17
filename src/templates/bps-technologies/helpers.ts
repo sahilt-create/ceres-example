@@ -4499,12 +4499,14 @@ export const buildBpsView = (root: unknown) => {
   const options = resolveSettings(state);
   const withFields = (party: ReturnType<typeof mapParty>) =>
     party ? { ...party, fields: partyFields(party) } : null;
+  // Shipped From / Shipped To always carry their heading: a cleared label prints the default
+  // word, never a box without a title (user, 2026-11-17).
   const shippedFrom = visibility.shippedFrom
     ? withFields(
         mapParty(
           invoice,
           invoice.shippedFrom,
-          heading(labels, "shippedFrom", "Shipped From"),
+          labelOr(labels, "shippedFrom", "Shipped From"),
           true
         )
       )
@@ -4514,7 +4516,7 @@ export const buildBpsView = (root: unknown) => {
         mapParty(
           invoice,
           invoice.shippedTo,
-          heading(labels, "shippedTo", "Shipped To"),
+          labelOr(labels, "shippedTo", "Shipped To"),
           true
         )
       )
