@@ -2803,7 +2803,7 @@ body[class~="isDibella"]
   }
 
   .bp-doc .bp-page-body > :is(.bp-box, .bp-items-section, .bp-totals-table, .bp-bottom) + .bp-totals-table .bp-totals > tr:first-child > *,
-  .bp-doc .bp-page-body > :is(.bp-box, .bp-items-section, .bp-totals-table, .bp-bottom) + .bp-bottom .bp-line-start > td,
+  .bp-doc .bp-page-body > :is(.bp-box, .bp-items-section, .bp-totals-table, .bp-bottom) + .bp-bottom .bp-lines-head td,
   .bp-doc .bp-page-body > :is(.bp-box, .bp-items-section, .bp-totals-table, .bp-bottom) + .bp-widget-table .ceres-table > thead > tr:first-child > th {
     border-top-width: 1px;
   }
@@ -2829,5 +2829,53 @@ body[class~="isDibella"]
 @container bp-doc (width < 600px) {
   .bp-bank > .bp-upi {
     align-self: center;
+  }
+}
+
+/* The summary tables at the end, after the notes and attachments (user, 2026-11-16): a section
+   gap above them and between them; nothing when none shows. */
+
+/* A space between the tables, each its own box (user, 2026-11-16). */
+.bp-summaries {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.bp-summaries:not(:has(> .bp-widget-table:not([style*="none"]) .ceres-table)) {
+  display: none;
+}
+
+/* The terms | signature part's top rule is its heading row (template.hbs bp-lines-head), which
+   print repeats at the top of each page it continues on; its first row draws none. */
+.bp-lines > .bp-lines-head td {
+  height: 0;
+  padding: 0;
+  border-top: var(--bp-rule);
+}
+
+.bp-doc .bp-lines .bp-line-start > td {
+  border-top-width: 0;
+}
+
+@media print {
+  .bp-lines > .bp-lines-head {
+    display: table-header-group;
+  }
+}
+
+/*
+ * The terms | signature part's empty spacer row (bp-line-end) could go over to the next page by
+ * itself, leaving a stray rule at that page's top (user, 2026-11-17). In print it is dropped and
+ * the last terms line carries its space, so the part always ends on a line with text.
+ */
+@media print {
+  .bp-lines .bp-line-end {
+    display: none;
+  }
+
+  .bp-lines .bp-line:has(+ .bp-line-end) > .bp-line-cell {
+    padding-bottom: calc(3px + 12px);
   }
 }

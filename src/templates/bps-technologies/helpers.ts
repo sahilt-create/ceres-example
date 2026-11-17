@@ -4607,8 +4607,8 @@ export const buildBpsView = (root: unknown) => {
     ),
     // BPS design: the customer's lines in the details list, "Customer Name: …", "Address: …".
     // The client's fixed last two pages (Premium Services, Terms & Conditions), copied as the
-    // client wrote them; quotations only (user, 2026-11-16).
-    fixedPages: text(invoice.billType).toUpperCase() === "QUOTATION",
+    // client wrote them, on every document type (user, 2026-11-17: missing on the others).
+    fixedPages: true,
     customerLabel: "Customer Name",
     addressLabel: "Address",
     // The band's details strip: the document details, then what is due.
