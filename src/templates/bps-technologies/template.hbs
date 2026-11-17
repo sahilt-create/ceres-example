@@ -403,53 +403,6 @@
             </div>
           {{/if}}
 
-          {{!-- The summaries join the frame under the totals (BPS design keeps every figure in the
-                ruled box); rendered with their data, hidden while switched off (live toggles). --}}
-          <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
-            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
-          </section>
-
-          <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
-            {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
-          </section>
-
-          {{#if view.stock}}
-            <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="stock-summary" data-ceres-batch-summary{{#if view.stock.hidden}} style="display: none;"{{/if}}>
-              <div class="ceres-table-section">
-                <table class="ceres-table bp-stock-table">
-                  <thead><tr>{{#each view.stock.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
-                  <tbody>
-                    {{#each view.stock.rows}}
-                      <tr>{{#each this}}<td{{#if isNum}} class="bp-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
-                    {{/each}}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          {{/if}}
-
-          {{#if view.payments.show}}
-            <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
-              <div class="ceres-table-section">
-                <table class="ceres-table bp-payments-table">
-                  <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
-                  <tbody>
-                    {{#each view.payments.rows}}
-                      <tr data-testid="payment">
-                        {{#each this}}
-                          <td{{#unless isText}} class="bp-num"{{/unless}}>{{#if isDate}}{{bpDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="bp-payment-converted">{{converted}}</span>{{/if}}</td>
-                        {{/each}}
-                      </tr>
-                    {{/each}}
-                  </tbody>
-                  {{#if view.payments.total}}
-                    <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="bp-num">{{value}}</td>{{/each}}</tr></tfoot>
-                  {{/if}}
-                </table>
-              </div>
-            </section>
-          {{/if}}
-
           {{!-- Bank details on the left, the UPI QR with "SCAN & PAY" under it on the right. --}}
           {{#if view.bank.show}}
             <section class="bp-box bp-card bp-bank" data-testid="section" data-section="bank">
@@ -493,6 +446,9 @@
           <div class="bp-bottom" data-testid="section" data-section="bottom">
             <table class="bp-lines" role="presentation">
               <colgroup><col class="bp-lines-main" /><col class="bp-lines-side" /></colgroup>
+              {{!-- The top rule as a heading row: repeated at the top of every page the part
+                    continues on, so each page's piece opens closed (user, 2026-11-16). --}}
+              <thead class="bp-lines-head" aria-hidden="true"><tr><td colspan="2"></td></tr></thead>
               <tfoot class="bp-lines-foot" aria-hidden="true"><tr><td colspan="2"></td></tr></tfoot>
               <tbody>
                 <tr class="bp-line bp-line-start"><td class="bp-line-cell"></td><td class="bp-bottom-side" rowspan="1000">
@@ -543,6 +499,56 @@
               </ul>
             </section>
           {{/if}}
+
+          <div class="bp-summaries">
+          {{!-- The summaries last, after the notes and attachments, before the fixed pages (user,
+                2026-11-16); rendered with their data, hidden while switched off (live toggles). --}}
+          <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
+            {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          {{#if view.stock}}
+            <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="stock-summary" data-ceres-batch-summary{{#if view.stock.hidden}} style="display: none;"{{/if}}>
+              <div class="ceres-table-section">
+                <table class="ceres-table bp-stock-table">
+                  <thead><tr>{{#each view.stock.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.stock.rows}}
+                      <tr>{{#each this}}<td{{#if isNum}} class="bp-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.payments.show}}
+            <section class="bp-box bp-card bp-widget-table" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
+              <div class="ceres-table-section">
+                <table class="ceres-table bp-payments-table">
+                  <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.payments.rows}}
+                      <tr data-testid="payment">
+                        {{#each this}}
+                          <td{{#unless isText}} class="bp-num"{{/unless}}>{{#if isDate}}{{bpDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="bp-payment-converted">{{converted}}</span>{{/if}}</td>
+                        {{/each}}
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                  {{#if view.payments.total}}
+                    <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="bp-num">{{value}}</td>{{/each}}</tr></tfoot>
+                  {{/if}}
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          </div>
 
           {{!--
             The last two pages: the client's fixed text, copied as written (user, 2026-11-16: "ye

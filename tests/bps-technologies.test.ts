@@ -773,15 +773,16 @@ describe("BPS Technologies — boolean settings", () => {
     expect(html.slice(html.indexOf('class="bp-bottom-side"'))).toMatch(
       /^[^]*?data-section="terms"/
     );
+    // The summaries last, after the notes and attachments (user, 2026-11-16).
     const order = [
       "additional",
       "totals",
-      "hsn",
-      "tax-summary",
       "bank",
       "terms",
       "notes",
       "attachments",
+      "hsn",
+      "tax-summary",
       "enquiry",
     ].map((section) => html.indexOf(`data-section="${section}"`));
     expect(order.every((at) => at > 0)).toBe(true);
@@ -1689,7 +1690,7 @@ describe("BPS Technologies — boxes split by a page break", () => {
     // The bottom part's lines are table rows; the table's footer row, repeated at each page's
     // foot in Chrome 122 too, draws the part's bottom rule there.
     expect(hbs).toMatch(
-      /<table class="bp-lines" role="presentation">\s*<colgroup>[\s\S]*?<\/colgroup>\s*<tfoot class="bp-lines-foot"/
+      /<table class="bp-lines" role="presentation">\s*<colgroup>[\s\S]*?<\/colgroup>[\s\S]*?<thead class="bp-lines-head"[\s\S]*?<tfoot class="bp-lines-foot"/
     );
     expect(source).toMatch(
       /\.bp-lines > \.bp-lines-foot td \{[^}]*border-top: var\(--bp-rule\);/
@@ -2384,7 +2385,7 @@ describe("BPS Technologies — the client's four pages (brief, 2026-11-16)", () 
     );
   });
 
-  it("prints the client's fixed last two pages on quotations, as written, each on a new page", () => {
+  it("prints the client's fixed last two pages on every document type, as written, each on a new page", () => {
     const html = render((invoice) => {
       invoice.terms = [{ label: "Payments Terms", terms: ["10% Advance."] }];
     });
@@ -2395,11 +2396,22 @@ describe("BPS Technologies — the client's four pages (brief, 2026-11-16)", () 
       /bp-fixed bp-page-start"[^>]*data-section="fixed-terms"[\s\S]*?Terms &amp; Conditions[\s\S]*?Prices quoted are valid until the proposal’s expiry date\./
     );
     expect(html.match(/<li>/g)?.length).toBeGreaterThanOrEqual(10);
-    const invoice = render((doc) => {
-      doc.billType = "INVOICE";
+    // Every document type prints them (user, 2026-11-17).
+    [
+      "INVOICE",
+      "PROFORMA",
+      "SALES_ORDER",
+      "DELIVERY_CHALLAN",
+      "CREDIT_NOTE",
+      "DEBIT_NOTE",
+      "PURCHASE_ORDER",
+    ].forEach((billType) => {
+      const doc = render((invoice) => {
+        invoice.billType = billType;
+      });
+      expect(doc).toContain('data-section="fixed-services"');
+      expect(doc).toContain('data-section="fixed-terms"');
     });
-    expect(invoice).not.toContain('data-section="fixed-services"');
-    expect(invoice).not.toContain('data-section="fixed-terms"');
   });
 
   it("leaves out the page's own logo, tagline and document QR (the letterhead carries them)", () => {
@@ -2806,5 +2818,47 @@ describe("BPS Technologies — UPI at the bank box's foot (user, 2026-11-16)", (
   it("aligns the UPI QR and caption to the bottom of the bank box", () => {
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     expect(css).toMatch(/\.bp-bank > \.bp-upi \{\s*align-self: flex-end;/);
+  });
+});
+
+describe("BPS Technologies — all summary tables at the end (user, 2026-11-16)", () => {
+  it("prints the HSN, tax, batch and payment tables together after the notes, before the fixed pages", () => {
+    const html = render((invoice) => {
+      invoice.notes = "List of components";
+      invoice.advanceOptions.showHsnSummary = true;
+      invoice.advanceOptions.taxSummaryView = "TABLE";
+      invoice.advanceOptions.showStockSummary = true;
+      invoice.items[1].batchSummary = [{ batchName: "LOT-7", quantity: 1 }];
+      invoice.defaultBatchColumns = [
+        { key: "batchName", label: "Lot" },
+        { key: "quantity", label: "Qty" },
+      ];
+      invoice.advanceOptions.showPaymentsTable = true;
+      invoice.allPayments = [
+        { amount: 1000, paymentDate: "2026-06-01", paymentMethod: "CASH" },
+      ];
+    });
+    const at = (section: string) => html.indexOf(`data-section="${section}"`);
+    ["hsn", "tax-summary", "stock-summary", "payments"].forEach((section) => {
+      expect(at(section)).toBeGreaterThan(at("notes"));
+      expect(at(section)).toBeGreaterThan(at("bank"));
+      expect(at(section)).toBeLessThan(at("fixed-services"));
+    });
+    const group = html.slice(
+      html.indexOf('class="bp-summaries"'),
+      at("fixed-services")
+    );
+    ["hsn", "tax-summary", "stock-summary", "payments"].forEach((section) =>
+      expect(group).toContain(`data-section="${section}"`)
+    );
+  });
+});
+
+describe("BPS Technologies — space between summary tables (user, 2026-11-16)", () => {
+  it("puts a 16 px space between the summary tables", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.bp-summaries \{\s*display: flex;\s*flex-direction: column;\s*gap: 16px;/
+    );
   });
 });
