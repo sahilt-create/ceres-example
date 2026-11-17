@@ -2712,7 +2712,7 @@ describe("BPS Technologies — fixed pages type (user, 2026-11-16)", () => {
       /\.bp-fixed \.bp-fixed-list \{[^}]*font-size: calc\(var\(--bp-font-size-base\)/
     );
     expect(css).toMatch(
-      /\.bp-fixed \.bp-fixed-list > li::before \{[^}]*data:image\/svg\+xml/
+      /\.bp-fixed \.bp-fixed-list > li::before \{[^}]*clip-path: polygon\(0 0, 100% 50%, 0 100%, 30% 50%\)/
     );
   });
 });

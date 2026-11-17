@@ -484,9 +484,10 @@
 
           {{!-- Notes, Additional Information and Attachments after the box, unboxed, each under an
                 underlined heading (the client's component list, warranty, services and terms
-                pages). They run on line by line across page breaks. --}}
+                pages). They run on line by line across page breaks. In print the notes start
+                a new page (user, 17 Nov); pageless runs on after a section gap. --}}
           {{#if view.notes}}
-            <section class="bp-plain bp-notes" data-testid="section" data-section="notes">
+            <section class="bp-plain bp-notes bp-page-start" data-testid="section" data-section="notes">
               {{#if view.notes.title}}<h2 class="bp-plain-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
               <div class="bp-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
             </section>
