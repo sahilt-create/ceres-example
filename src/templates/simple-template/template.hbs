@@ -120,23 +120,13 @@
           </header>
 
           <div class="sm-box sm-row sm-row-parties" data-testid="section" data-section="parties">
-            {{!-- The document details: label | bold value; the IRN and e-way bill after the dates;
-                  Country / Place of Supply here only when there is no Shipped To. --}}
+            {{!-- The document details: label | bold value; Country / Place of Supply here only when
+                  there is no Shipped To. --}}
             <div class="sm-cell sm-meta{{#unless view.hasDetailsRow}} is-empty{{/unless}}" data-testid="section" data-section="details">
               <div class="sm-fields">
                 {{#each view.details}}
                   <p class="sm-field sm-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="sm-field-label">{{label}}</span><span class="sm-field-value{{#if isNum}} sm-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span></p>
                 {{/each}}
-                {{#unless view.compliance.isBelowItems}}
-                  <span class="sm-compliance sm-meta-compliance" data-testid="section" data-section="compliance">
-                    {{#if view.compliance.showIrn}}
-                      <p class="sm-field sm-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}><span class="sm-field-label">{{view.compliance.irnLabel}}</span><span class="sm-field-value sm-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
-                    {{/if}}
-                    {{#each view.compliance.rows}}
-                      <p class="sm-field sm-compliance-{{key}}"><span class="sm-field-label">{{label}}</span><span class="sm-field-value sm-num" data-testid="num">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span></p>
-                    {{/each}}
-                  </span>
-                {{/unless}}
                 {{#if view.supply}}{{#unless view.supplyInShipping}}
                   <span class="sm-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
                     {{#each view.supply.rows}}
@@ -211,6 +201,22 @@
             {{/if}}
           </div>
           {{/if}}
+
+          {{!-- The e-invoice and e-way bill details (IRN, Ack No., Ack Date, E-way Bill, …): a
+                ruled box of their own across the frame, before the items, label bold, value
+                regular (user's screenshot, 2026-11-18). Its QR stays in the header. --}}
+          {{#unless view.compliance.isBelowItems}}
+            <div class="sm-box sm-compliance-box{{#unless view.compliance.hasText}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+              <div class="sm-fields sm-compliance-fields">
+                {{#if view.compliance.showIrn}}
+                  <p class="sm-field sm-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}><span class="sm-field-label">{{view.compliance.irnLabel}}</span><span class="sm-field-value sm-irn-value" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+                {{/if}}
+                {{#each view.compliance.rows}}
+                  <p class="sm-field sm-compliance-{{key}}"><span class="sm-field-label">{{label}}</span><span class="sm-field-value sm-num" data-testid="num">{{#if isDate}}{{smDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{smDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                {{/each}}
+              </div>
+            </div>
+          {{/unless}}
 
           <section class="sm-items-section" data-testid="section" data-section="items">
             <div class="sm-items-scroll" data-testid="items-scroll">
@@ -542,7 +548,7 @@
           </div>
 
           {{#if view.enquiry}}
-            <p class="sm-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="sm-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="sm-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
+            <p class="sm-box sm-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="sm-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="sm-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
           {{/if}}
 
           {{> RefrensBranding @root.invoice}}

@@ -481,6 +481,18 @@ const SCRIPT_RANGES: Array<[RegExp, string]> = [
   [/[\u1100-\u11FF\uAC00-\uD7AF]/, "Noto Sans KR"],
   [/[\u3040-\u30FF]/, "Noto Sans JP"],
   [/[\u4E00-\u9FFF\u3400-\u4DBF]/, "Noto Sans SC"],
+  /*
+   * Symbols and punctuation Google's Inter doesn't serve print as "NO GLYPH" boxes in the PDF
+   * service too: arrows, ticks, stars, bullets, maths, ℃ (Symbols 2); the full-width "："
+   * "，" "（" Chinese/Japanese keyboards type, ㎡ ㎏ (SC; a treadmill's "weight：180kg",
+   * 18 Nov 2026); emoji.
+   */
+  [
+    /[\u2100-\u2112\u2114\u2115\u2117-\u2121\u2123-\u2190\u2192\u2194-\u2211\u2213\u2214\u2216-\u23FF\u2460-\u27BF\u2900-\u2BFF]/,
+    "Noto Sans Symbols 2",
+  ],
+  [/[\u3000-\u303F\u3200-\u33FF\uFE30-\uFE4F\uFF00-\uFFEF]/, "Noto Sans SC"],
+  [/[\u{1F000}-\u{1FAFF}]/u, "Noto Color Emoji"],
 ];
 
 const collectText = (value: unknown, out: string[], depth = 0): void => {
@@ -502,8 +514,13 @@ export const detectScriptFonts = (invoice: UnknownRecord): string[] => {
   const parts: string[] = [];
   collectText(invoice, parts);
   const all = parts.join("\n");
-  // Everything Latin, Cyrillic, Greek or Vietnamese: nothing to load.
-  if (!/[^\t\n\r\u0020-\u052F\u1E00-\u1EFF\u2000-\u2BFF]/.test(all)) return [];
+  // Everything Latin, Cyrillic, Greek, Vietnamese or Inter's own punctuation: nothing to load.
+  if (
+    !/[^\t\n\r\u0020-\u052F\u1E00-\u1FFF\u2000-\u206F\u20A0-\u20C4\u2113\u2116\u2122\u2191\u2193\u2212\u2215\uFEFF\uFFFD]/.test(
+      all
+    )
+  )
+    return [];
   return SCRIPT_RANGES.filter(([range]) => range.test(all)).map(
     ([, font]) => font
   );
@@ -4428,7 +4445,15 @@ export const buildSimpleView = (root: unknown) => {
     // it elsewhere (owner.configuration.experimental.qrCodePlacement).
     qrInDetails: qrInDetails(invoice),
     hasBrandRow: Boolean(logo) || !qrInDetails(invoice),
-    compliance: { ...compliance, title: complianceTitle(labels, compliance) },
+    compliance: {
+      ...compliance,
+      title: complianceTitle(labels, compliance),
+      // The IRN / e-way bill box before the items shows while it has a line (its QR prints in
+      // the header).
+      hasText: Boolean(
+        (compliance.showIrn && compliance.irn) || compliance.rows.length
+      ),
+    },
     hasCompliance,
 
     parties,
@@ -4448,10 +4473,7 @@ export const buildSimpleView = (root: unknown) => {
     // The details strip shows while it has a detail, the supply cells or the document QR's
     // place (kept for the host's live QR).
     hasDetailsRow:
-      meta.length > 0 ||
-      supply.show ||
-      Boolean(compliance.qr.document) ||
-      (hasCompliance && !compliance.isBelowItems),
+      meta.length > 0 || supply.show || Boolean(compliance.qr.document),
     // Shipped From in the left column, Shipped To in the right one, whichever is present.
     dispatchParties: [
       shippedFrom ? { ...shippedFrom, role: "shipped-from", column: 1 } : null,
@@ -6226,8 +6248,9 @@ const A4_ASPECT = 297 / 210;
 
 const stretchOnScreen = (doc: HTMLElement, filler: HTMLElement): void => {
   const table = filler.closest<HTMLElement>(".sm-items");
+  // Long PDF is a PDF setting: the preview stretches as for any document (PDF settings never
+  // change the preview; user, 2026-11-18: no stretch on a Long PDF document's preview).
   if (
-    doc.classList.contains("is-pageless") ||
     table?.classList.contains("is-cards") ||
     table?.classList.contains("is-grid")
   ) {
