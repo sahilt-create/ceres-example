@@ -713,6 +713,17 @@
   display: block;
   width: 100%;
   height: auto;
+
+  /* The print cap (55 % of a page, at most 600 px, below) on the preview's sheet too, so the
+     picture is drawn as large on screen as in the PDF (user, 2026-11-18: the preview showed it
+     across the whole table, the PDF at half that). An A4 sheet is 1.414 times its width tall. */
+  max-height: min(calc(0.55 * 141.4cqw), 600px);
+  object-fit: contain;
+  object-position: left top;
+}
+
+.sm-doc[dir="rtl"] .sm-large-image {
+  object-position: right top;
 }
 
 .sm-large-image + .sm-large-image {
@@ -1891,6 +1902,15 @@ body[class~="isDibella"]
 /* A full-width description beside its own # cell: that column runs on into the space, unruled. */
 .sm-doc.is-filled .sm-items > tbody > tr.sm-detail-row:has(> td.sm-col-serial) + .sm-filler > td.sm-col-serial {
   border-top: 0;
+}
+
+/* Under a row across the whole table the space stays open as that row: no column rules, only
+   the frame's end (and a full-width description's own # column) run down it (user, 2026-11-18:
+   "why are these lines there"). Transparent, so the columns keep their widths. */
+.sm-doc.is-filled .sm-items > tbody > tr:is(.sm-image-row, :has(> td[colspan]:only-child)) + .sm-filler > td:not(:last-child),
+.sm-doc.is-filled .sm-items > tbody > tr:is(.sm-image-row, :has(> td[colspan]:only-child)) + tr[style*="none"] + .sm-filler > td:not(:last-child),
+.sm-doc.is-filled .sm-items > tbody > tr.sm-detail-row:not([style*="none"]):has(> td.sm-col-serial) + .sm-filler > td:not(:last-child, .sm-col-serial) {
+  border-inline-end-color: transparent;
 }
 
 /* Not the table's end: the space carries no rule of its own (the separator is a border now,
