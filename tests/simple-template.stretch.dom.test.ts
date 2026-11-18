@@ -198,12 +198,13 @@ describe("Simple Template — the preview's A4 sheet", () => {
     ]);
   });
 
-  it("leaves a Pageless document as it is", () => {
+  // Long PDF is a PDF setting: the preview stretches as for any document (user, 2026-11-18).
+  it("stretches a Long PDF document's preview as any other", () => {
     media(false);
     const { doc, filler } = mount(" is-pageless");
     stretchItemTable();
-    expect(fillerHeight(filler)).toBe("");
-    expect(doc.classList.contains("is-filled")).toBe(false);
+    expect(fillerHeight(filler)).toBe("814px");
+    expect(doc.classList.contains("is-filled")).toBe(true);
   });
 
   it("leaves the cards and grid layouts as they are", () => {

@@ -224,10 +224,10 @@ describe("Simple Template — render", () => {
           .replace(/\s+/g, " ")
           .trim()
     );
-    // The serial heading prints the business's label (Simple design: "#").
-    expect(header).toMatch(/data-col="sr"[^>]*>#<\/th>/);
+    // The serial heading prints the business's label, else "S.No." (user, 2026-11-18).
+    expect(header).toMatch(/data-col="sr"[^>]*>S\.No\.<\/th>/);
     expect(labels).toEqual([
-      "#",
+      "S.No.",
       "Product Description",
       "Location",
       "Remote Type",
@@ -1029,7 +1029,8 @@ describe("Simple Template — view model", () => {
       invoice.irn = { Irn: "abc", qrCode: "irn-qr-payload" };
     });
     expect(active).toContain("sm-doc-qr is-empty");
-    // The IRN and the e-way bill are lines of the details; no E-Invoice card above the items.
+    // The IRN and the e-way bill: a ruled box of their own before the items, not lines of the
+    // document details (user's screenshot, 2026-11-18).
     const eway = render((invoice) => {
       invoice.irn = {
         Irn: "abc123",
@@ -1038,17 +1039,21 @@ describe("Simple Template — view model", () => {
       };
     });
     expect(eway).toMatch(
-      /data-section="details"[\s\S]*?sm-irn-row[\s\S]*?abc123[\s\S]*?Eway Bill[\s\S]*?602218603039[\s\S]*?Eway Date/
+      /class="sm-box sm-compliance-box" data-testid="section" data-section="compliance">[\s\S]*?sm-irn-row[\s\S]*?abc123[\s\S]*?Eway Bill[\s\S]*?602218603039[\s\S]*?Eway Date[\s\S]*?data-section="items"/
     );
-    expect(eway).not.toMatch(
-      /data-section="logistics"[\s\S]*?data-section="compliance"[\s\S]*?data-section="items"/
+    const details = eway.slice(
+      eway.indexOf('data-section="details"'),
+      eway.indexOf('data-section="compliance"')
     );
+    expect(details).not.toContain("abc123");
+    // No IRN or e-way bill: the box is not shown.
+    expect(render()).toContain('sm-compliance-box is-empty"');
   });
 
-  it("sizes the table from the design's 958 px table with a 30 px serial column, as shares of the table", () => {
+  it("sizes the table from the design's 958 px table with a 44 px S.No. column, as shares of the table", () => {
     const s = state();
     const table = mapItemTable(s, formatContext(s.invoice));
-    expect(table.serialWidth).toBe(30);
+    expect(table.serialWidth).toBe(44);
     const rate = table.header.find((cell: Json) => cell.key === "rate");
     expect(rate?.width).toBeGreaterThanOrEqual(70);
     expect(rate?.share).toBeCloseTo(((rate?.width as number) / 958) * 100, 2);
@@ -1904,7 +1909,7 @@ describe("Simple Template — header rows in print", () => {
   it("prints the header, each row of three cells and the words line whole", () => {
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     expect(css).toMatch(
-      /\.sm-head,\s*\.sm-row,\s*\.sm-words,\s*\.sm-row > \.sm-cell \{\s*break-inside: avoid;/
+      /\.sm-head,\s*\.sm-row,\s*\.sm-compliance-box,\s*\.sm-words,\s*\.sm-row > \.sm-cell \{\s*break-inside: avoid;/
     );
   });
 });
@@ -2041,6 +2046,24 @@ describe("Simple Template — real PDF findings (2026-11-01)", () => {
     expect(mapScript(khmer).font).toBe("'Noto Sans Khmer'");
     expect(template(khmer)).toContain("--sm-script-font: 'Noto Sans Khmer';");
     expect(mapScript(state()).font).toBe("");
+  });
+
+  // "weight：180kg" printed a NO GLYPH box: Google's Inter lacks the full-width colon (2026-11-18).
+  it("loads fonts for full-width punctuation, symbols and emoji Inter lacks", () => {
+    const withText = (value: string) =>
+      mapScript(
+        state((invoice) => {
+          (invoice.billedTo as Record<string, unknown>).name = value;
+        })
+      ).font;
+    expect(withText("Maximum user weight：180kg（approx.）")).toBe(
+      "'Noto Sans SC'"
+    );
+    expect(withText("Area 12㎡")).toBe("'Noto Sans SC'");
+    expect(withText("Waterproof ✓ → ★ ≤ 40℃")).toBe("'Noto Sans Symbols 2'");
+    expect(withText("Great 👍")).toBe("'Noto Color Emoji'");
+    // Inter's own: curly quotes, dashes, ₹, €, №, ™, ×, bullet.
+    expect(withText("“Size” – 210×93 — ₹ € № ™ • …")).toBe("");
   });
 
   // Tabloid fell back to A4: the page was laid out an A4 column wide.

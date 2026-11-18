@@ -378,7 +378,6 @@
 }
 
 .sm-field,
-.sm-fields > .sm-meta-compliance,
 .sm-fields > .sm-supply {
   display: contents;
 }
@@ -402,6 +401,29 @@
 
 .sm-irn-value {
   overflow-wrap: anywhere;
+}
+
+/* The e-invoice and e-way bill details: a box of their own before the items, label bold and
+   value regular (user's screenshot, 2026-11-18). */
+.sm-compliance-box {
+  padding: var(--sm-pad);
+}
+
+.sm-compliance-box.is-empty {
+  display: none;
+}
+
+.sm-compliance-fields {
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 24px;
+}
+
+.sm-compliance-fields .sm-field-label {
+  font-weight: 600;
+}
+
+.sm-compliance-fields .sm-field-value {
+  font-weight: 400;
 }
 
 /* The document details: label and value columns, the values bold (design). */
@@ -691,6 +713,17 @@
   display: block;
   width: 100%;
   height: auto;
+
+  /* The print cap (55 % of a page, at most 600 px, below) on the preview's sheet too, so the
+     picture is drawn as large on screen as in the PDF (user, 2026-11-18: the preview showed it
+     across the whole table, the PDF at half that). An A4 sheet is 1.414 times its width tall. */
+  max-height: min(calc(0.55 * 141.4cqw), 600px);
+  object-fit: contain;
+  object-position: left top;
+}
+
+.sm-doc[dir="rtl"] .sm-large-image {
+  object-position: right top;
 }
 
 .sm-large-image + .sm-large-image {
@@ -918,15 +951,15 @@
   overflow-wrap: anywhere;
 }
 
-.sm-lines .sm-attachment > td {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* A long file name ends in "…" on its own line. The link clips, not the cell: a clipping cell
+   cut off the part's right edge, which the cell draws across the right half (user, 2026-11-18). */
 .sm-lines .sm-attachment a {
+  display: block;
+  overflow: hidden;
   color: inherit;
   text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Additional Information: a ruled row each, the label a third of the half, the value bold. */
@@ -935,7 +968,7 @@
 }
 
 .sm-closing .sm-kv-row > td {
-  padding-block: 1px;
+  padding-block: 0;
   border-top: var(--sm-rule);
 }
 
@@ -943,17 +976,22 @@
   height: 0;
 }
 
+/* Label | value with a rule between them, the row's full height (user, 2026-11-18). */
 .sm-kv-line {
   display: grid;
-  grid-template-columns: 36% minmax(0, 1fr);
-  gap: 0 var(--sm-pad);
+  grid-template-columns: 40% minmax(0, 1fr);
 }
 
 .sm-kv-line > .sm-kv-label {
+  padding-block: 1px;
+  padding-inline-end: var(--sm-pad);
+  border-inline-end: var(--sm-rule);
   overflow-wrap: break-word;
 }
 
 .sm-kv-line > .sm-kv-value {
+  padding-block: 1px;
+  padding-inline-start: var(--sm-pad);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -1068,10 +1106,18 @@
   text-decoration: underline;
 }
 
-/* A payment in another currency: its business-currency amount under it. */
+/* A payment in another currency: its business-currency amount under it, bold (Refrens' own
+   Simple template). */
 .sm-payment-converted {
   display: block;
-  color: var(--sm-muted);
+  color: var(--sm-ink);
+  font-weight: 600;
+}
+
+/* Payments as Refrens' own Simple template prints them: every cell centred, set at the top. */
+.sm-doc .sm-widget-table .sm-payments-table > * > tr > :is(th, td) {
+  text-align: center;
+  vertical-align: top;
 }
 
 /* ------------------------------------------------------------ signature */
@@ -1215,9 +1261,10 @@
   display: none;
 }
 
-/* Refrens' closing line from the document's contact details, under the frame. */
+/* Refrens' closing line from the document's contact details: the frame's last ruled row
+   (Refrens' own Simple template; user, 2026-11-18). */
 .sm-enquiry {
-  margin-top: 12px;
+  padding: 2px var(--sm-pad);
   color: var(--sm-ink);
   text-align: center;
   line-height: var(--sm-lh);
@@ -1578,6 +1625,7 @@
      never splits (on a narrow page its stacked cells may, see the container rules). */
   .sm-head,
   .sm-row,
+  .sm-compliance-box,
   .sm-words,
   .sm-row > .sm-cell {
     break-inside: avoid;
@@ -1777,10 +1825,6 @@
     letter-spacing: calc(0.02em - 0.25px);
   }
 
-  /* The enquiry line keeps its 12 px under the frame (the paragraph reset outranks it). */
-  .sm-doc .sm-page-body > .sm-enquiry {
-    margin-top: 12px;
-  }
 
   .sm-footer-spacer {
     padding-top: var(--sm-section-gap);
@@ -1845,6 +1889,28 @@ body[class~="isDibella"]
 .sm-doc.is-filled .sm-items .sm-filler > td {
   height: var(--sm-filler-height, 0);
   padding-block: 0;
+}
+
+/* Under a row across the whole table (a full-width description, the original images) the space
+   opens with a rule, where the column rules begin; a cell's height takes in its border, so the
+   space stays as tall and the page's fit is unchanged (user, 2026-11-18: the line was missing). */
+.sm-doc.is-filled .sm-items > tbody > tr:is(.sm-detail-row:not([style*="none"]), .sm-image-row, :has(> td[colspan]:only-child)) + .sm-filler > td,
+.sm-doc.is-filled .sm-items > tbody > tr:is(.sm-image-row, :has(> td[colspan]:only-child)) + tr[style*="none"] + .sm-filler > td {
+  border-top: var(--sm-separator) solid var(--sm-sep-color);
+}
+
+/* A full-width description beside its own # cell: that column runs on into the space, unruled. */
+.sm-doc.is-filled .sm-items > tbody > tr.sm-detail-row:has(> td.sm-col-serial) + .sm-filler > td.sm-col-serial {
+  border-top: 0;
+}
+
+/* Under a row across the whole table the space stays open as that row: no column rules, only
+   the frame's end (and a full-width description's own # column) run down it (user, 2026-11-18:
+   "why are these lines there"). Transparent, so the columns keep their widths. */
+.sm-doc.is-filled .sm-items > tbody > tr:is(.sm-image-row, :has(> td[colspan]:only-child)) + .sm-filler > td:not(:last-child),
+.sm-doc.is-filled .sm-items > tbody > tr:is(.sm-image-row, :has(> td[colspan]:only-child)) + tr[style*="none"] + .sm-filler > td:not(:last-child),
+.sm-doc.is-filled .sm-items > tbody > tr.sm-detail-row:not([style*="none"]):has(> td.sm-col-serial) + .sm-filler > td:not(:last-child, .sm-col-serial) {
+  border-inline-end-color: transparent;
 }
 
 /* Not the table's end: the space carries no rule of its own (the separator is a border now,
