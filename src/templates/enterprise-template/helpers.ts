@@ -4542,11 +4542,9 @@ export const buildEnterpriseView = (root: unknown) => {
   const buyer = billedToParty
     ? {
         ...billedToParty,
-        title: mergedFields
-          ? [billedToParty.title, shippedTo ? shippedTo.title : ""]
-              .filter(Boolean)
-              .join(" & ")
-          : billedToParty.title,
+        // Always "Billed To & Shipped To" when merged, whatever the business calls Billed To
+        // (user, 2026-11-19: "Quotation For & Shipped To" → "Billed To & Shipped To").
+        title: mergedFields ? "Billed To & Shipped To" : billedToParty.title,
         fields: (mergedFields || billedToParty.fields) as Array<
           Record<string, unknown>
         >,
@@ -4662,8 +4660,9 @@ export const buildEnterpriseView = (root: unknown) => {
     notes: notes.notes,
     additional,
     attachments: notes.attachments,
-    // Terms or attachments on the left of the bank (template.hbs is-solo otherwise).
-    hasBottomLines: terms.length > 0 || Boolean(notes.attachments),
+    // Terms on the left of the bank (template.hbs is-solo otherwise); attachments are a part
+    // of their own after the notes (Refrens' own Enterprise, 2026-11-19).
+    hasBottomLines: terms.length > 0,
     /*
      * The summaries render whenever there is data, hidden while their setting is off, so the
      * host's live toggles (data-ceres-hsn-summary / -tax-summary / -payment-table) can show

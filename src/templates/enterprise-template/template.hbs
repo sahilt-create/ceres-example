@@ -435,7 +435,7 @@
           {{/if}}
 
           {{!--
-            Terms, notes, attachments | bank and UPI: one table. Each line of the left half is a row
+            Terms | bank and UPI: one table. Each line of the left half is a row
             whose cell draws the part's rules (its left edge, the rule between the halves, and the
             right edge across the bank's column), the bank sits in a cell spanning every row, and
             the footer row draws the bottom rule. In print a page break falls between rows and the
@@ -443,7 +443,7 @@
             (Chrome 122 copies no border onto a box broken across pages; user, 2026-11-13). Terms
             are numbered by the stylesheet.
           --}}
-          {{!-- Without a line on the left (no terms or attachments; no Additional Information), the
+          {{!-- Without a line on the left (no terms; no Additional Information), the
                 bank / signature cell takes the part's whole width (is-solo). --}}
           <div class="en-bottom" data-testid="section" data-section="bottom">
             <table class="en-lines" role="presentation">
@@ -463,18 +463,20 @@
                         {{/each}}
                       </div>
                     {{/if}}
-                    {{#if view.bank.upi}}
+                    {{!-- The UPI ID under the QR (Refrens' own Enterprise); here only without a QR. --}}
+                    {{#if view.bank.upi}}{{#unless view.bank.upi.qr}}
                       <div class="en-upi-id-block">
                         <h3 class="en-card-title en-upi-label">{{view.bank.upi.label}}</h3>
                         <p class="en-upi-id en-num" data-testid="num">{{view.bank.upi.id}}</p>
                       </div>
-                    {{/if}}
+                    {{/unless}}{{/if}}
                   </div>
                   {{#if view.bank.upi.qr}}
                     <figure class="en-upi">
                       <figcaption class="en-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
                       <img class="en-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
                       {{#if view.bank.upi.note}}<p class="en-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                      {{#if view.bank.upi.id}}<p class="en-upi-id en-num" data-testid="num">{{view.bank.upi.id}}</p>{{/if}}
                     </figure>
                   {{/if}}
                 </section>
@@ -484,10 +486,6 @@
                   <tr class="en-line en-line-title en-terms" data-testid="section" data-section="terms"><td class="en-line-cell"><h2 class="en-card-title" data-role="title">{{title}}</h2></td></tr>
                   {{#each items}}<tr class="en-line en-term"><td class="en-line-cell"><div class="en-term-row"><span class="en-term-no" aria-hidden="true"></span><span class="en-term-text">{{this}}</span></div></td></tr>{{/each}}
                 {{/each}}
-                {{#if view.attachments}}
-                  <tr class="en-line en-line-title" data-testid="section" data-section="attachments"><td class="en-line-cell">{{#if view.attachments.title}}<h2 class="en-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}</td></tr>
-                  {{#each view.attachments.files}}<tr class="en-line en-attachment"><td class="en-line-cell"><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></td></tr>{{/each}}
-                {{/if}}
                 {{#if view.hasBottomLines}}<tr class="en-line en-line-end"><td class="en-line-cell"></td></tr>{{/if}}
               </tbody>
             </table>
@@ -506,6 +504,23 @@
                   {{#each view.notes.blocks}}
                     <tr class="en-line en-notes{{#if (enLeadBlock this)}} is-lead{{/if}}"{{#if @first}} data-testid="section" data-section="notes"{{/if}}><td class="en-line-cell"><div class="en-note-body">{{> MarkdownViewer (prepareMarkdownViewerData this) }}</div></td></tr>
                   {{/each}}
+                  <tr class="en-line en-line-end"><td class="en-line-cell"></td></tr>
+                </tbody>
+              </table>
+            </div>
+          {{/if}}
+
+          {{!-- Attachments in a part of their own across the frame, after the notes (Refrens' own
+                Enterprise, user 2026-11-19): one-column lines, closed at a page foot like the others. --}}
+          {{#if view.attachments}}
+            <div class="en-bottom en-attachments-part" data-testid="section" data-section="attachments-part">
+              <table class="en-lines is-full" role="presentation">
+                <colgroup><col class="en-lines-main" /></colgroup>
+                <tfoot class="en-lines-foot" aria-hidden="true"><tr><td></td></tr></tfoot>
+                <tbody>
+                  <tr class="en-line en-line-start"><td class="en-line-cell"></td></tr>
+                  <tr class="en-line en-line-title" data-testid="section" data-section="attachments"><td class="en-line-cell">{{#if view.attachments.title}}<h2 class="en-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}</td></tr>
+                  {{#each view.attachments.files}}<tr class="en-line en-attachment"><td class="en-line-cell"><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></td></tr>{{/each}}
                   <tr class="en-line en-line-end"><td class="en-line-cell"></td></tr>
                 </tbody>
               </table>

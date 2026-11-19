@@ -762,7 +762,7 @@ describe("Enterprise Template — boolean settings", () => {
     expect(noParties).toMatch(/en-transport-vehicleNumber[\s\S]*?WB01AB1234/);
   });
 
-  it("totals and words across the frame; terms, notes, attachments | bank and UPI; the summaries; additional info | signature last", () => {
+  it("totals and words across the frame; terms | bank and UPI; notes; attachments; the summaries; additional info | signature last", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
       invoice.attachments = ["https://example.com/drawing.pdf"];
@@ -778,13 +778,14 @@ describe("Enterprise Template — boolean settings", () => {
     );
     // The summary tables after terms, notes, attachments and bank (user request, 2026-10-27);
     // then Additional Information | signature closes the document (user, 2026-11-13).
-    // Notes across the frame after Terms and Attachments | Bank (Enterprise design).
+    // Notes, then Attachments, across the frame after Terms | Bank (Refrens' own Enterprise,
+    // 2026-11-19).
     const order = [
       "totals",
       "bank",
       "terms",
-      "attachments",
       "notes",
+      "attachments",
       "hsn",
       "tax-summary",
       "additional",
@@ -2391,7 +2392,7 @@ describe("Enterprise Template — Enterprise layout (2026-11-18)", () => {
     const v = view(same);
     expect(v.shipTo).toBeNull();
     expect(v.buyer?.isMerged).toBe(true);
-    expect(v.buyer?.title).toMatch(/ & Shipped To$/);
+    expect(v.buyer?.title).toBe("Billed To & Shipped To");
     const html = render(same);
     expect(html).toContain("en-row-parties has-no-ship-to");
     expect(html).not.toContain('data-role="shipped-to"');
@@ -2399,7 +2400,7 @@ describe("Enterprise Template — Enterprise layout (2026-11-18)", () => {
       html.indexOf('data-merged="shipped-to"'),
       html.indexOf('data-section="details"')
     );
-    expect(box).toContain("&amp; Shipped To");
+    expect(box).toContain("Billed To &amp; Shipped To");
     expect(box).toContain("Phone");
     expect(box).toContain('data-section="supply"');
   });
@@ -2454,14 +2455,32 @@ describe("Enterprise Template — Enterprise layout (2026-11-18)", () => {
     expect(css).toMatch(/--en-close-width: 0px;/);
   });
 
-  it("centres the Additional Information title and rows", () => {
+  it("runs the closing part's right edge through the ruled rows without gaps", () => {
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     expect(css).toMatch(
-      /\.en-closing \.en-additional > td\.en-line-cell \{[^}]*text-align: center;/
+      /\.en-lines \.en-kv-row > \.en-line-cell::after \{\s*top: -1px;/
+    );
+  });
+
+  it("puts the Additional Information title on the left and centres its rows", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.en-closing \.en-additional > td\.en-line-cell \{[^}]*text-align: start;/
     );
     expect(css).toMatch(
       /\.en-closing \.en-kv-row > td\.en-line-cell \{[^}]*vertical-align: middle;/
     );
+  });
+
+  it("prints the UPI ID under the QR's note, as Refrens' own Enterprise", () => {
+    const html = render((invoice) => {
+      invoice.paymentOptions = { ...invoice.paymentOptions, upi: true };
+      invoice.upi = { vpa: "shop@okbank" };
+    });
+    expect(html).toMatch(
+      /<figure class="en-upi">[\s\S]*?en-upi-qr[\s\S]*?class="en-upi-id[^"]*"[^>]*>shop@okbank</
+    );
+    expect(html).not.toContain("en-upi-id-block");
   });
 
   it("keeps a note label with the block after it", () => {
