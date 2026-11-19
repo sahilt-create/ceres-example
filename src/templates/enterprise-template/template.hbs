@@ -133,7 +133,10 @@
 
           <div class="en-box en-row en-row-parties{{#unless view.shipTo}} has-no-ship-to{{/unless}}" data-testid="section" data-section="parties">
             {{#with view.buyer as |party|}}
-              <div class="en-cell en-party en-buyer" data-role="billed-to">
+              {{!-- Billed To, or "Billed To & Shipped To" when both are the same party at the same
+                    address (party.isMerged); the merged box carries Country / Place of Supply
+                    as Shipped To does. --}}
+              <div class="en-cell en-party en-buyer{{#if party.isMerged}} is-merged{{/if}}" data-role="billed-to"{{#if party.isMerged}} data-merged="shipped-to"{{/if}}>
                 {{#if party.title}}<h2 class="en-caption">{{party.title}}</h2>{{/if}}
                 <p class="en-party-name" dir="auto">{{party.name}}</p>
                 {{#if party.address}}<p class="en-party-address" data-role="address">{{party.address}}</p>{{/if}}
@@ -142,7 +145,22 @@
                     {{#each party.fields}}
                       <p class="en-field"><span class="en-field-label">{{label}}</span><span class="en-field-value{{#if noWrap}} en-num{{else if isEmail}} en-email{{/if}}{{#if isToken}} en-break{{/if}}">{{#if isDate}}{{enDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
                     {{/each}}
+                    {{#if party.isMerged}}{{#if view.supply}}
+                      <span class="en-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                        {{#each view.supply.rows}}
+                          <p class="en-field en-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="en-field-label">{{label}}</span><span class="en-field-value">{{value}}</span></p>
+                        {{/each}}
+                      </span>
+                    {{/if}}{{/if}}
                   </div>
+                {{else if party.isMerged}}
+                  {{#if view.supply}}<div class="en-fields">
+                      <span class="en-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                        {{#each view.supply.rows}}
+                          <p class="en-field en-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="en-field-label">{{label}}</span><span class="en-field-value">{{value}}</span></p>
+                        {{/each}}
+                      </span>
+                    </div>{{/if}}
                 {{/if}}
               </div>
             {{/with}}
@@ -486,7 +504,7 @@
                   <tr class="en-line en-line-start"><td class="en-line-cell"></td></tr>
                   {{#if view.notes.title}}<tr class="en-line en-line-title"><td class="en-line-cell"><h2 class="en-card-title" data-role="title">{{view.notes.title}}</h2></td></tr>{{/if}}
                   {{#each view.notes.blocks}}
-                    <tr class="en-line en-notes"{{#if @first}} data-testid="section" data-section="notes"{{/if}}><td class="en-line-cell"><div class="en-note-body">{{> MarkdownViewer (prepareMarkdownViewerData this) }}</div></td></tr>
+                    <tr class="en-line en-notes{{#if (enLeadBlock this)}} is-lead{{/if}}"{{#if @first}} data-testid="section" data-section="notes"{{/if}}><td class="en-line-cell"><div class="en-note-body">{{> MarkdownViewer (prepareMarkdownViewerData this) }}</div></td></tr>
                   {{/each}}
                   <tr class="en-line en-line-end"><td class="en-line-cell"></td></tr>
                 </tbody>

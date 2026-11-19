@@ -11,6 +11,9 @@ import {
   formatFigure,
   foreignAmountInWords,
   withRefrensDefaults,
+  withMoneyDefaults,
+  isInvisibleSymbol,
+  isLeadBlock,
   mapCompliance,
   mapParty,
   mapItemTable,
@@ -2134,11 +2137,11 @@ describe("Enterprise Template — print size (2026-11-02)", () => {
   // each size prints at its own (user, 2026-11-02: Smaller printed as Normal).
   it("prints every text scale at its own size, 0.8 and unset by the template's own zoom", () => {
     const print = (pdfOptions: Json) => mapPrint({ pdfOptions });
-    // No zoom of the document's own: the page's html zoom is the text scale.
+    // Refrens' own 75 % (2026-11-19), the page's html zoom (the text scale) on top.
     ["0.8", "0.9", "1", "1.2"].forEach((zoomSize) =>
-      expect(print({ zoomSize }).printScale).toBe("1")
+      expect(print({ zoomSize }).printScale).toBe("0.75")
     );
-    expect(printScaleFor()).toBe(1);
+    expect(printScaleFor()).toBe(0.75);
     // Refrens' renderer zooms <html> by 0.9, 1, 1.1 and 1.2, not 0.8 nor unset: the template's.
     expect(print({}).ownPrintZoom).toBe("0.8");
     expect(print({ zoomSize: "0.8" }).ownPrintZoom).toBe("0.8");
@@ -2363,13 +2366,110 @@ describe("Enterprise Template — Enterprise layout (2026-11-18)", () => {
     );
   });
 
-  it("gives Billed To two thirds without a Shipped To", () => {
+  it("gives Billed To and the details half each without a Shipped To", () => {
     expect(render()).toContain("en-row-parties has-no-ship-to");
     expect(
       render((invoice) => {
         invoice.shippedTo = { name: "Site Office", city: "Howrah" };
       })
     ).not.toContain("has-no-ship-to");
+  });
+
+  it("merges Billed To and Shipped To into one box when they are the same party and address", () => {
+    const same = (invoice: Record<string, unknown>) => {
+      const billed = invoice.billedTo as Record<string, unknown>;
+      billed.phone = "+919966410605";
+      invoice.shippedTo = {
+        name: ` ${String(billed.name).toLowerCase()} `,
+        address: billed.address,
+        city: billed.city,
+        pincode: billed.pincode,
+        state: billed.state,
+        country: billed.country,
+      };
+    };
+    const v = view(same);
+    expect(v.shipTo).toBeNull();
+    expect(v.buyer?.isMerged).toBe(true);
+    expect(v.buyer?.title).toMatch(/ & Shipped To$/);
+    const html = render(same);
+    expect(html).toContain("en-row-parties has-no-ship-to");
+    expect(html).not.toContain('data-role="shipped-to"');
+    const box = html.slice(
+      html.indexOf('data-merged="shipped-to"'),
+      html.indexOf('data-section="details"')
+    );
+    expect(box).toContain("&amp; Shipped To");
+    expect(box).toContain("Phone");
+    expect(box).toContain('data-section="supply"');
+  });
+
+  it("keeps two boxes when the shipping address or a shared field differs", () => {
+    const moved = view((invoice) => {
+      const billed = invoice.billedTo as Record<string, unknown>;
+      invoice.shippedTo = { ...billed, city: "Howrah" };
+    });
+    expect(moved.shipTo).not.toBeNull();
+    expect(moved.buyer?.isMerged).toBe(false);
+    const otherGst = view((invoice) => {
+      const billed = invoice.billedTo as Record<string, unknown>;
+      invoice.shippedTo = { ...billed, gstin: "19BBBBB0000B1Z5" };
+    });
+    expect(otherGst.shipTo).not.toBeNull();
+  });
+
+  it("adds a field only the shipping address carries to the merged box", () => {
+    const v = view((invoice) => {
+      const billed = invoice.billedTo as Record<string, unknown>;
+      invoice.shippedTo = { ...billed, phone: "+919966410605" };
+    });
+    expect(v.buyer?.isMerged).toBe(true);
+    expect(v.buyer?.fields.map((f) => f.label)).toContain("Phone");
+  });
+
+  it("prints an invisible custom currency symbol as nothing, never a box", () => {
+    expect(isInvisibleSymbol("\u3164")).toBe(true);
+    expect(isInvisibleSymbol("₹")).toBe(false);
+    const html = template(
+      withMoneyDefaults(
+        state((invoice) => {
+          invoice.customCurrencySymbol = "\u3164";
+        })
+      )
+    );
+    expect(html).not.toContain("\u3164");
+  });
+
+  it("keeps the QR beside the bank rows until the values have 12 characters' room", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(/\.en-bank-main \{[^}]*flex: 1 1 0;/);
+    expect(css).toMatch(
+      /\.en-bank-rows \{[^}]*minmax\(max\(12ch, min-content\), 1fr\);/
+    );
+  });
+
+  it("draws no transparent rules beside the column rules (no notches at the joints)", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).not.toMatch(/border-(?:bottom|inline-end)-color: transparent/);
+    expect(css).toMatch(/--en-close-width: 0px;/);
+  });
+
+  it("centres the Additional Information title and rows", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.en-closing \.en-additional > td\.en-line-cell \{[^}]*text-align: center;/
+    );
+    expect(css).toMatch(
+      /\.en-closing \.en-kv-row > td\.en-line-cell \{[^}]*vertical-align: middle;/
+    );
+  });
+
+  it("keeps a note label with the block after it", () => {
+    expect(isLeadBlock("**Components Warranty**")).toBe(true);
+    expect(isLeadBlock("### Warranty")).toBe(true);
+    expect(isLeadBlock("<strong>Warranty</strong>")).toBe(true);
+    expect(isLeadBlock("Plain sentence about **bold** words.")).toBe(false);
+    expect(isLeadBlock("| a | b |\n| - | - |")).toBe(false);
   });
 
   it("splits the e-invoice lines from the e-way bill lines", () => {

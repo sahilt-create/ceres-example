@@ -368,15 +368,17 @@
 
 /* Rows of equal cells (Billed To | Shipped To | details a third each, Shipped From | Transport
    half each), a rule between them. A cell is never narrower than an unbreakable value in it
-   (numbers never wrap). Without a Shipped To, Billed To takes two thirds. */
+   (numbers never wrap). Without a Shipped To, Billed To and the details take half each. */
 .en-row {
   display: grid;
   grid-auto-columns: minmax(min-content, 1fr);
   grid-auto-flow: column;
 }
 
+/* Without a Shipped To, Billed To and the details take half each (user, 2026-11-19: "divide
+   the section equally", as Refrens' own Enterprise). */
 .en-row-parties.has-no-ship-to:not(:has(> .en-meta.is-empty)) {
-  grid-template-columns: minmax(min-content, 2fr) minmax(min-content, 1fr);
+  grid-template-columns: repeat(2, minmax(min-content, 1fr));
 }
 
 .en-cell {
@@ -679,7 +681,7 @@
 
 /* The last item's rule is the table's foot (print: the corner footer draws it per page). */
 .en-items > tbody:last-of-type > tr:last-child:not(.en-filler) > td {
-  border-bottom: 1px solid var(--en-close-line, var(--en-line));
+  border-bottom: var(--en-close-width, 1px) solid var(--en-close-line, var(--en-line));
 }
 
 /* A name on a row of its own (Item Name Full Width) reads with the figures under it: no rule
@@ -932,7 +934,8 @@
   width: 50%;
 }
 
-.en-lines td {
+/* The part's own rows only: a table in a note keeps its own cells (user, 2026-11-19). */
+.en-lines > :is(tbody, tfoot) > tr > td {
   padding: 2px var(--en-pad);
   vertical-align: top;
 }
@@ -1052,11 +1055,26 @@
   padding-block: 2px;
 }
 
+/* The Additional Information title sits in the middle of its ruled row (user, 2026-11-19). */
+.en-closing .en-additional > td.en-line-cell {
+  padding-block: 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.en-closing .en-additional .en-card-title {
+  margin: 0;
+  text-align: center;
+}
+
 /* The rule between label and value is drawn by the cell, its full height: a row stretched by
    the signature beside it left a border on the label short of the row's foot (2026-11-18). It
    sits where the label's 40 % column ends (on the left in a right-to-left document). */
+
+/* A row stretched by the signature beside it keeps its text in the middle (user, 2026-11-19). */
 .en-closing .en-kv-row > td.en-line-cell {
   padding-block: 0;
+  vertical-align: middle;
   border-top: var(--en-rule);
   background: linear-gradient(var(--en-line), var(--en-line)) no-repeat
     calc(40% - 0.6px) 0 / 1px 100%;
@@ -1104,12 +1122,36 @@
   justify-content: space-between;
 }
 
+/*
+ * The QR stays beside the bank rows, at their top (user, 2026-11-19), and drops under them only
+ * when the values would have less than 12 characters' room: the rows grow from nothing (basis
+ * 0, so a long value wraps rather than pushing the QR down), never narrower than the labels
+ * on one line plus a 12-character value column.
+ */
 .en-bank-main {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 8px;
   min-width: min-content;
+}
+
+/* Labels on one line; a value column of at least 12 characters, and never narrower than a
+   number in it (numbers never wrap). */
+.en-bank-rows {
+  grid-template-columns: max-content minmax(max(12ch, min-content), 1fr);
+}
+
+.en-bank-rows > .en-kv-label {
+  white-space: nowrap;
+}
+
+.en-bank-rows > .en-kv-value {
+  overflow-wrap: anywhere;
+}
+
+.en-bank .en-upi-id {
+  overflow-wrap: anywhere;
 }
 
 .en-upi-id-block {
@@ -1516,40 +1558,61 @@
     margin-inline-end: 0;
   }
 
-  /* The bottom parts stack: the bank (or signature) over the lines, ruled at both sides. */
-  .en-lines,
-  .en-lines > tbody,
-  .en-lines > tfoot,
-  .en-lines tr,
-  .en-lines td {
-    display: block;
-    width: 100%;
-  }
-
-  .en-lines > colgroup {
-    display: none;
-  }
-
-  .en-lines .en-line-cell::after {
-    content: none;
-  }
-
-  .en-lines .en-bottom-side {
-    border-inline: var(--en-rule);
-  }
-
-  /* As a block the first row's height 0 (a table cell's minimum) would really be 0. */
-  .en-lines tr > td.en-bottom-side {
-    height: auto;
-  }
-
-  .en-lines .en-bottom-side-top {
-    display: none;
-  }
-
   /* Headings wrap; a summary's first column is a date, a code or a rate, and never does. */
   .en-widget-table .ceres-table th {
     white-space: normal;
+  }
+}
+
+/*
+ * On screen only: the bottom parts' halves stack under 600 px. In print they stay a two-column
+ * table on any paper (A5, wide margins): only a table closes a part cut by a page break, with
+ * its repeated footer and the stretch planner's rows (stacked blocks ended open at the page
+ * foot; user, 2026-11-19: closing caps).
+ */
+@media screen {
+  @container en-doc (width < 600px) {
+    /* The bottom parts stack: the bank (or signature) over the lines, ruled at both sides. */
+    .en-lines,
+    .en-lines > tbody,
+    .en-lines > tfoot,
+    .en-lines > :is(tbody, tfoot) > tr,
+    .en-lines > :is(tbody, tfoot) > tr > td {
+      display: block;
+      width: 100%;
+    }
+
+    .en-lines > colgroup {
+      display: none;
+    }
+
+    /* The footer row (the part's bottom rule) comes first in the markup, as a table needs: as
+       blocks it printed at the part's top and the part ended open (user, 2026-11-19). */
+    .en-lines {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .en-lines > tfoot {
+      order: 1;
+    }
+
+    .en-lines .en-line-cell::after {
+      content: none;
+    }
+
+    .en-lines .en-bottom-side {
+      border-inline: var(--en-rule);
+    }
+
+    /* As a block the first row's height 0 (a table cell's minimum) would really be 0. */
+    .en-lines > tbody > tr > td.en-bottom-side {
+      height: auto;
+    }
+
+    .en-lines .en-bottom-side-top {
+      display: none;
+    }
   }
 }
 
@@ -1557,6 +1620,13 @@
    each whole, so a row never takes a page of its own. */
 @media print {
   @container en-doc (width < 600px) {
+    /* The bank half of an A5 page: a 20-digit account number (never wrapped) beside its label
+       needs the gap's room. */
+    .en-bank-rows {
+      column-gap: 4px;
+    }
+
+
     .en-row {
       break-inside: auto;
     }
@@ -1617,6 +1687,9 @@
   /* A browser's own print: the paper's whole width, whichever way its dialog turns it (user,
      2026-11-03: landscape kept the portrait width, the sides left empty). */
   body:not([class~="isDibella"]) .en-doc.is-browser-print {
+    /* The paper's width as it is: under the 75 % print base (zoom), a percentage is not
+       scaled, so 100 % / 0.75 ran a third past the page (2026-11-19). */
+    width: 100%;
     max-width: none;
   }
 
@@ -1946,8 +2019,10 @@
   }
 
 
+  /* A pixel more than the fixed footer: rounded, the footer image's top row landed on the
+     table's closing rule at a page's foot and hid it (2026-11-19). */
   .en-footer-spacer {
-    padding-top: var(--en-section-gap);
+    padding-top: calc(var(--en-section-gap) + 1px);
     visibility: hidden;
   }
 
@@ -2003,7 +2078,7 @@ body[class~="isDibella"]
 .en-doc.is-filled .en-items:not(:has(+ [data-en-totals-split])) > tbody:last-of-type > tr.en-filler:last-child > td {
   --en-sep: 0 0 transparent;
 
-  border-bottom: 1px solid var(--en-close-line, var(--en-line));
+  border-bottom: var(--en-close-width, 1px) solid var(--en-close-line, var(--en-line));
 }
 
 .en-doc.is-filled .en-items .en-filler > td {
@@ -2014,23 +2089,28 @@ body[class~="isDibella"]
 /* Under a row across the whole table (a full-width description, the original images) the space
    opens with a rule, where the column rules begin; a cell's height takes in its border, so the
    space stays as tall and the page's fit is unchanged (user, 2026-11-18: the line was missing). */
-.en-doc.is-filled .en-items > tbody > tr:is(.en-detail-row:not([style*="none"]), .en-image-row, :has(> td[colspan]:only-child)) + .en-filler > td,
-.en-doc.is-filled .en-items > tbody > tr:is(.en-image-row, :has(> td[colspan]:only-child)) + tr[style*="none"] + .en-filler > td {
-  border-top: var(--en-separator) solid var(--en-sep-color);
+
+/* Drawn as that row's own bottom rule, one unbroken line: as the space's top rule, cell by cell
+   beside their transparent column rules, the mitred corners left a notch at every column
+   (user, 2026-11-19). */
+.en-doc.is-filled .en-items > tbody > tr:is(.en-detail-row:not([style*="none"]), .en-image-row, :has(> td[colspan]:only-child)):is(:has(+ .en-filler), :has(+ tr[style*="none"] + .en-filler)) > td {
+  border-bottom: var(--en-separator) solid var(--en-sep-color);
 }
 
 /* A full-width description beside its own # cell: that column runs on into the space, unruled. */
-.en-doc.is-filled .en-items > tbody > tr.en-detail-row:has(> td.en-col-serial) + .en-filler > td.en-col-serial {
-  border-top: 0;
+.en-doc.is-filled .en-items > tbody > tr.en-detail-row:has(> td.en-col-serial):has(+ .en-filler) > td.en-col-serial {
+  border-bottom: 0;
 }
 
 /* Under a row across the whole table the space stays open as that row: no column rules, only
    the frame's end (and a full-width description's own # column) run down it (user, 2026-11-18:
-   "why are these lines there"). Transparent, so the columns keep their widths. */
+   "why are these lines there"). No width rather than transparent: a transparent rule beside the
+   space's bottom rule mitred a notch into it at every column (user, 2026-11-19); each cell
+   still fills its column (separate borders), so the columns keep their places. */
 .en-doc.is-filled .en-items > tbody > tr:is(.en-image-row, :has(> td[colspan]:only-child)) + .en-filler > td:not(:last-child),
 .en-doc.is-filled .en-items > tbody > tr:is(.en-image-row, :has(> td[colspan]:only-child)) + tr[style*="none"] + .en-filler > td:not(:last-child),
 .en-doc.is-filled .en-items > tbody > tr.en-detail-row:not([style*="none"]):has(> td.en-col-serial) + .en-filler > td:not(:last-child, .en-col-serial) {
-  border-inline-end-color: transparent;
+  border-inline-end-width: 0;
 }
 
 /* Not the table's end: the space carries no rule of its own (the separator is a border now,
@@ -2128,6 +2208,10 @@ body[class~="isDibella"]
      Only a table with that shape: the split totals' table keeps its own. */
   .en-items:has(> .en-items-corners) {
     --en-close-line: transparent;
+
+    /* Not drawn at all rather than transparent: a transparent bottom border beside each coloured
+       column rule mitres the rule's end into a notch at every column (user, 2026-11-19). */
+    --en-close-width: 0px;
   }
 
   .en-items > .en-items-corners > tr::after {
@@ -2198,10 +2282,12 @@ body[class~="isDibella"]
     box-shadow: none;
   }
 
+  /* No bottom border at all, not a transparent one: a transparent border beside the coloured
+     column rule mitres its end into a slanted notch at every column (user, 2026-11-19). */
   .en-items td.is-joint-row {
     --en-sep: 0 0 transparent;
 
-    border-bottom-color: transparent;
+    border-bottom-width: 0;
   }
 
 
@@ -2259,13 +2345,18 @@ body[class~="isDibella"]
     break-inside: avoid;
   }
 
-  /* Notes print a row per block (helpers.ts markdownBlocks) and break between them; a block
-     longer than a page still breaks inside, its cell keeping its edges. */
-  .en-lines > tbody > tr.en-notes {
-    break-inside: auto;
-  }
+  /* Notes print a row per block (helpers.ts markdownBlocks) and break between them, each block
+     kept whole like every line (the stretch planner closes the part at the page foot only at a
+     break between rows: a block with a table broken inside it left the part open at the foot
+     and the next page's top, user 2026-11-19). A block taller than a page still breaks
+     inside, as avoid gives way there. */
 
   .en-lines .en-line-title {
+    break-after: avoid;
+  }
+
+  /* A label naming the note block after it stays on that block's page (helpers isLeadBlock). */
+  .en-lines > tbody > tr.en-notes.is-lead {
     break-after: avoid;
   }
 

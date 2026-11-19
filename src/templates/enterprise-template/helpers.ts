@@ -204,6 +204,22 @@ export const formatContext = (invoice: UnknownRecord): FormatContext => ({
  * summary, payment record) print every figure with the same decimals as the table — a whole
  * amount as "625,975.00", not "625,975".
  */
+/*
+ * A custom currency symbol made only of invisible characters (a business's way to print figures
+ * with no symbol, e.g. U+3164 HANGUL FILLER) shows as a crossed box in the PDF: the PDF
+ * service's fonts have no glyph for it. It becomes WORD JOINER (U+2060), which browsers never
+ * draw, and removeHiddenSymbol takes it and the space after it out of the page once drawn
+ * (ported from BPS Technologies, user 2026-11-19).
+ */
+export const HIDDEN_SYMBOL = "\u2060";
+const INVISIBLE =
+  /[\s\p{Cf}\p{Zs}\p{Mn}\u115F\u1160\u3164\uFFA0\u2800\u180E\u2028\u2029]/gu;
+
+export const isInvisibleSymbol = (value: unknown): boolean =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  value.replace(INVISIBLE, "") === "";
+
 export const withMoneyDefaults = <T>(state: T): T => {
   const invoice = asRecord(asRecord(state).invoice);
   if (
@@ -212,7 +228,24 @@ export const withMoneyDefaults = <T>(state: T): T => {
   ) {
     invoice.subUnitLength = moneyDigits(invoice);
   }
+  if (isInvisibleSymbol(invoice.customCurrencySymbol)) {
+    invoice.customCurrencySymbol = HIDDEN_SYMBOL;
+  }
   return state;
+};
+
+/* The hidden symbol and the space the formatter puts after it, out of every text in the page. */
+export const removeHiddenSymbol = (root: ParentNode = document): void => {
+  if (typeof document === "undefined") return;
+  root.querySelectorAll<HTMLElement>(".en-doc").forEach((doc) => {
+    const walker = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const value = node.nodeValue || "";
+      if (value.includes(HIDDEN_SYMBOL)) {
+        node.nodeValue = value.replace(/\u2060[\s\u00a0]?/g, "");
+      }
+    }
+  });
 };
 
 export const formatQuantity = (value: unknown, ctx: FormatContext): string =>
@@ -3868,6 +3901,21 @@ const fileName = (url: string): string => {
  * breaks across pages between blocks and each page's piece closes at its foot. One row split
  * inside carried no closing rule in Chrome 122 (the PDF service's), 2026-11-18.
  */
+/*
+ * A notes block that only names what follows (a heading, or a line wholly bold, like
+ * "**Components Warranty**"): it stays on the page of the block after it (user, 2026-11-19:
+ * the label was left at a page's foot, its table on the next page).
+ */
+export const isLeadBlock = (block: unknown): boolean => {
+  const line = text(block).trim();
+  if (!line || line.includes("\n")) return false;
+  return (
+    /^#{1,6}\s+\S/.test(line) ||
+    /^(\*\*|__)[^*_]+(\*\*|__):?$/.test(line) ||
+    /^<(strong|b)>[^<]+<\/(strong|b)>:?$/i.test(line)
+  );
+};
+
 export const markdownBlocks = (source: string): string[] => {
   const blocks: string[] = [];
   let current: string[] = [];
@@ -4031,7 +4079,12 @@ const PAPER_HEIGHT_MM: Record<string, number> = {
  * 1). Refrens' renderer zooms <html> by it except at 0.8 and when unset (src/main/commonUtils.ts),
  * so the template draws that zoom itself then (ownPrintZoom, template.hbs).
  */
-const PRINT_BASE_SCALE = 1;
+/*
+ * Enterprise prints at Refrens' own 75 % (user, 2026-11-19: "make this template dense as the
+ * existing Enterprise template"; Refrens' native Enterprise prints 12 px text at 6.8 pt): the
+ * text scale multiplies it as before.
+ */
+const PRINT_BASE_SCALE = 0.75;
 export const printScaleFor = (): number => PRINT_BASE_SCALE;
 
 export const mapPrint = (state: UnknownRecord) => {
@@ -4384,6 +4437,42 @@ const mapEcommerceOperator = (invoice: UnknownRecord) => {
   ];
 };
 
+/*
+ * Billed To and Shipped To are one box, "Billed To & Shipped To", when they name the same
+ * party at the same address (Refrens' native Enterprise template, user 2026-11-19): same name
+ * and address (case and spacing ignored), and no field both carry (by label) differs. A field only the
+ * shipping address carries (a phone, say) still prints in the merged box.
+ */
+const sameText = (a: unknown, b: unknown) =>
+  text(a).replace(/\s+/g, " ").trim().toLowerCase() ===
+  text(b).replace(/\s+/g, " ").trim().toLowerCase();
+export const mergeSameParties = <
+  P extends {
+    name: string;
+    address: string;
+    fields: Array<Record<string, unknown>>;
+  }
+>(
+  billed: P | null,
+  shipped: P | null
+): Array<Record<string, unknown>> | null => {
+  if (!billed || !shipped) return null;
+  if (!sameText(billed.name, shipped.name)) return null;
+  if (!sameText(billed.address, shipped.address)) return null;
+  const byKey = new Map(
+    billed.fields.map((field) => [text(field.label).toLowerCase(), field])
+  );
+  const differs = shipped.fields.some((field) => {
+    const own = byKey.get(text(field.label).toLowerCase());
+    return Boolean(own) && !sameText(own?.value, field.value);
+  });
+  if (differs) return null;
+  const extra = shipped.fields.filter(
+    (field) => !byKey.has(text(field.label).toLowerCase())
+  );
+  return [...billed.fields, ...extra];
+};
+
 export const buildEnterpriseView = (root: unknown) => {
   const state = asRecord(root);
   const invoice = asRecord(state.invoice);
@@ -4444,6 +4533,30 @@ export const buildEnterpriseView = (root: unknown) => {
     .map((party, index) =>
       index === 1 || !seller ? { ...party, role: "billed-to" } : party
     );
+  const billedToParty =
+    (parties.find((party) => asRecord(party).role === "billed-to") as
+      | (NonNullable<ReturnType<typeof withFields>> & { role: string })
+      | undefined) || null;
+  const mergedFields = mergeSameParties(billedToParty, shippedTo);
+  // One "Billed To & Shipped To" box when both name the same party at the same address.
+  const buyer = billedToParty
+    ? {
+        ...billedToParty,
+        title: mergedFields
+          ? [billedToParty.title, shippedTo ? shippedTo.title : ""]
+              .filter(Boolean)
+              .join(" & ")
+          : billedToParty.title,
+        fields: (mergedFields || billedToParty.fields) as Array<
+          Record<string, unknown>
+        >,
+        isMerged: Boolean(mergedFields),
+      }
+    : null;
+  const shipTo =
+    shippedTo && !mergedFields
+      ? { ...shippedTo, role: "shipped-to", isShippedTo: true }
+      : null;
   const table = mapItemTable(state, ctx, options);
   const totals = mapTotals(state, options);
   const bank = mapBank(state);
@@ -4497,8 +4610,7 @@ export const buildEnterpriseView = (root: unknown) => {
     // The band (Enterprise design): the seller beside the logo, Billed To on the right.
     seller:
       parties.find((party) => asRecord(party).role === "billed-by") || null,
-    buyer:
-      parties.find((party) => asRecord(party).role === "billed-to") || null,
+    buyer,
     // The band's details strip: the document details, then what is due.
     details: meta,
     // Country / Place of Supply print under Shipped To (fixed decision, all templates); in the
@@ -4519,9 +4631,7 @@ export const buildEnterpriseView = (root: unknown) => {
         : null,
     ].filter(Boolean),
     // Shipped To beside Billed To, Shipped From beside Transport Details (design).
-    shipTo: shippedTo
-      ? { ...shippedTo, role: "shipped-to", isShippedTo: true }
-      : null,
+    shipTo,
     shipFrom: shippedFrom ? { ...shippedFrom, role: "shipped-from" } : null,
     hasShipping: shippedFrom !== null || shippedTo !== null,
     // The Shipped From | Shipped To | Transport row shows while it has one of them.
@@ -4622,6 +4732,7 @@ export const registerEnterpriseHelpers = (
 ): void => {
   if (!HB) return;
   HB.registerHelper("enView", (root: unknown) => buildEnterpriseView(root));
+  HB.registerHelper("enLeadBlock", (block: unknown) => isLeadBlock(block));
   // `{{enDate value offset}}` — Handlebars appends its options object, so only a string or
   // number second argument is an offset.
   HB.registerHelper("enDate", (value: unknown, offset: unknown) =>
@@ -5997,6 +6108,7 @@ const flowUnits = (
         : 0;
     let first = true;
     let afterAvoid = joinPrevious;
+    let spanLeft = 0;
     const isItems = el.classList.contains("en-items");
     Array.from(el.tBodies).forEach((body) => {
       const bodyStyle = getComputedStyle(body);
@@ -6008,8 +6120,21 @@ const flowUnits = (
         const style = getComputedStyle(row);
         if (style.display === "none") return;
         const at = box(row);
+        // A cell spanning rows (the bank / signature side of a bottom part, fitSideSpans) holds
+        // the rows it spans together: Chrome never breaks a page inside a rowspan, so they
+        // move to the next page as one (user, 2026-11-19: quotation LTG3443's terms | bank
+        // went to page 3 whole and the page above was left unfilled).
+        const spanned = spanLeft > 0;
+        spanLeft = Math.max(
+          spanLeft - 1,
+          ...Array.from(
+            row instanceof HTMLTableRowElement ? row.cells : [],
+            (cell) => cell.rowSpan - 1
+          )
+        );
         if (at.bottom - at.top <= 0) return;
-        const join = !first && (afterAvoid || avoids(style.breakBefore));
+        const join =
+          !first && (afterAvoid || spanned || avoids(style.breakBefore));
         push(
           {
             top: first && el.tHead ? box(el.tHead).top : at.top,
@@ -6698,6 +6823,7 @@ export const fitDetails = (root: ParentNode = document): void => {
 };
 
 export const fitItemsToScreen = (root: ParentNode = document): void => {
+  removeHiddenSymbol(root);
   fitDetails(root);
   const printing =
     typeof window.matchMedia === "function" &&
@@ -6993,6 +7119,7 @@ export const registerEnterpriseWords = (): void => {
   const schedule = () => {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
+      removeHiddenSymbol();
       prepareReadableStylesheet();
       applyBrowserPrintPage();
       loadScriptFonts();
