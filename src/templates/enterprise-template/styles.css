@@ -957,6 +957,12 @@
   content: "";
 }
 
+/* A row with a top rule (Additional Information's ruled rows): the edge starts on that rule,
+   not under it, or each row left a pixel's gap in the right edge (user, 2026-11-19). */
+.en-lines .en-kv-row > .en-line-cell::after {
+  top: -1px;
+}
+
 /* The part's top rule: its first row. */
 
 /* Notes across the whole frame: one column, no right half. */
@@ -1055,16 +1061,17 @@
   padding-block: 2px;
 }
 
-/* The Additional Information title sits in the middle of its ruled row (user, 2026-11-19). */
+/* The Additional Information title on the left, in the middle of its row's height (user,
+   2026-11-19: centred first, then "align the label on left"). */
 .en-closing .en-additional > td.en-line-cell {
   padding-block: 6px;
-  text-align: center;
+  text-align: start;
   vertical-align: middle;
 }
 
 .en-closing .en-additional .en-card-title {
   margin: 0;
-  text-align: center;
+  text-align: start;
 }
 
 /* The rule between label and value is drawn by the cell, its full height: a row stretched by
@@ -2087,15 +2094,9 @@ body[class~="isDibella"]
 }
 
 /* Under a row across the whole table (a full-width description, the original images) the space
-   opens with a rule, where the column rules begin; a cell's height takes in its border, so the
-   space stays as tall and the page's fit is unchanged (user, 2026-11-18: the line was missing). */
-
-/* Drawn as that row's own bottom rule, one unbroken line: as the space's top rule, cell by cell
-   beside their transparent column rules, the mitred corners left a notch at every column
-   (user, 2026-11-19). */
-.en-doc.is-filled .en-items > tbody > tr:is(.en-detail-row:not([style*="none"]), .en-image-row, :has(> td[colspan]:only-child)):is(:has(+ .en-filler), :has(+ tr[style*="none"] + .en-filler)) > td {
-  border-bottom: var(--en-separator) solid var(--en-sep-color);
-}
+   carries that row on with no rule of its own: a rule there doubled the totals' top rule when the
+   space was only a few points tall (user, 2026-11-19: "remove the double border"), and the
+   column rules under such a row are hidden anyway (below). */
 
 /* A full-width description beside its own # cell: that column runs on into the space, unruled. */
 .en-doc.is-filled .en-items > tbody > tr.en-detail-row:has(> td.en-col-serial):has(+ .en-filler) > td.en-col-serial {
