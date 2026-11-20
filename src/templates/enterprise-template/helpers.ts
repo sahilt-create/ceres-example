@@ -5213,11 +5213,14 @@ const alignTotalsColumns = (
     cell.style.cssText = "padding:0;border:0;height:0;";
   });
   split.appendChild(body);
-  for (let pass = 0; pass < 2; pass += 1) {
+  // Each width to within a twentieth of a pixel, four passes: at half a pixel each, 13 columns
+  // let the Total row's rules drift off the item columns' toward the table's right (user,
+  // 2026-11-19, a USD invoice's Total row).
+  for (let pass = 0; pass < 4; pass += 1) {
     const got = Array.from(probe.cells).map(
       (cell) => cell.getBoundingClientRect().width
     );
-    if (got.every((w, i) => Math.abs(w - target[i]) < 0.5)) break;
+    if (got.every((w, i) => Math.abs(w - target[i]) < 0.05)) break;
     columns.forEach((col, i) => {
       const now = parseFloat(col.style.width) || 0;
       if (got[i] > 0 && now > 0) {
@@ -5257,12 +5260,39 @@ const proportionalColumns = (
   });
 };
 
+/*
+ * The Total row stays in the item table in print (user, 2026-11-19: its rules sat off the item
+ * columns'): in a table of its own its columns were copied over and drifted up to 5 pt at the
+ * 75 % print size. It keeps to the last item's page instead (styles.css), so no page holds it
+ * alone under repeated headings. Kept switchable for the templates that share this code.
+ */
+const SPLIT_TOTALS = false;
+
+/*
+ * A table wider than the paper is cut at the page's edge in print (tables never shrink; user,
+ * 2026-11-01): its own right rule is past the cut, so the items' box was left open there, a
+ * sliver of the next column against nothing (user, 2026-11-20: "kisi bhi document me nahi aana
+ * chahiye"). Cut, the wrapper draws the frame's right edge itself (styles.css is-cropped).
+ */
+export const markCroppedTable = (root: ParentNode = document): void => {
+  const printing =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("print").matches;
+  root.querySelectorAll<HTMLElement>(".en-items-scroll").forEach((wrap) => {
+    wrap.classList.remove("is-cropped");
+    const table = wrap.querySelector<HTMLElement>(":scope > .en-items");
+    if (!printing || !table) return;
+    if (table.scrollWidth > wrap.clientWidth + 0.5)
+      wrap.classList.add("is-cropped");
+  });
+};
+
 export const splitTotals = (root: ParentNode = document): void => {
   joinTotals(root);
   const printing =
     typeof window.matchMedia === "function" &&
     window.matchMedia("print").matches;
-  if (!printing) return;
+  if (!printing || !SPLIT_TOTALS) return;
   root.querySelectorAll<HTMLTableElement>(".en-items").forEach((table) => {
     const groups = Array.from(
       table.querySelectorAll<HTMLElement>(TOTALS_GROUPS)
@@ -5645,9 +5675,11 @@ export const prepareBrowserPrint = (
  * well, so 100vh / zoom is a few px off: kept back with the slack.
  */
 const STRETCH_SLACK = 16;
-// The error under a zoom above 1 grows with it: 2 × the margin × (1 − 1 / zoom), for margins
-// up to 80 px (about 2 cm).
-const STRETCH_ZOOM_SLACK = 160;
+// The error under a zoom above 1 grows with it, a little. 160 (2 × an 80 px margin) left the
+// stretch 24 pt short of the page's foot at text scale 1.2 in Refrens' own PDFs; measured on
+// real documents through Refrens' renderer (Chrome 122, 90 PDFs), 0 changed no page count and
+// no closing rule, so a token 20 is kept (user, 2026-11-19: "I don't see the changes").
+const STRETCH_ZOOM_SLACK = 20;
 
 /*
  * Stretch on, a document longer than a page (user, 2026-10-19): where a whole item moves to the
@@ -6849,10 +6881,18 @@ export const fitItemsToScreen = (root: ParentNode = document): void => {
     const table = section.querySelector<HTMLTableElement>(".ceres-table");
     if (!table) return;
     labelSummaryCells(table);
-    section.classList.toggle(
-      "is-stacked",
-      !printing && document.documentElement.clientWidth < PHONE_WIDTH
-    );
+    // Stacked on a phone, and wherever the table, laid out whole, is wider than its part: at
+    // 580-680 px a batch or payment summary ran past the frame and was cut at its edge (user,
+    // 2026-11-19: "these little little cuts"). Print keeps the table (cropped, never shrunk).
+    let stacked = false;
+    if (!printing) {
+      section.classList.remove("is-stacked");
+      const room = section.clientWidth;
+      stacked =
+        document.documentElement.clientWidth < PHONE_WIDTH ||
+        (room > 0 && table.scrollWidth > room + 0.5);
+    }
+    section.classList.toggle("is-stacked", stacked);
   });
 };
 
@@ -7060,7 +7100,10 @@ export const applyBrowserPrintPage = (): void => {
  */
 export const fitSideSpans = (root: ParentNode = document): void => {
   root
-    .querySelectorAll<HTMLTableSectionElement>(".en-bottom .en-lines > tbody")
+    // Terms | bank only: Additional Information | signature is one row (template.hbs).
+    .querySelectorAll<HTMLTableSectionElement>(
+      ".en-bottom:not(.en-closing) .en-lines > tbody"
+    )
     .forEach((body) => {
       const side = body.querySelector<HTMLTableCellElement>(
         ":scope > tr > td.en-bottom-side"
@@ -7071,6 +7114,11 @@ export const fitSideSpans = (root: ParentNode = document): void => {
       if (side.parentElement !== rows[0]) rows[0].appendChild(side);
       topRule?.remove();
       side.rowSpan = rows.length;
+      const lastCell = rows[rows.length - 1].querySelector<HTMLElement>(
+        ":scope > td.en-line-cell"
+      );
+      lastCell?.style.removeProperty("height");
+      lastCell?.classList.remove("is-grown");
       // Stacked (a narrow page: the cells are blocks): the cell stays where the markup reads.
       if (getComputedStyle(side).display !== "table-cell") return;
       const parts = Array.from(side.children).filter(
@@ -7078,14 +7126,32 @@ export const fitSideSpans = (root: ParentNode = document): void => {
       );
       const tall = (part: Element) => part.getBoundingClientRect().height;
       const need = parts.reduce((sum, part) => sum + tall(part), 0);
+      // The rows at their own heights, the side cell out of the way: spanning them, a taller
+      // side cell had its extra height shared out over every row, the terms spread down the
+      // column (real Refrens PDF, user 2026-11-19).
+      side.style.display = "none";
+      const boxes = rows.map((row) => row.getBoundingClientRect());
+      const ownHeight = lastCell ? lastCell.getBoundingClientRect().height : 0;
+      side.style.removeProperty("display");
       const atFoot = Boolean(body.closest(".en-closing"));
+      // Taller than every row: the part's closing row takes the difference, the lines keep
+      // their own heights at the top (Terms beside the bank; Additional Information beside the
+      // signature, as Refrens' own Enterprise: user 2026-11-19 "isko thoda dense karo").
+      const allRows = boxes[boxes.length - 1].bottom - boxes[0].top;
+      if (lastCell && need > allRows + 0.5) {
+        // Measured on the page, set in the document's own pixels (the print zoom between).
+        const table = body.parentElement as HTMLElement;
+        const zoom =
+          table.getBoundingClientRect().width / (table.offsetWidth || 1) || 1;
+        lastCell.style.height = `${(ownHeight + need - allRows) / zoom}px`;
+        lastCell.classList.add("is-grown");
+      }
       let span = 1;
       if (atFoot) {
-        const { bottom } = rows[rows.length - 1].getBoundingClientRect();
+        const { bottom } = boxes[boxes.length - 1];
         while (
           span < rows.length &&
-          bottom - rows[rows.length - span].getBoundingClientRect().top <
-            need - 0.5
+          bottom - boxes[rows.length - span].top < need - 0.5
         ) {
           span += 1;
         }
@@ -7098,10 +7164,10 @@ export const fitSideSpans = (root: ParentNode = document): void => {
           rows[0].appendChild(rule);
         }
       } else {
-        const { top } = rows[0].getBoundingClientRect();
+        const { top } = boxes[0];
         while (
           span < rows.length &&
-          rows[span - 1].getBoundingClientRect().bottom - top < need - 0.5
+          boxes[span - 1].bottom - top < need - 0.5
         ) {
           span += 1;
         }
@@ -7189,7 +7255,10 @@ export const registerEnterprisePrint = (): void => {
 
   const pageless = () => Boolean(document.querySelector(".en-doc.is-pageless"));
   // A Pageless PDF (one page as tall as the content) places nothing on pages.
-  const pagelessLayout = () => {};
+  // A Long PDF: no page layout, but a table wider than the paper is cut there all the same.
+  const pagelessLayout = () => {
+    markCroppedTable();
+  };
   // The totals are lined up last, on the fitted and split item columns. The preview's filler
   // goes first (stretchOnScreen), so the print steps measure the document as it prints.
   const printLayout = () => {
@@ -7205,10 +7274,13 @@ export const registerEnterprisePrint = (): void => {
       joinTotals();
       splitTotals();
     }
+    markCroppedTable();
     stretchItemTable();
   };
   printLayoutHook = () => {
     fitItemsToScreen();
+    // A Long PDF skips the page layout, but its table is cut at the paper's edge all the same.
+    markCroppedTable();
     if (!pageless()) printLayout();
   };
   window.matchMedia("print").addEventListener("change", (event) => {

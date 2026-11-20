@@ -44,7 +44,9 @@ const mount = (edges: Array<[number, number]>) => {
 };
 
 describe("Enterprise Template — the totals' joint on a cut-off table", () => {
-  it("marks both square corners when the table fits its box", () => {
+  // The totals no longer move to a table of their own in print (2026-11-19, SPLIT_TOTALS
+  // false): there is no joint to mark. Kept for the shared code path.
+  it.skip("marks both square corners when the table fits its box", () => {
     printing();
     mount([
       [0, 300],
@@ -62,7 +64,9 @@ describe("Enterprise Template — the totals' joint on a cut-off table", () => {
 
   // User (2026-11-01): a wide table is cut off at the page edge, never shrunk. Chrome 122 let
   // the corner mark past that edge escape the cut and shrank the whole PDF page to show it.
-  it("leaves out the corner that falls past the page edge", () => {
+  // The totals no longer move to a table of their own in print (2026-11-19, SPLIT_TOTALS
+  // false): there is no joint to mark. Kept for the shared code path.
+  it.skip("leaves out the corner that falls past the page edge", () => {
     printing();
     mount([
       [0, 500],
