@@ -1,8 +1,11 @@
 /**
  * @jest-environment jsdom
  */
+import fs from "fs";
+import path from "path";
 import {
   joinTotals,
+  markCroppedTable,
   splitTotals,
 } from "../src/templates/enterprise-template/helpers";
 
@@ -23,16 +26,21 @@ const mount = () => {
 };
 
 describe("Enterprise Template — totals in print", () => {
-  it("moves the totals into a table of their own, without the item headings", () => {
+  // 2026-11-19: the Total row stays in the item table in print (its own table's copied
+  // columns drifted off the item columns'); it keeps to the last item's page instead.
+  it("keeps the totals in the item table in print, on the last item's page", () => {
     printing(true);
     const table = mount();
     splitTotals();
-    const split = table.nextElementSibling as HTMLTableElement;
-    expect(split.hasAttribute("data-en-totals-split")).toBe(true);
-    expect(split.querySelector("thead")).toBeNull();
-    expect(split.querySelectorAll(".en-items-total")).toHaveLength(1);
-    expect(table.querySelectorAll(".en-items-total")).toHaveLength(0);
-    expect(split.querySelectorAll("col")).toHaveLength(2);
+    expect(table.nextElementSibling).toBeNull();
+    expect(table.querySelectorAll(".en-items-total")).toHaveLength(1);
+    const css = fs.readFileSync(
+      path.join(__dirname, "../src/templates/enterprise-template/styles.css"),
+      "utf8"
+    );
+    expect(css).toMatch(
+      /\.en-items > tbody\.en-items-total > tr \{\s*break-before: avoid;/
+    );
   });
 
   it("leaves the table whole outside print, and joins it back in order", () => {
@@ -46,5 +54,34 @@ describe("Enterprise Template — totals in print", () => {
     joinTotals();
     expect(table.nextElementSibling).toBeNull();
     expect(table.innerHTML).toBe(before);
+  });
+
+  it("closes a table cut at the page's edge with the wrapper's own right edge", () => {
+    printing(true);
+    const table = mount();
+    const wrap = table.parentElement as HTMLElement;
+    Object.defineProperty(wrap, "clientWidth", {
+      configurable: true,
+      value: 500,
+    });
+    Object.defineProperty(table, "scrollWidth", {
+      configurable: true,
+      value: 620,
+    });
+    markCroppedTable();
+    expect(wrap.classList.contains("is-cropped")).toBe(true);
+    Object.defineProperty(table, "scrollWidth", {
+      configurable: true,
+      value: 500,
+    });
+    markCroppedTable();
+    expect(wrap.classList.contains("is-cropped")).toBe(false);
+    printing(false);
+    Object.defineProperty(table, "scrollWidth", {
+      configurable: true,
+      value: 620,
+    });
+    markCroppedTable();
+    expect(wrap.classList.contains("is-cropped")).toBe(false);
   });
 });

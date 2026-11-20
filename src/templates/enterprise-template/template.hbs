@@ -577,12 +577,27 @@
 
           {{!-- The document closes with Additional Information | the signature, after the summaries
                 (user, 2026-11-13). --}}
+          {{!-- Additional Information | signature: one row, the information's ruled lines at the top
+                of the left cell, the signature at the foot of the right one, so the lines keep their
+                own heights however tall the signature (Refrens' own Enterprise; user 2026-11-19
+                "isko thoda dense karo"). One row: the part moves to a page whole. --}}
           <div class="en-bottom en-closing" data-testid="section" data-section="closing">
             <table class="en-lines" role="presentation">
               <colgroup><col class="en-lines-main" /><col class="en-lines-side" /></colgroup>
               <tfoot class="en-lines-foot" aria-hidden="true"><tr><td colspan="2"></td></tr></tfoot>
               <tbody>
-                <tr class="en-line en-line-start">{{#if view.additional}}<td class="en-line-cell"></td>{{/if}}<td class="en-bottom-side{{#unless view.additional}} is-solo{{/unless}}"{{#if view.additional}} rowspan="1000"{{else}} colspan="2"{{/if}}>
+                {{#if view.additional}}
+                  <tr class="en-line en-line-start"><td class="en-line-cell"></td><td class="en-bottom-side-top" aria-hidden="true"></td></tr>
+                  <tr class="en-line en-closing-row">
+                    <td class="en-line-cell en-additional-cell" data-testid="section" data-section="additional">
+                      {{#if view.additional.title}}<div class="en-additional"><h2 class="en-card-title" data-role="title">{{view.additional.title}}</h2></div>{{/if}}
+                      <div class="en-kv-rows">
+                        {{#each view.additional.rows}}
+                          <div class="en-kv-line en-kv-row"><span class="en-kv-label" data-role="ai-label">{{label}}</span><span class="en-kv-value{{#if isDate}} en-num{{/if}}" data-role="ai-value">{{#if isDate}}{{enDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></div>
+                        {{/each}}
+                      </div>
+                    </td>
+                    <td class="en-bottom-side">
               {{!-- Only for a signature the document has (an image or a digital request). --}}
               {{#if view.signature.show}}
                 <section class="en-signature" data-testid="signature">
@@ -601,14 +616,30 @@
                   {{#if view.signature.label}}<p class="en-signature-label">{{view.signature.label}}</p>{{/if}}
                 </section>
               {{/if}}
-                </td></tr>
-                {{#if view.additional}}
-                  <tr class="en-line en-line-title en-additional" data-testid="section" data-section="additional"><td class="en-line-cell">{{#if view.additional.title}}<h2 class="en-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}</td></tr>
-                  {{#each view.additional.rows}}
-                    <tr class="en-line en-kv-row"><td class="en-line-cell"><div class="en-kv-line"><span class="en-kv-label" data-role="ai-label">{{label}}</span><span class="en-kv-value{{#if isDate}} en-num{{/if}}" data-role="ai-value">{{#if isDate}}{{enDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span></div></td></tr>
-                  {{/each}}
+                    </td>
+                  </tr>
+                {{else}}
+                  <tr class="en-line en-line-start"><td class="en-bottom-side is-solo" colspan="2">
+              {{!-- Only for a signature the document has (an image or a digital request). --}}
+              {{#if view.signature.show}}
+                <section class="en-signature" data-testid="signature">
+                  <div class="en-signature-mark">
+                    {{#if view.signature.image}}
+                      {{> CeresImage src=view.signature.image alt=view.signature.label class="en-signature-image"}}
+                    {{else if view.signature.awaitingDigital}}
+                      <p class="en-signature-banner">Awaiting Digital Signature</p>
+                    {{else if view.signature.signedDigital}}
+                      <p class="en-signature-banner">
+                        Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+                        {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+                      </p>
+                    {{/if}}
+                  </div>
+                  {{#if view.signature.label}}<p class="en-signature-label">{{view.signature.label}}</p>{{/if}}
+                </section>
+              {{/if}}
+                  </td></tr>
                 {{/if}}
-                {{#if view.additional}}<tr class="en-line en-line-end"><td class="en-line-cell"></td></tr>{{/if}}
               </tbody>
             </table>
           </div>

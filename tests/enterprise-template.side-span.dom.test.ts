@@ -48,29 +48,33 @@ describe("Enterprise Template — the bank / signature cell spans only the rows 
     expect(side.rowSpan).toBe(5);
   });
 
-  it("anchors the signature at the closing part's last rows, so it stays at the foot", () => {
+  // 2026-11-19: Additional Information | signature is one row (template.hbs), so the lines
+  // keep their own heights beside a taller signature; fitSideSpans leaves that part alone.
+  it("leaves the closing part (Additional Information | signature) alone", () => {
     document.body.innerHTML = part(true, 6);
     layOut([1, 20, 20, 20, 20, 20, 20, 0], 50);
     fitSideSpans();
     const side = document.querySelector(
       "td.en-bottom-side"
     ) as HTMLTableCellElement;
-    const rows = Array.from(document.querySelectorAll("tbody > tr"));
-    // From the foot up: 0, 20, 20, 20 = 60 ≥ 50, over the last four rows.
-    expect(side.rowSpan).toBe(4);
-    expect(rows.indexOf(side.parentElement as Element)).toBe(rows.length - 4);
+    expect(side.rowSpan).toBe(1000);
+    expect(side.parentElement?.classList.contains("en-line-start")).toBe(true);
   });
 
-  it("spans every row when the side is taller than the lines, and is stable when run again", () => {
-    document.body.innerHTML = part(true, 1);
-    layOut([1, 20, 0], 200);
+  it("gives a bank taller than the terms' lines the closing row's room, the lines at their own heights", () => {
+    document.body.innerHTML = part(false, 2);
+    layOut([1, 20, 20, 8], 200);
     fitSideSpans();
     fitSideSpans();
     const side = document.querySelector(
       "td.en-bottom-side"
     ) as HTMLTableCellElement;
-    expect(side.rowSpan).toBe(3);
-    expect(side.parentElement?.classList.contains("en-line-start")).toBe(true);
+    expect(side.rowSpan).toBe(4);
+    const last = document.querySelector(
+      "tr.en-line-end > td"
+    ) as HTMLTableCellElement;
+    expect(last.classList.contains("is-grown")).toBe(true);
+    expect(parseFloat(last.style.height)).toBeGreaterThan(8);
     expect(document.querySelectorAll("td.en-bottom-side")).toHaveLength(1);
   });
 });

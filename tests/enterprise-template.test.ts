@@ -2459,20 +2459,26 @@ describe("Enterprise Template — Enterprise layout (2026-11-18)", () => {
     expect(css).toMatch(/--en-close-width: 0px;/);
   });
 
-  it("runs the closing part's right edge through the ruled rows without gaps", () => {
-    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
-    expect(css).toMatch(
-      /\.en-lines \.en-kv-row > \.en-line-cell::after \{\s*top: -1px;/
+  it("runs the closing part's right edge in one piece beside the ruled lines", () => {
+    const html = render((invoice) => {
+      invoice.customFields = [
+        { label: "Site", value: "Block 1" },
+        { label: "PO", value: "77" },
+      ];
+    });
+    // One row: the left cell (and its edge) spans the lines; they are not rows of their own.
+    expect(html).toMatch(
+      /<tr class="en-line en-closing-row">\s*<td class="en-line-cell en-additional-cell"[\s\S]*?en-kv-line en-kv-row[\s\S]*?en-kv-line en-kv-row[\s\S]*?<\/td>\s*<td class="en-bottom-side">/
     );
   });
 
-  it("puts the Additional Information title on the left and centres its rows", () => {
+  it("puts the Additional Information title on the left, its lines at the top of their cell", () => {
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     expect(css).toMatch(
-      /\.en-closing \.en-additional > td\.en-line-cell \{[^}]*text-align: start;/
+      /\.en-closing \.en-additional \.en-card-title \{[^}]*text-align: start;/
     );
     expect(css).toMatch(
-      /\.en-closing \.en-kv-row > td\.en-line-cell \{[^}]*vertical-align: middle;/
+      /\.en-closing \.en-additional-cell \{[^}]*vertical-align: top;/
     );
   });
 
@@ -2485,6 +2491,14 @@ describe("Enterprise Template — Enterprise layout (2026-11-18)", () => {
       /<figure class="en-upi">[\s\S]*?en-upi-qr[\s\S]*?class="en-upi-id[^"]*"[^>]*>shop@okbank</
     );
     expect(html).not.toContain("en-upi-id-block");
+  });
+
+  it("right-aligns the Total and Sub total rows' last figure; the UPI ID bold", () => {
+    const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+    expect(css).toMatch(
+      /\.en-items :is\(\.en-total-row, \.en-group-total-row\) > td:last-child \{\s*text-align: end;/
+    );
+    expect(css).toMatch(/\.en-upi-id \{[^}]*font-weight: 600;/);
   });
 
   it("keeps a note label with the block after it", () => {

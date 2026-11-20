@@ -704,6 +704,11 @@
   font-weight: 600;
 }
 
+/* The Total and Sub total rows' last figure against the cell's right edge (user, 2026-11-20). */
+.en-items :is(.en-total-row, .en-group-total-row) > td:last-child {
+  text-align: end;
+}
+
 /* The item's name bold (design). */
 .en-item-name {
   display: block;
@@ -945,22 +950,12 @@
   border-inline: var(--en-rule);
 }
 
-/* The part's right edge, drawn row by row across the right half: from the cell's padding box,
-   twice its width plus its two borders, less the rule's own pixel. */
-.en-lines .en-line-cell::after {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  inset-inline-start: calc(200% + 2px);
-  width: 1px;
-  background: var(--en-line);
-  content: "";
-}
-
-/* A row with a top rule (Additional Information's ruled rows): the edge starts on that rule,
-   not under it, or each row left a pixel's gap in the right edge (user, 2026-11-19). */
-.en-lines .en-kv-row > .en-line-cell::after {
-  top: -1px;
+/* The part's right edge: the table's own border, so it lands on the frame's line at every print
+   size. A line drawn from the left cell at 200 % + 2 px ended up to 0.75 pt inside it under
+   the print zoom, the bank's box short of the totals' above it (user, 2026-11-20: "section
+   overlapping"). Table sides carry on across a page break. */
+.en-lines:not(.is-full) {
+  border-inline-end: var(--en-rule);
 }
 
 /* The part's top rule: its first row. */
@@ -968,10 +963,6 @@
 /* Notes across the whole frame: one column, no right half. */
 .en-lines.is-full > colgroup > col {
   width: 100%;
-}
-
-.en-lines.is-full .en-line-cell::after {
-  content: none;
 }
 
 .en-lines .en-line-start > td {
@@ -997,7 +988,7 @@
 
 /* Alone in its part (no lines on the left): the part's whole width, its own edges. */
 .en-lines td.en-bottom-side.is-solo {
-  border-inline: var(--en-rule);
+  border-inline-start: var(--en-rule);
 }
 
 .en-closing .en-bottom-side.is-solo > .en-signature {
@@ -1056,17 +1047,18 @@
   white-space: nowrap;
 }
 
-/* Additional Information: a ruled row each, the label a third of the half, the value bold. */
-.en-closing .en-line-title > td.en-line-cell {
-  padding-block: 2px;
+/* Additional Information | signature, one row (template.hbs): the title and the ruled lines at
+   the top of the left cell, at their own heights however tall the signature beside them (user,
+   2026-11-19: "isko thoda dense karo"; Refrens' own Enterprise). The label a 40 % column, the
+   value bold, a rule between them the line's full height. */
+.en-closing .en-additional-cell {
+  padding: 0;
+  vertical-align: top;
 }
 
-/* The Additional Information title on the left, in the middle of its row's height (user,
-   2026-11-19: centred first, then "align the label on left"). */
-.en-closing .en-additional > td.en-line-cell {
-  padding-block: 6px;
-  text-align: start;
-  vertical-align: middle;
+/* The title on the left (user, 2026-11-19: centred first, then "align the label on left"). */
+.en-closing .en-additional {
+  padding: 6px var(--en-pad);
 }
 
 .en-closing .en-additional .en-card-title {
@@ -1074,14 +1066,8 @@
   text-align: start;
 }
 
-/* The rule between label and value is drawn by the cell, its full height: a row stretched by
-   the signature beside it left a border on the label short of the row's foot (2026-11-18). It
-   sits where the label's 40 % column ends (on the left in a right-to-left document). */
-
-/* A row stretched by the signature beside it keeps its text in the middle (user, 2026-11-19). */
-.en-closing .en-kv-row > td.en-line-cell {
-  padding-block: 0;
-  vertical-align: middle;
+.en-closing .en-kv-row {
+  padding-inline: var(--en-pad);
   border-top: var(--en-rule);
   background: linear-gradient(var(--en-line), var(--en-line)) no-repeat
     calc(40% - 0.6px) 0 / 1px 100%;
@@ -1089,12 +1075,14 @@
   background-origin: content-box;
 }
 
-.en-doc[dir="rtl"] .en-closing .en-kv-row > td.en-line-cell {
-  background-position: calc(60% + 0.6px) 0;
+/* The last line closed under it; over the part's own bottom rule where they meet. */
+.en-closing .en-kv-row:last-child {
+  margin-bottom: -1px;
+  border-bottom: var(--en-rule);
 }
 
-.en-closing .en-line-end > td.en-line-cell {
-  height: 0;
+.en-doc[dir="rtl"] .en-closing .en-kv-row {
+  background-position: calc(60% + 0.6px) 0;
 }
 
 /* Label | value with a rule between them, the row's full height (user, 2026-11-18). */
@@ -1168,8 +1156,10 @@
   margin-top: 8px;
 }
 
+/* The UPI ID dark and bold (user, 2026-11-20). */
 .en-upi-id {
-  color: var(--en-ink);
+  color: var(--en-strong);
+  font-weight: 600;
   overflow-wrap: break-word;
 }
 
@@ -1604,8 +1594,9 @@
       order: 1;
     }
 
-    .en-lines .en-line-cell::after {
-      content: none;
+    /* Stacked, each block draws both sides; the table draws none. */
+    .en-lines:not(.is-full) {
+      border-inline-end: 0;
     }
 
     .en-lines .en-bottom-side {
@@ -1710,6 +1701,12 @@
   .en-items-scroll,
   .en-widget-table {
     overflow: clip;
+  }
+
+  /* Cut at the page's edge (helpers.ts markCroppedTable): the frame's right edge drawn by the
+     wrapper, as the table's own is past the cut. */
+  .en-items-scroll.is-cropped {
+    border-inline-end: var(--en-rule);
   }
 
   /* Column headings repeat on every page a table spans; its totals print once, at the end. */
@@ -2159,6 +2156,18 @@ body[class~="isDibella"]
   /* A card that can split (terms, notes, additional info, attachments) lays out as a block:
      Chrome split a column flex card at its very start, leaving an empty box at the page's
      foot. The 8 px between its parts moves from the gap to margins. */
+}
+
+/* Print: the Total row stays in the item table, on the last item's page (helpers.ts
+   SPLIT_TOTALS): never alone under repeated headings on a page of its own. */
+@media print {
+  .en-items > tbody.en-items-total > tr {
+    break-before: avoid;
+  }
+
+  .en-items > tbody:has(+ tbody.en-items-total) > tr:last-child {
+    break-after: avoid;
+  }
 }
 
 /* The page-break corners (below) are print only. */
