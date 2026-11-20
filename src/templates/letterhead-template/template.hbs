@@ -1,0 +1,590 @@
+{{!--
+  Letterhead Template (Figma Document-Templates, node 1801:8109 "Letterhead Template").
+
+  Root is normalizeInvoiceTemplateState's output. Every block reads the view model built once
+  by `lhView` (helpers.ts): labels, visibility and table columns all come from the payload.
+  The design has no fixed assets: the logo, the QR codes and the signature are the document's.
+
+  Order: header (title + status | document details, business logo + document QR), Billed By |
+  Billed To, Shipped From | Shipped To, Transport Details | E-Invoice / E-Way Bill (with the
+  e-invoice QR), items (with the column-sum row), then two columns: Bank and UPI, Terms, Notes,
+  Additional Info, Attachments on the left; totals, amount in words and signature on the
+  right. Summaries (HSN, tax, batch, payments) and the enquiry line close the document.
+  data-testid / data-section / data-col are test hooks; data-ceres-* are the host's live
+  update targets.
+--}}
+{{#with (lhView @root) as |view|}}
+<div class="lh-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-lh-currency="{{@root.invoice.currency}}" data-testid="invoice-root" data-lh-side-margin="{{view.print.sideMargin}}" data-lh-paper-width="{{view.print.paperWidth}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--lh-text-scale: {{view.print.textScale}}; --lh-print-scale: {{view.print.printScale}}; --lh-print-width: {{view.print.printWidth}}px; --lh-browser-print-width: {{view.print.browserPrintWidth}}px; --lh-print-base: {{view.print.printBase}}px; --lh-browser-print-height: {{view.print.browserPrintHeight}}px; --lh-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --lh-theme: {{view.theme.accent}}; --lh-on-accent: {{view.theme.onAccent}};{{#if view.theme.accentText}} --lh-accent-text: {{view.theme.accentText}};{{/if}}{{/if}}{{#if view.script.font}} --lh-script-font: {{{view.script.font}}};{{/if}}">
+  {{!-- Text Scale Smaller (0.8, also unset): Refrens' renderer leaves the page unzoomed then, so the template zooms it (helpers.ts mapPrint ownPrintZoom); :where() lets the renderer's own rule win once Lydia sets another size live. --}}
+  {{#if view.print.ownPrintZoom}}<style id="lh-own-zoom">@media print { :where(html) { zoom: {{view.print.ownPrintZoom}}; } }</style>{{/if}}
+  {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
+  {{#if view.script.fontUrl}}<link rel="stylesheet" href="{{view.script.fontUrl}}" />{{/if}}
+  {{#unless view.letterheadEveryPage}}
+    {{!-- Letterhead on the first page only (pdfOptions.letterHeadOnFirstPage): in the flow. --}}
+    <div class="{{#if view.serviceLetterhead}}no-dibella {{/if}}invoice-letterhead lh-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="first">
+      {{#if @root.invoice.letterHead}}
+        <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+      {{else}}
+        <img alt="Letterhead" data-ceres-height="letterhead" />
+      {{/if}}
+    </div>
+  {{/unless}}
+
+  {{!--
+    Print frame: transparent on screen (display: contents). In print, the letterhead repeats
+    at the top of every page in the <thead> unless it is for the first page only; when the
+    footer repeats on every page (pdfOptions.footerOnLastPage off), the real footer is fixed
+    to the foot of each page and the repeating <tfoot> holds an invisible copy of it, so
+    content never runs under it.
+  --}}
+  <table class="lh-page-frame" role="presentation">
+    {{!-- The page's top margin in a browser's own print, whose page margins are 0 there so Chrome
+          prints no date / title / URL / page-number stamps (helpers.ts applyBrowserPrintPage);
+          hidden otherwise, and under an every-page letterhead, which sits on the page's edge. --}}
+    <thead class="lh-page-frame-header">
+      <tr class="lh-page-margin" aria-hidden="true"><td></td></tr>
+      {{#if view.letterheadEveryPage}}
+        {{!-- What the PDF service's stamped letterhead takes past its margin (helpers.ts placeStampRoom). --}}
+        <tr class="lh-stamp-room is-top" aria-hidden="true"><td></td></tr>
+        <tr>
+          <td>
+            <div class="no-dibella invoice-letterhead lh-letterhead{{#unless @root.invoice.letterHead}} is-empty{{/unless}}" data-ceres-page-header data-ceres-page-policy="all">
+              {{#if @root.invoice.letterHead}}
+                <img src="{{@root.invoice.letterHead}}" alt="Letterhead" data-ceres-height="letterhead" />
+              {{else}}
+                <img alt="Letterhead" data-ceres-height="letterhead" />
+              {{/if}}
+            </div>
+          </td>
+        </tr>
+      {{/if}}
+    </thead>
+    <tfoot class="lh-page-frame-footer">
+      {{#if view.footerEveryPage}}
+        <tr>
+          <td>
+            <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer lh-letterhead-footer lh-footer-spacer{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" aria-hidden="true">
+              {{#if @root.invoice.letterHeadFooter}}<img src="{{@root.invoice.letterHeadFooter}}" alt="" />{{else}}<img alt="" />{{/if}}
+            </div>
+          </td>
+        </tr>
+        <tr class="lh-stamp-room is-bottom" aria-hidden="true"><td></td></tr>
+      {{/if}}
+      {{#if view.ownSignatureNote}}
+        <tr class="lh-signature-note"><td><p>This is an electronically generated document, no signature is required.</p></td></tr>
+      {{/if}}
+      <tr class="lh-page-margin" aria-hidden="true"><td></td></tr>
+    </tfoot>
+    <tbody>
+      <tr>
+        <td class="lh-page-frame-cell">
+          <div class="lh-page-body">
+          {{!--
+            Letterhead design (user's PDF, 2026-11-19): a tinted band with the title, status and
+            subtitle | the seller's name and address | the logo on a white tile; then cards in
+            three columns, each under a tinted tab title: <Document> Details | Billed By (the
+            seller's tax and contact fields) | Payment Record, then Billed To, Shipped From,
+            Shipped To, Transport Details. A missing card leaves no gap.
+          --}}
+          <header class="lh-band" data-testid="section" data-section="header">
+            <div class="lh-title-block">
+              {{#if view.title}}
+                <div class="lh-title-row">
+                  <h1 class="lh-title" data-role="title">{{view.title}}</h1>
+                  {{#if view.status}}
+                    <span class="lh-status{{#unless view.status.inPrint}} no-print{{/unless}}"><span class="invoice-tag {{view.status.color}}">{{view.status.text}}</span></span>
+                  {{/if}}
+                </div>
+              {{/if}}
+              {{#if view.subtitle}}<p class="lh-subtitle">{{view.subtitle}}</p>{{/if}}
+              {{#if view.copy}}<p class="lh-copy" data-role="tag">{{view.copy}}</p>{{/if}}
+            </div>
+            {{#with view.seller as |party|}}
+              <div class="lh-band-seller" data-role="billed-by">
+                <p class="lh-party-name lh-seller-name" dir="auto">{{party.name}}</p>
+                {{#if party.address}}<p class="lh-party-address" data-role="address">{{party.address}}</p>{{/if}}
+              </div>
+            {{/with}}
+            {{#if view.brand.logo}}
+              <div class="lh-logo">
+                {{> CeresImage src=view.brand.logo alt=view.brand.name class="lh-logo-image"}}
+              </div>
+            {{/if}}
+          </header>
+
+          <section class="lh-grid" data-testid="section" data-section="parties">
+            {{#if view.hasDetailsRow}}
+              <div class="lh-box lh-details-box" data-testid="section" data-section="details">
+                <h2 class="lh-tab">{{view.detailsTitle}}</h2>
+                <div class="lh-fields">
+                  {{#each view.details}}
+                    <p class="lh-field lh-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="lh-field-label">{{label}}</span><span class="lh-field-value{{#if isNum}} lh-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{lhDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                  {{/each}}
+                  {{#unless view.compliance.isBelowItems}}
+                    <div class="lh-compliance lh-details-compliance" data-testid="section" data-section="compliance">
+                      {{#if view.compliance.showIrn}}
+                        <p class="lh-field lh-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}><span class="lh-field-label">{{view.compliance.irnLabel}}</span><span class="lh-field-value lh-irn-value lh-break" data-ceres-field="irn">{{view.compliance.irn}}</span></p>
+                      {{/if}}
+                      {{#each view.compliance.rows}}
+                        <p class="lh-field lh-compliance-{{key}}"><span class="lh-field-label">{{label}}</span><span class="lh-field-value lh-num" data-testid="num">{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{lhDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/unless}}
+                  {{#unless view.supplyUnderShipTo}}{{#if view.supply}}
+                    <div class="lh-fields lh-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                      {{#each view.supply.rows}}
+                        <p class="lh-field lh-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="lh-field-label">{{label}}</span><span class="lh-field-value">{{value}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}{{/unless}}
+                </div>
+                {{!-- One QR: the e-invoice QR while the IRN is active, else the document QR; ZATCA / LHDN. --}}
+                <div class="lh-qr-list lh-details-qrs">
+                  <div class="lh-qr lh-doc-qr{{#unless view.documentQr}} is-empty{{/unless}}" data-ceres-field-container="documentQr"><img data-ceres-field="documentQr"{{#if view.documentQr}} src="{{view.documentQr}}"{{/if}} alt="Document QR Code" /></div>
+                  {{#unless view.compliance.isBelowItems}}
+                    <div class="lh-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                    <div class="lh-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                    <div class="lh-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                  {{/unless}}
+                </div>
+              </div>
+            {{/if}}
+
+            {{#with view.seller as |party|}}
+              {{#if party.fields.length}}
+                <div class="lh-box lh-party lh-seller" data-role="billed-by-fields">
+                  {{#if party.title}}<h2 class="lh-tab">{{party.title}}</h2>{{/if}}
+                  <div class="lh-fields">
+                    {{#each party.fields}}
+                      <p class="lh-field"><span class="lh-field-label">{{label}}</span><span class="lh-field-value{{#if noWrap}} lh-num{{else if isEmail}} lh-email{{/if}}{{#if isToken}} lh-break{{/if}}">{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                </div>
+              {{/if}}
+            {{/with}}
+
+            {{#if view.paymentRecord}}
+              <div class="lh-box lh-payment-record{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}" data-testid="section" data-section="payment-record">
+                <h2 class="lh-tab">{{view.paymentRecord.title}}</h2>
+                <div class="lh-fields">
+                  {{#each view.paymentRecord.rows}}
+                    <p class="lh-field lh-meta-{{key}}"><span class="lh-field-label">{{label}}</span><span class="lh-field-value lh-num" data-testid="num">{{value}}</span></p>
+                  {{/each}}
+                </div>
+              </div>
+            {{/if}}
+
+            {{#with view.buyer as |party|}}
+              <div class="lh-box lh-party lh-buyer" data-role="billed-to">
+                {{#if party.title}}<h2 class="lh-tab">{{party.title}}</h2>{{/if}}
+                <p class="lh-party-name" dir="auto">{{party.name}}</p>
+                {{#if party.address}}<p class="lh-party-address" data-role="address">{{party.address}}</p>{{/if}}
+                {{#if party.fields.length}}
+                  <div class="lh-fields">
+                    {{#each party.fields}}
+                      <p class="lh-field"><span class="lh-field-label">{{label}}</span><span class="lh-field-value{{#if noWrap}} lh-num{{else if isEmail}} lh-email{{/if}}{{#if isToken}} lh-break{{/if}}">{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                {{/if}}
+              </div>
+            {{/with}}
+
+            {{#each view.dispatchParties}}
+              <div class="lh-box lh-party lh-ship" data-role="{{role}}">
+                {{#if title}}<h2 class="lh-tab">{{title}}</h2>{{/if}}
+                <p class="lh-party-name" dir="auto">{{name}}</p>
+                {{#if address}}<p class="lh-party-address" data-role="address">{{address}}</p>{{/if}}
+                {{#if fields.length}}
+                  <div class="lh-fields">
+                    {{#each fields}}
+                      <p class="lh-field"><span class="lh-field-label">{{label}}</span><span class="lh-field-value{{#if noWrap}} lh-num{{else if isEmail}} lh-email{{/if}}{{#if isToken}} lh-break{{/if}}">{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isPhone}}{{formatPhoneNumber value}}{{else}}{{value}}{{/if}}</span></p>
+                    {{/each}}
+                  </div>
+                {{/if}}
+                {{#if isShipTo}}{{#if view.supply}}
+                    <div class="lh-fields lh-supply" data-testid="section" data-section="supply" data-ceres-country-of-supply{{#if view.supply.hidden}} style="display:none"{{/if}}>
+                      {{#each view.supply.rows}}
+                        <p class="lh-field lh-supply-cell"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="lh-field-label">{{label}}</span><span class="lh-field-value">{{value}}</span></p>
+                      {{/each}}
+                    </div>
+                  {{/if}}{{/if}}
+              </div>
+            {{/each}}
+
+            {{#if view.transport}}
+              <div class="lh-box lh-party lh-transport" data-role="transport">
+                {{#if view.transport.title}}<h2 class="lh-tab">{{view.transport.title}}</h2>{{/if}}
+                <div class="lh-fields">
+                  {{#each view.transport.rows}}
+                    <p class="lh-field"><span class="lh-field-label lh-transport-{{key}}">{{label}}</span><span class="lh-field-value{{#if isNum}} lh-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{lhDate value 0}}{{else}}{{value}}{{/if}}</span></p>
+                  {{/each}}
+                </div>
+              </div>
+            {{/if}}
+          </section>
+
+          <section class="lh-items-section" data-testid="section" data-section="items">
+            <div class="lh-items-scroll" data-testid="items-scroll">
+              <table class="lh-items{{#if view.printTight}} is-print-tight{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--lh-figures: {{view.table.figureCount}}; --lh-serial-width: {{view.table.serialWidth}}px;">
+                <thead>
+                  <tr data-testid="items-header">
+                    {{!-- No "Sr." text over the serial numbers (user request, 2026-10-23); kept for screen readers. --}}
+                    <th class="lh-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px" aria-label="{{view.table.serialLabel}}"></th>
+                    {{#each view.table.header}}
+                      <th class="{{className}}" data-col="{{col}}"{{#if width}} style="width: {{width}}px"{{/if}}>
+                        {{#if isName}}<span class="lh-desc-min" aria-hidden="true" style="width: {{view.table.descriptionMin}}px"></span>{{/if}}
+                        {{#each labelParts}}{{this}}{{#unless @last}}<wbr />{{/unless}}{{/each}}
+                      </th>
+                    {{/each}}
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each view.table.rows}}
+                    {{#if isGroupHeader}}
+                      <tr class="lh-group-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-row">
+                        <td colspan="{{colspan}}">
+                          <span class="lh-group-name">{{name}}</span>
+                          {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                        </td>
+                      </tr>
+                      {{#if originalImages.length}}
+                        <tr class="lh-image-row lh-group-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="group-image-row">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="lh-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{else}}
+                      {{#if nameRow}}
+                        <tr class="lh-name-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-name-row" data-item-index="{{itemIndex}}">
+                          <td class="lh-col-serial" data-col="sr" rowspan="2">{{#if serial}}<span class="lh-num" data-testid="num">{{serial}}</span>{{/if}}</td>
+                          <td colspan="{{detailColspan}}">
+                            <span class="lh-item-name">{{name}}</span>
+                            {{#if inlineCodes.length}}<span class="lh-item-codes">{{#each inlineCodes}}<span class="lh-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                      <tr class="lh-item-row{{#if isStripe}} is-stripe{{/if}}{{#if isRich}} is-rich{{/if}}{{#if isGroupTotal}} lh-group-total-row{{/if}}{{#if nameRow}} has-name-row{{/if}}" data-testid="item-row" data-item-index="{{itemIndex}}">
+                        {{#unless nameRow}}<td class="lh-col-serial" data-col="sr">{{#if serial}}<span class="lh-num" data-testid="num">{{serial}}</span>{{/if}}</td>{{/unless}}
+                        {{#each cells}}
+                          {{#if isName}}
+                            <td class="{{className}}" data-col="{{col}}">
+                              {{#if ../thumbnail}}
+                                <div class="lh-item-thumbnail">{{> CeresImage src=../thumbnail alt=../name class="lh-thumbnail" href=../thumbnail}}</div>
+                              {{/if}}
+                              {{#unless ../nameRow}}
+                                <span class="lh-item-name">{{../name}}</span>
+                                {{#if ../inlineCodes.length}}<span class="lh-item-codes">{{#each ../inlineCodes}}<span class="lh-item-code">{{this}}</span>{{/each}}</span>{{/if}}
+                              {{/unless}}
+                              {{#if ../hasDetail}}
+                                <div class="lh-item-detail" data-ceres-description-inline{{#if ../detailRow}} style="display: none;"{{/if}}>
+                                  {{#unless ../detailRow}}
+                                    <div data-ceres-description-content>
+                                      {{#if ../description}}<div class="lh-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData ../description) }}</div>{{/if}}
+                                      {{#if ../images.length}}{{> CeresImageGallery (prepareImageGallery ../images variant="thumbnail" alt=../name) }}{{/if}}
+                                    </div>
+                                  {{/unless}}
+                                </div>
+                              {{/if}}
+                            </td>
+                          {{else}}
+                            <td class="{{className}}" data-col="{{col}}" data-label="{{label}}">{{#if isNum}}<span class="lh-num" data-testid="num">{{value}}</span>{{else}}{{value}}{{/if}}</td>
+                          {{/if}}
+                        {{/each}}
+                      </tr>
+                      {{#if hasDetail}}
+                        {{!-- Full-width description row (isDescriptionFullWidth), kept for the live toggle. --}}
+                        <tr class="lh-detail-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}" data-ceres-description-row{{#unless detailRow}} style="display: none;"{{/unless}}>
+                          <td class="lh-col-serial"></td>
+                          <td colspan="{{detailColspan}}">
+                            <div class="lh-item-detail" data-ceres-description-full-width>
+                              {{#if detailRow}}
+                                <div data-ceres-description-content>
+                                  {{#if description}}<div class="lh-item-desc">{{> MarkdownViewer (prepareMarkdownViewerData description) }}</div>{{/if}}
+                                  {{#if images.length}}{{> CeresImageGallery (prepareImageGallery images variant="thumbnail" alt=name) }}{{/if}}
+                                </div>
+                              {{/if}}
+                            </div>
+                          </td>
+                        </tr>
+                      {{/if}}
+                      {{#if imageRow}}
+                        {{!-- Original images: their own row under the item, across the whole table. --}}
+                        <tr class="lh-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="lh-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
+                          </td>
+                        </tr>
+                      {{/if}}
+                    {{/if}}
+                  {{/each}}
+                  {{!-- Stretch row: takes the spare height of a one-page printout, or of the preview's A4 sheet. --}}
+                  <tr class="lh-filler" aria-hidden="true"><td class="lh-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tbody>
+                {{#if view.table.footer.show}}
+                  <tbody class="lh-items-total">
+                    <tr class="lh-total-row" data-testid="items-total">
+                      <td class="lh-col-serial" data-col="sr">{{#if view.table.footer.labelInSerial}}{{view.table.footer.label}}{{/if}}</td>
+                      {{#each view.table.footer.cells}}
+                        <td class="{{className}}" data-col="{{col}}"{{#unless isName}} data-label="{{label}}"{{/unless}}>{{#if isName}}{{view.table.footer.label}}{{else if isNum}}<span class="lh-num" data-testid="num">{{value}}</span>{{/if}}</td>
+                      {{/each}}
+                    </tr>
+                  </tbody>
+                {{/if}}
+                {{!-- Print only: repeated at the foot of each page the table spans, it rounds the
+                      corners of the page's last row (styles.css, "corners at a page break"). --}}
+                <tfoot class="lh-items-corners" aria-hidden="true">
+                  <tr><td class="lh-col-serial"></td>{{#each view.table.header}}<td class="{{className}}"></td>{{/each}}</tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+
+          {{#if view.compliance.isBelowItems}}
+            <section class="lh-cards lh-logistics" data-testid="section" data-section="logistics-below">
+              <div class="lh-card lh-compliance lh-col-2{{#unless view.hasCompliance}} is-empty{{/unless}}" data-testid="section" data-section="compliance">
+                <div class="lh-compliance-text">
+                  {{#if view.compliance.title}}<h2 class="lh-card-title">{{view.compliance.title}}</h2>{{/if}}
+                  <div class="lh-kv">
+                    {{#if view.compliance.showIrn}}
+                      <span class="lh-kv-label lh-irn-row"{{#unless view.compliance.irn}} style="display:none"{{/unless}}>{{view.compliance.irnLabel}}</span>
+                      <span class="lh-kv-value lh-irn-value"{{#unless view.compliance.irn}} style="display:none"{{/unless}} data-ceres-field="irn">{{view.compliance.irn}}</span>
+                    {{/if}}
+                    {{#each view.compliance.rows}}
+                      <span class="lh-kv-label">{{label}}</span>
+                      <span class="lh-kv-value lh-num" data-testid="num">{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{lhDate value 0}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </div>
+                <div class="lh-qr-list">
+                  <div class="lh-qr{{#unless view.compliance.qr.irn}} is-empty{{/unless}}" data-ceres-field-container="qrCode"><img data-ceres-field="qrCode"{{#if view.compliance.qr.irn}} src="{{view.compliance.qr.irn}}"{{/if}} alt="E-Invoice QR Code" /></div>
+                  <div class="lh-qr{{#unless view.compliance.qr.zatca}} is-empty{{/unless}}" data-ceres-field-container="zatcaQrCode"><img data-ceres-field="zatcaQrCode"{{#if view.compliance.qr.zatca}} src="{{view.compliance.qr.zatca}}"{{/if}} alt="ZATCA QR Code" /></div>
+                  <div class="lh-qr{{#unless view.compliance.qr.lhdn}} is-empty{{/unless}}" data-ceres-field-container="lhdnQrCode"><img data-ceres-field="lhdnQrCode"{{#if view.compliance.qr.lhdn}} src="{{view.compliance.qr.lhdn}}"{{/if}} alt="LHDN QR Code" /></div>
+                </div>
+              </div>
+            </section>
+          {{/if}}
+
+          {{!-- Under the items: the amount in words, notes, additional information and attachments
+                on the left; the totals, then "For <business>" over the signature on the right. --}}
+          <div class="lh-bottom">
+            <div class="lh-bottom-main">
+              {{#if view.words}}
+                <section class="lh-card lh-words ceres-subtotal-words{{#if view.totals.hidden}} is-hidden-by-totals{{/if}}{{#if view.words.hiddenBySetting}} is-hidden-by-words-setting{{/if}}" data-ceres-total-in-words>
+                  <h2 class="lh-card-title lh-words-label">{{view.words.label}}</h2>
+                  <p class="lh-words-value">{{view.words.value}}</p>
+                </section>
+              {{/if}}
+
+              {{#if view.notes}}
+                <section class="lh-card lh-notes" data-testid="section" data-section="notes">
+                  {{#if view.notes.title}}<h2 class="lh-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
+                  <div class="lh-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
+                </section>
+              {{/if}}
+
+              {{#if view.additional}}
+                <section class="lh-card" data-testid="section" data-section="additional">
+                  {{#if view.additional.title}}<h2 class="lh-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
+                  <div class="lh-kv">
+                    {{#each view.additional.rows}}
+                      <span class="lh-kv-label" data-role="ai-label">{{label}}</span>
+                      <span class="lh-kv-value{{#if isDate}} lh-num{{/if}}" data-role="ai-value">{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
+                    {{/each}}
+                  </div>
+                </section>
+              {{/if}}
+
+              {{#if view.attachments}}
+                <section class="lh-card" data-testid="section" data-section="attachments">
+                  {{#if view.attachments.title}}<h2 class="lh-card-title" data-role="title">{{view.attachments.title}}</h2>{{/if}}
+                  <ol class="lh-attachments">
+                    {{#each view.attachments.files}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer" title="{{name}}">{{name}}</a></li>{{/each}}
+                  </ol>
+                </section>
+              {{/if}}
+            </div>
+
+            <div class="lh-bottom-side">
+              {{!-- The shared Subtotal widget's rows and hooks (live hideTotals / hideTaxes); the
+                    grand total large between two rules. --}}
+              <table class="lh-totals-table" data-testid="totals-table">
+                <tbody class="lh-totals ceres-subtotal" data-ceres-subtotal data-testid="section" data-section="totals">
+                  {{#each view.totals.rows}}
+                    <tr
+                      class="ceres-subtotal-row ceres-subtotal-row-{{emphasis}}{{#if isGrand}} lh-grand-row{{/if}}{{#if isExtra}} lh-extra-row{{/if}}{{#if view.totals.hidden}}{{#unless survivesHideTotals}} is-hidden-by-totals{{/unless}}{{/if}}{{#if isTaxRow}}{{#if view.totals.hideTaxes}} is-hidden-by-taxes{{/if}}{{/if}}"
+                      data-ceres-subtotal-row="{{key}}"
+                      {{#if isTaxRow}}data-ceres-subtotal-taxes{{/if}}
+                      {{#if survivesHideTotals}}data-ceres-subtotal-keep{{/if}}
+                    >
+                      <th class="ceres-subtotal-label" scope="row">
+                        {{label}}
+                        {{#if note}}<div class="ceres-subtotal-note">{{note}}</div>{{/if}}
+                      </th>
+                      <td class="ceres-subtotal-value">
+                        <span class="lh-num"{{#if isNum}} data-testid="num"{{/if}}{{#if isGrand}} data-role="grand-total-row"{{/if}}>{{value}}</span>
+                        {{#if converted}}<div class="ceres-subtotal-converted">{{converted}}</div>{{/if}}
+                        {{#if extra}}
+                          <div class="ceres-subtotal-extra">
+                            {{extra.value}}
+                            {{#if extra.converted}}<div class="ceres-subtotal-converted">{{extra.converted}}</div>{{/if}}
+                          </div>
+                        {{/if}}
+                      </td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+
+              {{!-- Only for a signature the document has (an image or a digital request). --}}
+              {{#if view.signature.show}}
+                <section class="lh-signature" data-testid="signature">
+                  {{#if view.brand.name}}<p class="lh-signature-for">For {{view.brand.name}}</p>{{/if}}
+                  <div class="lh-signature-mark">
+                    {{#if view.signature.image}}
+                      {{> CeresImage src=view.signature.image alt=view.signature.label class="lh-signature-image"}}
+                    {{else if view.signature.awaitingDigital}}
+                      <p class="lh-signature-banner">Awaiting Digital Signature</p>
+                    {{else if view.signature.signedDigital}}
+                      <p class="lh-signature-banner">
+                        Digitally signed{{#if view.signature.signerName}} by {{view.signature.signerName}}{{/if}}
+                        {{#if view.signature.verifyUrl}}<a href="{{view.signature.verifyUrl}}" target="_blank" rel="noopener noreferrer">Verify</a>{{/if}}
+                      </p>
+                    {{/if}}
+                  </div>
+                  {{#if view.signature.label}}<p class="lh-signature-label">{{view.signature.label}}</p>{{/if}}
+                </section>
+              {{/if}}
+            </div>
+          </div>
+
+          {{!-- The tinted foot band (Letterhead design): Terms | Bank Account Details | UPI - Scan to pay. --}}
+          {{#if view.hasFootBand}}
+            <footer class="lh-foot-band" data-testid="section" data-section="foot-band">
+              {{#if view.terms.length}}
+                <div class="lh-foot-terms">
+                  {{#each view.terms}}
+                    <section class="lh-card lh-terms" data-testid="section" data-section="terms">
+                      <h2 class="lh-card-title" data-role="title">{{title}}</h2>
+                      <ol class="lh-terms-list">
+                        {{#each items}}<li>{{this}}</li>{{/each}}
+                      </ol>
+                    </section>
+                  {{/each}}
+                </div>
+              {{/if}}
+              {{#if view.bank.show}}
+                <section class="lh-card lh-bank" data-testid="section" data-section="bank">
+                  {{#if view.bank.rows.length}}
+                    <div class="lh-bank-main">
+                      {{#if view.bank.title}}<h2 class="lh-card-title" data-role="title">{{view.bank.title}}</h2>{{/if}}
+                      <div class="lh-kv lh-bank-rows">
+                        {{#each view.bank.rows}}
+                          <span class="lh-kv-label lh-bank-{{key}}">{{label}}</span>
+                          <span class="lh-kv-value{{#if isNum}} lh-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
+                        {{/each}}
+                        {{#if view.bank.upi}}{{#unless view.bank.upi.qr}}
+                          <span class="lh-kv-label lh-bank-upi">{{view.bank.upi.label}}</span>
+                          <span class="lh-kv-value lh-num" data-testid="num">{{view.bank.upi.id}}</span>
+                        {{/unless}}{{/if}}
+                      </div>
+                    </div>
+                  {{/if}}
+                  {{#if view.bank.upi.qr}}
+                    <figure class="lh-upi">
+                      <figcaption class="lh-card-title lh-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
+                      {{#if view.bank.upi.note}}<p class="lh-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                      <img class="lh-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
+                      <p class="lh-upi-id lh-num">{{view.bank.upi.id}}</p>
+                    </figure>
+                  {{/if}}
+                </section>
+              {{/if}}
+            </footer>
+          {{/if}}
+
+          {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered
+                with their data, hidden while switched off (live toggles). --}}
+          <section class="lh-card lh-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+            {{#if view.hsn.title}}<h3 class="lh-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
+            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          <section class="lh-card lh-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
+            {{#if view.taxSummary.title}}<h3 class="lh-card-title" data-role="title">{{view.taxSummary.title}}</h3>{{/if}}
+            {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          {{#if view.stock}}
+            <section class="lh-card lh-widget-table" data-testid="section" data-section="stock-summary" data-ceres-batch-summary{{#if view.stock.hidden}} style="display: none;"{{/if}}>
+              {{#if view.stock.title}}<h3 class="lh-card-title" data-role="title">{{view.stock.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table lh-stock-table">
+                  <thead><tr>{{#each view.stock.columns}}<th>{{label}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.stock.rows}}
+                      <tr>{{#each this}}<td{{#if isNum}} class="lh-num" data-testid="num"{{/if}}>{{value}}</td>{{/each}}</tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.payments.show}}
+            <section class="lh-card lh-widget-table" data-testid="section" data-section="payments" data-ceres-payment-table{{#if view.payments.hidden}} style="display: none;"{{/if}}>
+              {{#if view.payments.title}}<h3 class="lh-card-title" data-role="title">{{view.payments.title}}</h3>{{/if}}
+              <div class="ceres-table-section">
+                <table class="ceres-table lh-payments-table">
+                  <thead><tr>{{#each view.payments.columns}}<th>{{this}}</th>{{/each}}</tr></thead>
+                  <tbody>
+                    {{#each view.payments.rows}}
+                      <tr data-testid="payment">
+                        {{#each this}}
+                          <td{{#unless isText}} class="lh-num"{{/unless}}>{{#if isDate}}{{lhDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}{{#if converted}}<span class="lh-payment-converted">{{converted}}</span>{{/if}}</td>
+                        {{/each}}
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                  {{#if view.payments.total}}
+                    <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="lh-num">{{value}}</td>{{/each}}</tr></tfoot>
+                  {{/if}}
+                </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if view.enquiry}}
+            <p class="lh-enquiry" data-testid="enquiry" data-section="enquiry">{{view.enquiry.lead}}{{#if view.enquiry.email}} {{view.enquiry.emailLabel}} <strong class="lh-email">{{view.enquiry.email}}</strong>{{/if}}{{#if view.enquiry.phone}}{{#if view.enquiry.email}},{{/if}} {{view.enquiry.phoneLabel}} <strong class="lh-num">{{formatPhoneNumber view.enquiry.phone}}</strong>{{/if}}</p>
+          {{/if}}
+
+          {{> RefrensBranding @root.invoice}}
+          {{!-- On the last page only: the content's last block, so in print the content before it
+                goes over to a new page with it rather than leave it alone there. --}}
+          {{#unless view.footerEveryPage}}
+        <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer lh-letterhead-footer{{#if view.footerEveryPage}} lh-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+          {{#if @root.invoice.letterHeadFooter}}
+            <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+          {{else}}
+            <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+          {{/if}}
+        </div>
+          {{/unless}}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  {{!-- On every page: fixed to each printed page's foot (print rules), outside the frame. --}}
+  {{#if view.footerEveryPage}}
+  <div class="{{#if view.serviceFooter}}no-dibella {{/if}}invoice-letterhead-footer lh-letterhead-footer{{#if view.footerEveryPage}} lh-footer-fixed{{/if}}{{#unless @root.invoice.letterHeadFooter}} is-empty{{/unless}}" data-ceres-page-footer data-ceres-page-policy="{{#if view.footerEveryPage}}all{{else}}last{{/if}}">
+    {{#if @root.invoice.letterHeadFooter}}
+      <img src="{{@root.invoice.letterHeadFooter}}" alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{else}}
+      <img alt="Letterhead footer" data-ceres-height="letterhead-footer" />
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
+{{/with}}
