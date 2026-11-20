@@ -1,0 +1,2813 @@
+@import "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap";
+
+/*
+ * Minimal Template: Refrens' Minimal layout, measured on the user's "Minimal - Web View" PDF
+ * (2026-11-19, a 1000 px canvas): 24 px page gutters, 13 px text on 20 px lines, 14 px names,
+ * a 28 px title, three 307 px columns 16 px apart, #2b2b2b text with #7e7e7e labels, a #f0f0f0
+ * table heading inside #e8e8e8 rules, the grand total on a #097dc4 bar (the theme colour).
+ * Built on the Modern template's print engine (stretch, page-break closing, split totals,
+ * literal text scale, stamp room).
+ *
+ * Every rule is scoped to .mn-doc; the page box and margins belong to the browser or the PDF
+ * service (no @page: it would break Lydia's Pageless PDF). Headings, labels and table headers
+ * are the business's own editable text, so no rule changes their case. Text sizes follow the
+ * document's text scale (--mn-text-scale).
+ */
+
+.mn-doc {
+  /* Smooth, lighter glyph edges on macOS screens (user, 2026-11-04). */
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -webkit-font-smoothing: antialiased;
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -moz-osx-font-smoothing: grayscale;
+
+  /* The host's live colour (Lydia's theme picker sets --primary-color on <html>) wins over the
+     document's colour as rendered, so a change shows without a re-render. Only the grand
+     total's bar carries it (Refrens' Minimal). */
+  --mn-accent: var(--primary-color, var(--mn-theme, #097dc4));
+  --mn-on-accent: #fff;
+
+  /* The theme colour as text on the paper; a light theme colour takes the ink instead
+     (helpers.ts mapSettings accentText / syncThemeContrast). */
+  --mn-accent-text: var(--mn-accent);
+  --mn-tint: color-mix(in srgb, var(--mn-accent) 10%, var(--mn-paper));
+
+  /* No zebra rows in Refrens' Minimal. */
+  --mn-zebra: var(--mn-paper);
+
+  /* The item table's heading row: #f0f0f0 (Refrens' Minimal), whatever the theme. */
+  --mn-head-tint: #f0f0f0;
+
+  /* Text colours measured on the reference: #2b2b2b text, #7e7e7e field names, the totals'
+     labels and item descriptions. */
+  --mn-ink: #2b2b2b;
+  --mn-strong: #2b2b2b; /* the grand total */
+  --mn-muted: #7e7e7e; /* field names and captions */
+  --mn-caption: #7e7e7e; /* summary titles */
+  --mn-code: #7e7e7e; /* SKU, HSN/SAC and the other codes under an item's name */
+  --mn-desc: #7e7e7e; /* an item's description under its name */
+  --mn-label: #7e7e7e; /* field names under the items, the totals' labels */
+  --mn-paper: #fff;
+  --mn-card: var(--mn-paper);
+  --mn-fill: #f0f2f5; /* group rows */
+  --mn-line: #e8e8e8; /* the table's rules */
+
+  /* 13 px text on 20 px lines; every line height a ratio, so it follows the text scale. */
+  --mn-lh: 1.5385;
+
+  /*
+   * --mn-script-font is the Noto face for the document's Language/Script setting (set inline
+   * by the template, loaded from Google Fonts); it fills in the glyphs the main face lacks.
+   */
+  --mn-font: var(--subtitle-font, "Roboto"), var(--mn-script-font, "Roboto"), sans-serif;
+  --mn-title-font: var(--title-font, "Roboto"), var(--mn-script-font, "Roboto"), sans-serif;
+  --mn-table-font: var(--mn-font);
+  --mn-label-font: var(--mn-font);
+
+  /* Type scale (Refrens' Minimal): 13 px text, 14 px names, 12 px UPI captions, 16 px grand
+     total, 28 px title. Print uses the same sizes (user, 2026-10-21: print 1:1). */
+  --mn-font-size-code: 12px;
+  --mn-font-size-xs: 13px;
+  --mn-font-size-sm: 13px;
+  --mn-font-size-s: 13px;
+  --mn-font-size-base: 13px;
+  --mn-font-size-m: 13px;
+  --mn-font-size-l: 13px;
+  --mn-font-size-lg: 13px;
+  --mn-font-size-xl: 28px; /* the title */
+  --mn-font-size-heading: 13px; /* section headings */
+  --mn-font-size-subheading: 13px;
+  --mn-font-size-grand: 16px; /* the grand total, label and figure */
+  --mn-font-size-name: 14px; /* party names */
+  --mn-font-size-brand: 14px;
+  --mn-font-size-section: 13px; /* headings under the items and the table's headings */
+  --mn-font-size-label: 12px; /* Scan to pay, the UPI note */
+  --mn-font-size-status: 14px; /* the status tag */
+  --mn-font-size-words: 13px;
+  --mn-font-size-grand-figure: 16px;
+  --mn-font-size-caption: 13px; /* the summary tables' titles */
+
+  /* 24 px in from the page's sides; the letterhead and footer run to the edges. */
+  --mn-gutter: 24px;
+  --mn-section-gap: 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--mn-section-gap);
+  width: min(100vw, 1000px);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--mn-gutter);
+  background: var(--mn-paper);
+  color: var(--mn-ink);
+  font-family: var(--mn-font);
+  font-size: calc(var(--mn-font-size-base) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  line-height: var(--mn-lh);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.mn-doc,
+.mn-doc *,
+.mn-doc *::before,
+.mn-doc *::after {
+  box-sizing: border-box;
+}
+
+/* Flex children default to min-width:auto, which would let a wide table stretch the page. */
+.mn-doc > *,
+.mn-page-body > * {
+  min-width: 0;
+}
+
+/* The print frame (template.hbs) is transparent on screen. */
+.mn-page-frame,
+.mn-page-frame > tbody,
+.mn-page-frame > tbody > tr,
+.mn-page-frame-cell,
+.mn-page-frame-header,
+.mn-page-frame-header > tr,
+.mn-page-frame-header > tr > td,
+.mn-page-body {
+  display: contents;
+}
+
+.mn-page-frame-footer {
+  display: none;
+}
+
+/* The page margin rows of a browser's own print only (print rules below); the signature note
+   in Refrens' PDF only. */
+.mn-page-frame > * > tr.mn-signature-note,
+.mn-page-frame > * > tr.mn-page-margin,
+.mn-page-frame > * > tr.mn-stamp-room {
+  display: none;
+}
+
+.mn-doc p,
+.mn-doc h1,
+.mn-doc h2,
+.mn-doc h3,
+.mn-doc ol,
+.mn-doc ul,
+.mn-doc figure {
+  margin: 0;
+}
+
+/*
+ * Figures, codes, dates, IDs and phone numbers never wrap (user request): the box holding
+ * one widens to fit it instead — columns, cards and table cells alike.
+ */
+.mn-num {
+  white-space: nowrap;
+}
+
+/* An email stays on one line while it fits and breaks only when its box is too narrow. */
+.mn-email {
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ letterhead */
+
+.mn-doc .invoice-letterhead,
+.mn-doc .invoice-letterhead-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.mn-doc .invoice-letterhead img,
+.mn-doc .invoice-letterhead-footer img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mn-doc .invoice-letterhead.is-empty,
+.mn-doc .invoice-letterhead-footer.is-empty {
+  display: none;
+}
+
+.mn-doc .mn-letterhead,
+.mn-doc .mn-letterhead-footer {
+  width: auto;
+  margin-inline: calc(-1 * var(--mn-gutter));
+}
+
+/* The letterhead sits in the flow or in the print frame's header: either way, none, gutter. */
+.mn-doc:has(.mn-letterhead.is-empty) {
+  padding-top: var(--mn-gutter);
+}
+
+.mn-doc:has(.mn-letterhead-footer.is-empty:not(.mn-footer-spacer)) {
+  padding-bottom: var(--mn-gutter);
+}
+
+
+/* An image that failed to load prints nothing (helpers.ts registerMinimalImages). */
+.mn-doc img.is-broken,
+.mn-logo:has(> .is-broken, .mn-logo-image.is-broken) {
+  display: none;
+}
+
+/* ------------------------------------------------------------ header */
+
+/*
+ * Refrens' Minimal (user's "Minimal - Web View" PDF, 2026-11-19): everything above the item
+ * table on the white paper. Logo on the left, the title with its status tag, the subtitle and
+ * the business address on the right; then Billed By | Billed To | <Document> Details and
+ * Shipped From | Shipped To | Transport Details in three equal columns, 24 px apart. Captions in
+ * the ink colour, names medium, field names grey with their values beside them.
+ */
+.mn-band {
+  --mn-band-ink: var(--mn-ink);
+  --mn-band-soft: var(--mn-muted);
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--mn-band-ink);
+}
+
+.mn-band-row {
+  min-width: 0;
+}
+
+/* 24 px from the header to the table, and from the table to the bottom part. */
+.mn-doc .mn-band {
+  margin-bottom: calc(24px - var(--mn-section-gap));
+}
+
+.mn-doc .mn-bottom {
+  margin-top: calc(24px - var(--mn-section-gap));
+}
+
+/* Logo | title side. The title side keeps to the right (the start side in RTL). */
+.mn-band > .mn-title-block {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.mn-title-side {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  min-width: 0;
+  max-width: 60%;
+  margin-inline-start: auto; /* on the right edge, with or without a logo (or a broken one) */
+  text-align: end;
+}
+
+.mn-title-block.has-no-logo .mn-title-side {
+  max-width: none;
+}
+
+.mn-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mn-title {
+  color: var(--mn-ink);
+  font-family: var(--mn-title-font);
+  font-size: calc(var(--mn-font-size-xl) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The status tag: Refrens' own tag colours (refrens-status-tags). */
+.mn-status {
+  line-height: 0;
+}
+
+/* Refrens' native tag: a solid Ant Design fill, white Title Case text; 28 px tall with 14 px
+   text, 8 px either side (Refrens' Minimal). */
+.mn-doc .mn-status .invoice-tag {
+  --mn-status-fill: #52c41a;
+
+  margin: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--mn-status-fill);
+  color: var(--mn-paper);
+  font-size: calc(var(--mn-font-size-status) * var(--mn-text-scale, 1));
+  font-weight: 600;
+  line-height: 1.4286;
+}
+
+.mn-doc .mn-status .invoice-tag.danger {
+  --mn-status-fill: #f5222d;
+}
+
+.mn-doc .mn-status .invoice-tag.warning {
+  --mn-status-fill: #faad14;
+}
+
+.mn-doc .mn-status .invoice-tag.info {
+  --mn-status-fill: #1890ff;
+}
+
+.mn-doc .mn-status .invoice-tag.devider {
+  --mn-status-fill: #8c8c8c;
+}
+
+.mn-doc .mn-status .invoice-tag.magenta {
+  --mn-status-fill: #eb2f96;
+}
+
+.mn-doc .mn-subtitle,
+.mn-doc .mn-copy {
+  color: var(--mn-muted);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/* 20 px under the title, wrapping at about 200 px as Refrens' Minimal does. */
+.mn-doc .mn-header-address {
+  max-width: 200px;
+  margin-top: 16px;
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  overflow-wrap: break-word;
+}
+
+/* The logo as refrens.com sizes it: its own size, down to 200 x 96, square corners. */
+.mn-logo {
+  flex: none;
+  max-width: 40%;
+  line-height: 0;
+}
+
+.mn-doc .mn-logo .mn-logo-image {
+  display: block;
+  width: auto;
+  max-width: 200px;
+  height: auto;
+  max-height: 80px; /* Refrens' Minimal: 80 px tall */
+  border: 0;
+  border-radius: 0;
+  object-fit: contain;
+}
+
+/* Billed By | Billed To | Details and Shipped From | Shipped To | Transport: three equal
+   columns; a missing block leaves its column empty, so the columns line up row to row. */
+.mn-band-parties,
+.mn-band-logistics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px 16px;
+  align-items: start;
+}
+
+.mn-band-logistics:not(:has(> :not(.is-empty))) {
+  display: none;
+}
+
+.mn-band-logistics > .is-empty {
+  display: none;
+}
+
+/* Details sit in the third column even when a party is missing. */
+.mn-band-parties > .mn-doc-details,
+.mn-band-logistics > .mn-transport {
+  grid-column: 3;
+}
+
+.mn-party {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* "Billed By", "Shipped To", "Invoice Details": the block's caption, in the ink colour. */
+.mn-band-caption {
+  margin-bottom: 4px;
+  color: var(--mn-ink);
+  font-family: var(--mn-label-font);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  line-height: var(--mn-lh);
+}
+
+.mn-party-name {
+  color: var(--mn-ink);
+  font-family: var(--mn-label-font);
+  font-size: calc(var(--mn-font-size-name) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.mn-party-address {
+  margin-bottom: 4px;
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  overflow-wrap: break-word;
+}
+
+/* Field names grey, values beside them in the ink colour, 6 px between lines. */
+.mn-fields {
+  display: grid;
+  grid-template-columns: fit-content(50%) minmax(0, 1fr);
+  gap: 4px 16px;
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+}
+
+.mn-field {
+  display: contents;
+}
+
+.mn-field-label {
+  color: var(--mn-muted);
+  font-weight: 400;
+  overflow-wrap: break-word;
+}
+
+.mn-field-value {
+  min-width: 0;
+  color: var(--mn-ink);
+  font-weight: 400;
+  overflow-wrap: break-word;
+}
+
+.mn-field-value.mn-break:not(.mn-num) {
+  overflow-wrap: anywhere;
+}
+
+/* Transport and the document details: a value keeps its unbreakable width (a document
+   number, a Transporter ID, an Ack No.): the label column gives way first. */
+:is(.mn-band-logistics, .mn-doc-details) .mn-fields {
+  grid-template-columns: fit-content(55%) minmax(min-content, 1fr);
+}
+
+/* The details' names in a column at least 116 px wide (Refrens' Minimal: values 132 px in). */
+.mn-doc-details .mn-fields {
+  grid-template-columns: minmax(min(116px, 45%), max-content) minmax(min-content, 1fr);
+}
+
+.mn-meta-list > :is(.mn-details-compliance, .mn-supply) {
+  display: contents;
+}
+
+.mn-doc-details .mn-detail-value.mn-num,
+.mn-band-logistics .mn-field-value.mn-num {
+  overflow-wrap: normal;
+}
+
+/* The IRN, 64 characters that break anywhere. */
+.mn-doc-details .mn-irn-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The amount due on its row in bold (Refrens' Minimal: "Due Amount ₹94,240"). */
+.mn-doc-details .mn-detail[class~="mn-meta-dueAmount"] .mn-detail-value {
+  font-weight: 600;
+}
+
+/* The QR under the details; none, no space kept. */
+.mn-details-qrs {
+  margin-top: 8px;
+}
+
+.mn-details-qrs:not(:has(.mn-qr:not(.is-empty))) {
+  display: none;
+}
+
+/* The amount due goes with the totals: hidden while they are (Hide Totals, live too). */
+.mn-doc:has(.mn-grand-row.is-hidden-by-totals) .mn-detail[class~="mn-meta-dueAmount"] {
+  display: none;
+}
+
+.mn-compliance .mn-qr-list {
+  margin-top: 8px;
+}
+
+.mn-band .mn-qr:not(.is-empty) {
+  flex: none;
+  line-height: 0;
+}
+
+/* ------------------------------------------------------------ cards */
+
+.mn-card {
+  grid-column: auto;
+}
+
+.mn-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--mn-line);
+  border-radius: 0;
+  background: var(--mn-card);
+}
+
+/* Under the items the sections sit on the paper, no box (Minimal design): Bank and UPI, terms,
+   notes, additional information, attachments, the summaries. */
+.mn-bottom .mn-card,
+.mn-card.mn-widget-table,
+[data-section="logistics-below"] .mn-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Section headings in the ink colour, medium, as the text (Refrens' Minimal). */
+.mn-card-title {
+  color: var(--mn-ink);
+  font-family: var(--mn-label-font);
+  font-size: calc(var(--mn-font-size-heading) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  line-height: var(--mn-lh);
+}
+
+/*
+ * Every card heading medium in the theme colour (user request, 2026-10-24): 16 px above the
+ * item table (Billed / Shipped, Transport, E-Invoice), 14 px under it (Bank Details, Scan to
+ * pay via UPI, Terms, Notes, Additional Information, Attachments, an E-Invoice card placed
+ * under the items). No weight above 600 anywhere (user request, 2026-10-24).
+ */
+
+/* Under the items the headings read as the text, medium: "Terms and Conditions", "Bank and
+   UPI details", "Invoice total in words" (Refrens' Minimal). */
+.mn-bottom .mn-card-title,
+.mn-section-title,
+[data-section="logistics-below"] .mn-card-title {
+  color: var(--mn-ink);
+  font-family: var(--mn-label-font);
+  font-size: calc(var(--mn-font-size-section) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  line-height: var(--mn-lh);
+  letter-spacing: 0;
+}
+
+/* The summaries' titles a quiet grey caption in capitals, as in Professional, so the coloured
+   tables under them don't make the page too colourful (user request, 2026-11-12). */
+.mn-card.mn-widget-table > .mn-card-title {
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-section) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: var(--mn-lh);
+}
+
+/* Bold text in descriptions, notes and terms at 600 too, not the browser's or the markdown
+   viewer's 700. */
+.mn-doc :is(strong, b),
+.mn-doc .toastui-editor-contents :is(strong, b) {
+  font-weight: 600;
+}
+
+.mn-card[data-section="additional"] .mn-kv-label {
+  color: var(--mn-muted);
+}
+
+.mn-card[data-section="additional"] .mn-kv-value {
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------ key / value grids */
+
+/* Transport, e-way bill, bank, additional info: a label column (116 px in the design, hugging
+   a shorter label), 16 px, the value. */
+.mn-kv {
+  display: grid;
+  grid-template-columns: fit-content(50%) minmax(min-content, 1fr); /* a figure stays whole */
+  gap: 4px 16px; /* Refrens' Minimal */ /* as Bank Details, in every card (user request) */
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  line-height: var(--mn-lh);
+}
+
+.mn-kv-label {
+  color: var(--mn-label);
+  font-family: var(--mn-label-font);
+  font-weight: 400;
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+}
+
+.mn-kv-value {
+  color: var(--mn-ink);
+  font-weight: 400; /* bank rows' values regular (Refrens' Minimal) */
+  overflow-wrap: anywhere;
+}
+
+.mn-kv-value.mn-num {
+  overflow-wrap: normal;
+}
+
+/* ------------------------------------------------------------ compliance */
+
+/* The E-Invoice / E-Way Bill card: the title across the top, then the details on the left and
+   the QR on the right, its top level with the first detail (Figma; user request, 2026-10-24).
+   Hidden until something fills it (the host can post the IRN and its QR in live). */
+
+/* An E-Invoice block placed under the items (irnPosition BELOW_LINE_ITEMS): on the paper. */
+.mn-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mn-cards > .mn-compliance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  align-items: start;
+}
+
+.mn-compliance > .mn-compliance-text {
+  display: contents;
+}
+
+.mn-compliance > .mn-compliance-text > .mn-card-title {
+  grid-column: 1 / -1;
+}
+
+.mn-compliance > .mn-qr-list {
+  grid-column: 2;
+}
+
+.mn-compliance.is-empty:not(:has(.mn-irn-value:not(:empty), .mn-qr:not(.is-empty))) {
+  display: none;
+}
+
+.mn-compliance-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mn-irn-value {
+  overflow-wrap: anywhere;
+}
+
+.mn-qr-list {
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
+/* Every QR is 120 px square: document, e-invoice, UPI (user request, 2026-10-24). They are
+   drawn as SVG, so the e-invoice's version-25 code keeps sharp modules in print. */
+.mn-qr img {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+.mn-qr.is-empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------ items */
+
+.mn-items-section {
+  /* The table's outline and rules in the theme colour (Minimal design); the print pieces
+     (corners at a page break, the split totals' joint) read the same variable. */
+  --mn-line: #e8e8e8;
+
+  /* Refrens' Minimal: the outline and the rows' rules one 1 px #e8e8e8, whatever the theme. */
+  --mn-separator: 1px;
+  --mn-sep-color: var(--mn-line);
+
+  min-width: 0;
+}
+
+/*
+ * Rounded at all four corners (user request, as refrens.com's Minimal template): the
+ * wrapper clips the header's top corners; the body draws its own outline (side rules on its
+ * edge cells, the last row's bottom rule and corners), so no grey rule runs beside the header.
+ */
+.mn-items-scroll {
+  max-width: 100%;
+  overflow: auto hidden; /* sideways only for a table wider than the page; never up and down */
+  border-radius: 0; /* square corners (Refrens' Minimal) */
+}
+
+/*
+ * The table (Figma "Default Template Table"): a theme-coloured header row (13 / 500 white),
+ * 13 / 20 cells, rows ruled under and at the sides in neutral-200 with no column rules,
+ * figures centred, the item's name from the left, 6 px above and below, 8 px either side
+ * (user request, 2026-10-23).
+ */
+.mn-items {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--mn-ink);
+  font-family: var(--mn-table-font);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  line-height: var(--mn-lh);
+  letter-spacing: 0;
+  table-layout: auto;
+}
+
+.mn-items th,
+.mn-items td {
+  padding: 10px 12px 6px; /* Refrens' Minimal: text 10 px under the rule, 6 px over the next */
+  border: 0;
+  text-align: center;
+  vertical-align: top;
+}
+
+/* The separator is a 1 px bottom border in the separator colour (Refrens' Minimal). Not an inset
+   shadow: Chrome stores a cell's inset shadow in a PDF as a tinted fill of the whole cell under
+   a white one, and PDF viewers and Chrome's print preview showed a faint vertical line at every
+   cell's edge (user, 2026-11-12). A row without a separator sets its own bottom border. */
+.mn-items > tbody > tr > td {
+  --mn-sep: 0 0 transparent;
+
+  border-bottom: var(--mn-separator) solid var(--mn-sep-color);
+  box-shadow: none;
+}
+
+.mn-items > tbody > tr > td:first-child {
+  border-inline-start: 1px solid var(--mn-line);
+}
+
+/* Under a full-width name row the serial cell above spans this row: no edge rule here. */
+.mn-items > tbody > tr.has-name-row > td:first-child {
+  border-inline-start: 0;
+}
+
+.mn-items > tbody > tr > td:last-child {
+  border-inline-end: 1px solid var(--mn-line);
+}
+
+/* The last visible row closes the table with rounded corners: the Total row when there is
+   one, else the last item's last visible row (the stretch row and a hidden live-toggle
+   detail row never count on screen) — only while the stretch row is the table's last: when a
+   group's Sub total follows it, the Sub total closes the table and the item above stays
+   square (user, 2026-11-12: two curves). The row above the space closes only while the space is
+   not shown: written as one selector, this outranked the .is-filled rules handing the corners
+   to the space, and the stretched space showed as a box of its own under a closed table (user,
+   2026-11-13). In print the Total row is a table of its own under the
+   items (splitTotals): the corners are its, the items' last row stays square. */
+.mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr:last-child:not(.mn-filler) > td:first-child,
+.mn-doc:not(.is-filled) .mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr:is(:has(+ .mn-filler:last-child), :has(+ tr[style*="none"] + .mn-filler:last-child)) > td:first-child {
+  border-end-start-radius: 0;
+}
+
+.mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr:last-child:not(.mn-filler) > td:last-child,
+.mn-doc:not(.is-filled) .mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr:is(:has(+ .mn-filler:last-child), :has(+ tr[style*="none"] + .mn-filler:last-child)) > td:last-child {
+  border-end-end-radius: 0;
+}
+
+/* That last row's bottom rule is the table's edge: the outline's 1 px, not a separator. */
+.mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr:last-child:not(.mn-filler) > td,
+.mn-doc:not(.is-filled) .mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr:is(:has(+ .mn-filler:last-child), :has(+ tr[style*="none"] + .mn-filler:last-child)) > td {
+  --mn-sep: 0 0 transparent;
+
+  border-bottom: 1px solid var(--mn-close-line, var(--mn-line));
+}
+
+/* Zebra rows as refrens.com's Minimal: the first item white, the second tinted, and so on;
+   an item's description and image rows share its colour. */
+.mn-items > tbody > tr.is-stripe > td {
+  background: var(--mn-zebra);
+}
+
+/* Cell by cell, fractional column widths leave hairline seams in a tinted row: each cell's
+   colour runs 1px under its neighbour. */
+.mn-items > tbody > tr.is-stripe > td:not(:last-child) {
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
+}
+
+/* The fill on the row, not on each heading: cell by cell, columns with fractional widths left
+   hairline seams between the headings. */
+.mn-items > thead > tr {
+  background: var(--mn-head-tint);
+}
+
+/* The headings in theme-coloured capitals on the 20 % tint, the outline running round them
+   (Minimal design). */
+.mn-items > thead > tr > th {
+  background: none;
+  padding-block: 7px; /* a 36 px heading row */
+  border-top: 1px solid var(--mn-line);
+  border-bottom: 1px solid var(--mn-line);
+  color: var(--mn-ink);
+  font-family: var(--mn-label-font);
+  font-size: calc(var(--mn-font-size-section) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  letter-spacing: 0;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.mn-items > thead > tr > th:first-child {
+  border-inline-start: 1px solid var(--mn-line);
+  border-start-start-radius: 0;
+}
+
+.mn-items > thead > tr > th:last-child {
+  border-inline-end: 1px solid var(--mn-line);
+  border-start-end-radius: 0;
+}
+
+.mn-items .mn-col-serial {
+  width: 32px;
+  white-space: nowrap;
+}
+
+.mn-items td.is-fixed,
+.mn-items td.is-word {
+  white-space: nowrap;
+}
+
+.mn-items td.mn-col-name,
+.mn-items .mn-name-row > td + td {
+  text-align: start;
+  overflow-wrap: break-word;
+}
+
+.mn-items > thead > tr > th.mn-col-name {
+  text-align: start;
+}
+
+.mn-items .mn-desc-min {
+  display: block;
+  height: 0;
+}
+
+/* An item's name and its description (or images) read as one row: no rule between them. */
+
+/* (A detail row is in the page for the live "full width" toggle even while hidden.) */
+.mn-items > tbody > tr:is(.mn-name-row, .mn-item-row:has(+ :is(.mn-detail-row:not([style*="none"]), .mn-image-row)), .mn-item-row:has(+ .mn-detail-row[style*="none"] + .mn-image-row), .mn-detail-row:has(+ .mn-image-row)) > td {
+  --mn-sep: 0 0 transparent;
+
+  border-bottom: 0;
+}
+
+.mn-items .mn-name-row > td,
+.mn-items .mn-item-row:has(+ :is(.mn-detail-row:not([style*="none"]), .mn-image-row)) > td,
+.mn-items .mn-item-row:has(+ .mn-detail-row[style*="none"] + .mn-image-row) > td {
+  padding-bottom: 0;
+}
+
+.mn-items .mn-detail-row > td,
+.mn-items .mn-image-row > td {
+  padding-top: 4px;
+}
+
+/* Group rows take their turn in the zebra, no grey of their own (user request, 2026-10-24). */
+.mn-group-row > td {
+  font-weight: 600;
+  text-align: start;
+}
+
+.mn-group-total-row > td {
+  font-weight: 600;
+}
+
+/* The item's name in the body weight (Refrens' Minimal). */
+.mn-item-name {
+  display: block;
+  font-weight: 400;
+}
+
+/* SKU, HSN/SAC, unit, serial numbers under the item's name: 11 px (user request, 2026-10-23). */
+.mn-item-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  color: var(--mn-code);
+  font-size: calc(var(--mn-font-size-code) * var(--mn-text-scale, 1));
+  line-height: 1.35; /* 11 px on 14.85 px */
+}
+
+.mn-item-thumbnail {
+  float: inline-end;
+  margin-block-end: 4px;
+  margin-inline-start: 8px;
+}
+
+/* The whole picture inside its 64 px box, a wide logo too, as refrens.com shows it. */
+.mn-items .mn-thumbnail {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.mn-items.has-thumbnails td.mn-col-name {
+  min-width: 200px;
+}
+
+.mn-item-detail {
+  clear: both;
+}
+
+.mn-item-desc {
+  padding-top: 4px; /* 24 px from the name's last line to the description's first */
+  color: var(--mn-desc);
+  line-height: var(--mn-lh);
+}
+
+.mn-items .ceres-image-gallery {
+  clear: both;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.mn-items .ceres-image-gallery-thumbnail .ceres-image {
+  width: 64px;
+  height: 64px;
+}
+
+/* Item images print bare: no frame, square corners (user request, 2026-10-24; the shared
+   image widget draws a grey border and 4 px corners, loaded after this file, so .mn-doc). */
+.mn-doc .mn-items :is(.mn-thumbnail, .ceres-image, .mn-large-image) {
+  border: 0;
+  border-radius: 0;
+}
+
+.mn-detail-row > td,
+.mn-image-row > td {
+  text-align: start;
+}
+
+.mn-large-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mn-large-image + .mn-large-image {
+  margin-top: 8px;
+}
+
+/* The column-sum row ("Total"): the zebra colour, closing the table's rounded bottom. */
+.mn-total-row > td {
+  background: var(--mn-zebra);
+  font-weight: 600;
+}
+
+/* Cell by cell, fractional column widths left faint vertical lines across the Total row in
+   the preview and a browser's print (user, 2026-11-04): each cell's colour runs 1px under its
+   neighbour, as the zebra rows'. */
+.mn-total-row > td:not(:last-child) {
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
+}
+
+.mn-doc[dir="rtl"] .mn-total-row > td:not(:last-child) {
+  box-shadow: none;
+}
+
+/* The same across a summary table's total row (payments, tax summary). */
+.mn-widget-table .ceres-table tfoot td:not(:last-child) {
+  box-shadow: 1px 0 0 var(--mn-fill);
+}
+
+.mn-doc[dir="rtl"] .mn-widget-table .ceres-table tfoot td:not(:last-child) {
+  box-shadow: -1px 0 0 var(--mn-fill);
+}
+
+/* The stretch row (shown by .mn-doc.is-filled, below): empty, the side rules running through it. */
+.mn-items .mn-filler {
+  display: none;
+}
+
+/* ------------------------------------------------------------ bottom: cards | totals */
+
+/* Bank, terms, notes and the rest on the left; totals, words and signature in a 328 px
+   column on the right, 24 px apart (Figma). */
+
+/* When the cards' widest figure and the totals cannot share the row, the totals move under the
+   cards, kept to the right (never overlapping, never cut at the page edge). */
+.mn-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 40px; /* the totals 40 px from the left column (Refrens' Minimal) */
+  align-items: flex-start;
+}
+
+.mn-bottom-main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 16px; /* 16 px between terms, notes, bank and the rest (Refrens' Minimal) */
+  min-width: 0;
+}
+
+.mn-bottom-side {
+  display: flex;
+  flex: 0 0 300px; /* Refrens' Minimal: 300 px */
+  flex-direction: column;
+  gap: 20px;
+  min-width: min-content; /* a long total widens the column rather than wrap */
+  max-width: 100%;
+  margin-inline-start: auto;
+}
+
+.mn-bottom-side:not(:has(> *)) {
+  display: none;
+}
+
+
+/* Bank and UPI: the rows on the left, "Scan to pay via UPI" and the QR centred on the right. */
+
+/* A long account number widens the rows (figures never wrap); the QR then moves under them. */
+.mn-bottom-main > .mn-bank {
+  margin-bottom: 0;
+}
+
+/* The UPI block follows the bank rows at a fixed 40 px, not at the card's far end: in a wide
+   card (landscape, the totals narrower) it sat far from the rows it belongs to (user,
+   2026-11-12). */
+.mn-bank {
+  flex-flow: row wrap;
+  gap: 20px 40px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* The rows take what the QR leaves and wrap there: a long account name sized them to its
+   one-line width and pushed the QR under them, leaving the card's right side empty (user,
+   2026-11-02). Only an unbreakable figure wider than that room moves the QR down. */
+
+/* The UPI block stays beside the rows only while they keep about 300 px (labels on one line,
+   values of some 20 characters); in less, the rows wrapped word by word into a tall narrow
+   column, so the UPI block moves under them and they take the card's width (user, 2026-11-12).
+   Short details ask only for their own width (max-width: max-content), so the QR stays beside
+   them; an unbreakable figure still widens them (min-width). */
+.mn-bank-main {
+  display: flex;
+  flex: 1 1 calc(300px * var(--mn-text-scale, 1));
+  flex-direction: column;
+  gap: 8px;
+  min-width: min-content;
+  max-width: max-content; /* no wider than its rows: the UPI block follows them */
+  align-self: flex-start;
+}
+
+.mn-bottom-main {
+  min-width: min-content;
+}
+
+/* Terms, notes, additional information and attachments take the column's width, never set it:
+   a wide table in the notes (a technical specification) made the column so wide the totals
+   wrapped under all of it, pages below the bank details (user, 2026-11-12). Their text and
+   tables wrap to the column instead. The bank details still widen it (a long account number). */
+.mn-bottom-main > .mn-card:not(.mn-bank) {
+  contain: inline-size;
+}
+
+/* As wide as its widest unbroken line (the UPI ID or the QR), at least 140 px; the note wraps
+   to it. A long ID (Mediexihealthcare@okhdfcbank) ran out of the card at a fixed 200 px. */
+.mn-upi {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: min-content;
+  min-width: 140px;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* "Scan to pay via UPI" reads as a heading, as "Bank Details": theme colour, 16 px medium (user
+   requests, 2026-10-24). */
+
+/* "Scan to pay via UPI" in the theme colour, semibold, as the design's caption. */
+.mn-upi-caption {
+  color: var(--mn-ink);
+  font-family: var(--mn-label-font);
+  font-size: calc(var(--mn-font-size-label) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.mn-upi-qr {
+  display: block;
+  width: 120px;
+  height: 120px;
+}
+
+.mn-upi-id {
+  max-width: 100%;
+  color: var(--mn-ink); /* semibold under the QR (Minimal design) */
+  overflow-wrap: break-word; /* only an ID wider than the whole card breaks */
+  font-size: calc(var(--mn-font-size-label) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* The UPI note at 11 px, like the item codes (user request, 2026-10-24). */
+.mn-upi-note {
+  margin-top: -4px;
+  color: var(--mn-label);
+  font-size: calc(var(--mn-font-size-label) * var(--mn-text-scale, 1)); /* 12 px, Refrens' Minimal */
+  line-height: 1.35; /* 11 px on 14.85 px */
+}
+
+/* Terms: one paragraph each, unnumbered, 8 px apart (Refrens' Minimal). */
+.mn-terms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-inline-start: 0;
+  list-style: none;
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  letter-spacing: 0;
+  line-height: var(--mn-lh);
+}
+
+.mn-terms-list > li {
+  overflow-wrap: anywhere; /* a long unbroken word or link breaks inside the card */
+}
+
+.mn-terms-list > li::marker {
+  color: var(--mn-ink); /* the numbers in the text colour, as refrens.com */
+}
+
+.mn-note-body {
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  letter-spacing: 0;
+  line-height: var(--mn-lh);
+  overflow-wrap: break-word;
+}
+
+/* A long file name is cut with an ellipsis; it never sets the column's width. */
+.mn-attachments {
+  contain: inline-size;
+  padding: 0;
+  list-style: none;
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  line-height: var(--mn-lh);
+}
+
+.mn-attachments > li + li {
+  margin-top: 4px;
+}
+
+.mn-attachments > li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mn-attachments a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* A payment in another currency: its business-currency amount under it. */
+.mn-payment-converted {
+  display: block;
+  color: var(--mn-muted);
+}
+
+/* ------------------------------------------------------------ totals */
+
+/* Label on the left, figure on the right: a grid spaced by its gaps, rows 12 px apart and the
+   figure 20 px from its label, no padding (user request, 2026-10-24). Hidden rows (the
+   widget's display: none !important) take no gap. */
+.mn-totals-table {
+  display: block;
+  width: 100%;
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  letter-spacing: 0;
+  line-height: var(--mn-lh);
+}
+
+.mn-totals-table .mn-totals {
+  display: grid;
+
+  /* The labels never narrower than their longest word, and the figures at most 60 % of the row:
+     a long custom total ("Custom Valuewswwwww BBVGUHUTTG") took nearly all of it and the labels
+     broke letter by letter ("CGS/T", "Tot/al"; real PDF, quotation A00052-E, 2026-11-01). */
+  grid-template-columns: minmax(min-content, 1fr) fit-content(60%);
+  gap: 4px 20px; /* rows 24 px apart (Refrens' Minimal) */
+}
+
+.mn-totals-table .mn-totals > tr {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: start;
+}
+
+.mn-totals-table .mn-totals th,
+.mn-totals-table .mn-totals td {
+  padding: 0;
+  font-weight: 400;
+  text-align: start;
+}
+
+.mn-totals-table .mn-totals .ceres-subtotal-label {
+  color: var(--mn-label);
+  overflow-wrap: break-word;
+}
+
+/* Labels grey and regular, figures semibold (Minimal design). */
+.mn-totals-table .mn-totals .ceres-subtotal-value {
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: end;
+}
+
+/*
+ * The grand total in a box filled with the theme colour, white text, the label regular and the
+ * figure large and semibold (Minimal design, "Total Due Amount"). The label's fill runs across
+ * the 20 px column gap into the figure's, so the box reads as one.
+ */
+/* One bar: the fill on the row, the cells clear (cell by cell the label's and figure's fills
+   met in a visible seam). */
+.mn-totals-table .mn-totals .mn-grand-row {
+  margin-top: 2px; /* the bar 6 px under the last row */
+  background: var(--mn-accent);
+  outline: 1px solid var(--mn-accent-text); /* only seen on a light theme colour (white box) */
+  outline-offset: -1px;
+}
+
+.mn-totals-table .mn-totals .mn-grand-row > * {
+  align-self: stretch;
+  padding: 10px 12px; /* a 40 px bar (Refrens' Minimal) */
+  border: 0;
+  background: none;
+  color: var(--mn-on-accent);
+  line-height: 1.3;
+}
+
+.mn-totals-table .mn-totals .mn-grand-row > .ceres-subtotal-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--mn-on-accent);
+  font-size: calc(var(--mn-font-size-grand) * var(--mn-text-scale, 1));
+  font-weight: 400;
+}
+
+.mn-totals-table .mn-totals .mn-grand-row > .ceres-subtotal-value {
+  color: var(--mn-on-accent);
+  font-size: calc(var(--mn-font-size-grand-figure) * var(--mn-text-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.mn-totals-table .mn-totals .mn-grand-row .ceres-subtotal-converted {
+  color: var(--mn-on-accent);
+  font-size: calc(var(--mn-font-size-xs) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.mn-totals-table .mn-totals .ceres-subtotal-row-due > * {
+  font-weight: 600;
+}
+
+.mn-totals-table .mn-totals .ceres-subtotal-note,
+.mn-totals-table .mn-totals .ceres-subtotal-converted,
+.mn-totals-table .mn-totals .ceres-subtotal-extra {
+  color: var(--mn-muted);
+  font-size: calc(var(--mn-font-size-xs) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  line-height: var(--mn-lh);
+  letter-spacing: 0;
+}
+
+.mn-totals-table .mn-totals .mn-grand-row .ceres-subtotal-converted {
+  line-height: var(--mn-lh);
+  color: var(--mn-on-accent);
+}
+
+.mn-totals-table .mn-totals .mn-extra-row > td {
+  white-space: normal;
+  overflow-wrap: anywhere; /* a custom value wraps within its 60 %, however long its words */
+}
+
+/* A custom total's text value ("Custom Value …") wraps; its figures, if it has any, still do not
+   (only a figure carries data-testid="num", numbers never wrap). */
+.mn-totals-table .mn-totals .mn-extra-row .mn-num:not([data-testid="num"]) {
+  white-space: normal;
+}
+
+/* A custom field under the totals: its name bold, its value regular (refrens.com). */
+.mn-totals-table .mn-totals .mn-extra-row > .ceres-subtotal-label {
+  font-weight: 600;
+}
+
+/* The amount in words under the grand total: its caption, then the words (Minimal design). */
+/* 10 px under the bar, the words 4 px under their caption (Refrens' Minimal). */
+.mn-doc .mn-words {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: -10px 0 0;
+  color: var(--mn-ink);
+  overflow-wrap: break-word;
+}
+
+.mn-doc .mn-words-value {
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-words) * var(--mn-text-scale, 1));
+  font-weight: 400;
+  line-height: var(--mn-lh);
+}
+
+/* ------------------------------------------------------------ signature */
+
+/* "For <business>", the signature, "Authorised Signatory", centred in the column (Refrens'
+   Minimal); no panel behind the signature (user rule, signature-and-nested-tables). */
+.mn-signature {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.mn-signature-for {
+  color: var(--mn-ink);
+  overflow-wrap: break-word;
+}
+
+/* As refrens.com's own Minimal template signs (user, 2026-11-03): on the paper, no panel,
+   centred, up to 110 px tall and 220 px wide in proportion (8.5 times the text there), the
+   name under it. */
+.mn-signature-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mn-signature-mark .mn-signature-image {
+  display: block;
+  width: auto;
+  max-width: min(220px, 100%);
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+}
+
+.mn-signature-banner {
+  padding: 8px;
+  color: var(--mn-muted);
+  font-size: calc(var(--mn-font-size-sm) * var(--mn-text-scale, 1));
+}
+
+.mn-signature-banner a {
+  color: var(--mn-accent-text);
+}
+
+/* ------------------------------------------------------------ summaries (shared widgets) */
+
+/* The summaries in the item table's colours: a lighter theme rule between cells (ruled both
+   ways), the tinted heading row in theme-coloured capitals (Minimal design). */
+.mn-widget-table {
+  --mn-line: #e8e8e8;
+
+  gap: 8px;
+}
+
+/* Rounded at all four corners like the item table (user request, 2026-10-23); never scrolls.
+   The wrapper clips the header's top corners; the cells draw the grid and the outline, the
+   last row its rounded bottom corners, and nothing grey runs beside the header. */
+.mn-widget-table .ceres-table-section {
+  margin: 0;
+  overflow: clip;
+  border-radius: 0;
+}
+
+.mn-widget-table .ceres-table-section > .ceres-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* HSN and Tax Summary: every column the same width (user request, 2026-10-23). */
+.mn-widget-table:is([data-section="hsn"], [data-section="tax-summary"]) .ceres-table.is-even {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.mn-widget-table .ceres-table-heading {
+  display: none; /* the card's own title names the table */
+}
+
+.mn-widget-table .ceres-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--mn-ink);
+  font-family: var(--mn-table-font);
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  letter-spacing: 0;
+  line-height: var(--mn-lh);
+}
+
+/* Summary tables are ruled both ways, header included, so each figure reads against its
+   column and row (user request, 2026-10-23). */
+.mn-widget-table .ceres-table th,
+.mn-widget-table .ceres-table td {
+  padding: 6px 8px;
+  border: 0;
+  border-inline-end: 1px solid var(--mn-line);
+  border-bottom: 1px solid var(--mn-line);
+  white-space: nowrap;
+}
+
+.mn-widget-table .ceres-table :is(tbody, tfoot) td:first-child {
+  border-inline-start: 1px solid var(--mn-line);
+}
+
+.mn-widget-table .ceres-table > :last-child > tr:last-child > td:first-child {
+  border-end-start-radius: 0;
+}
+
+.mn-widget-table .ceres-table > :last-child > tr:last-child > td:last-child {
+  border-end-end-radius: 0;
+}
+
+/*
+ * A summary wider than the page (a Batch Summary with many columns or a long item name)
+ * wraps its headings and text cells rather than run off the page; figures and dates still
+ * never wrap. A table that fits keeps every cell on one line.
+ */
+.mn-widget-table .ceres-table thead th,
+.mn-widget-table .mn-stock-table td:not(.mn-num) {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.mn-widget-table .ceres-table thead tr {
+  background: var(--mn-head-tint);
+}
+
+.mn-widget-table .ceres-table thead th {
+  background: none;
+  color: var(--mn-ink);
+  font-size: calc(var(--mn-font-size-caption) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.mn-widget-table .ceres-table thead tr:first-child th {
+  border-top: 1px solid var(--mn-line);
+}
+
+.mn-widget-table .ceres-table thead tr th:first-child {
+  border-inline-start: 1px solid var(--mn-line);
+}
+
+.mn-widget-table .ceres-table thead tr:first-child th:first-child {
+  border-start-start-radius: 0;
+}
+
+.mn-widget-table .ceres-table thead tr:first-child th:last-child {
+  border-start-end-radius: 0;
+}
+
+.mn-widget-table .ceres-table tbody tr:nth-child(even) {
+  background: none;
+}
+
+.mn-widget-table .ceres-table tfoot td {
+  background: var(--mn-fill);
+  font-weight: 600;
+}
+
+.mn-widget-table .ceres-table .ceres-table-words {
+  background: var(--mn-paper);
+  color: var(--mn-ink);
+  font-size: inherit;
+  font-weight: 400;
+  white-space: normal;
+}
+
+/* The summaries sit without a box: the title, then the table. Terms, notes, additional info
+   and attachments too: the title, then the text (user request, 2026-10-24). */
+.mn-card:is(
+    .mn-widget-table,
+    [data-section="terms"],
+    [data-section="notes"],
+    [data-section="additional"],
+    [data-section="attachments"]
+  ) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Right-to-left: the widgets' own first-column and words alignment, mirrored. */
+.mn-doc[dir="rtl"] .mn-widget-table .ceres-table :is(th, td):first-child {
+  text-align: right;
+}
+
+.mn-doc[dir="rtl"] .mn-widget-table .ceres-table .ceres-table-words {
+  text-align: right !important;
+}
+
+/* A summary with no rows renders nothing: no empty card. */
+.mn-widget-table:not(:has(.ceres-table)) {
+  display: none;
+}
+
+/* Refrens' closing line from the document's contact details: "For any enquiry, reach out via…". */
+.mn-enquiry {
+  color: var(--mn-ink);
+  text-align: center; /* user request, 2026-10-23 */
+  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
+  line-height: var(--mn-lh);
+}
+
+/* ------------------------------------------------------------ markdown (notes, descriptions) */
+
+/*
+ * The markdown viewer brings its own stylesheet, loaded after the template's; these selectors
+ * outrank it, so descriptions and notes read the same whichever loads first.
+ */
+.mn-doc .mn-item-desc .toastui-editor-contents,
+.mn-doc .mn-note-body .toastui-editor-contents {
+  max-width: 100%;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.mn-doc .mn-item-desc .toastui-editor-contents *:not(table),
+.mn-doc .mn-note-body .toastui-editor-contents *:not(table) {
+  line-height: inherit;
+}
+
+.mn-doc .mn-item-desc .toastui-editor-contents :is(p, ul, ol, li, h1, h2, h3, h4, h5, h6),
+.mn-doc .mn-note-body .toastui-editor-contents :is(p, ul, ol, li, h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.mn-doc
+  .mn-item-desc
+  .toastui-editor-contents
+  > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div),
+.mn-doc
+  .mn-note-body
+  .toastui-editor-contents
+  > * + :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, div) {
+  margin-top: 4px; /* paragraphs close, like list points */
+}
+
+.mn-doc .mn-item-desc .toastui-editor-contents li + li,
+.mn-doc .mn-note-body .toastui-editor-contents li + li {
+  margin-top: 4px;
+}
+
+/*
+ * Tables written into a description or note, as Refrens' own Minimal template draws them
+ * (user, 2026-11-04): the heading row in the theme colour with white text, the body on a light
+ * tint of it, no rules between the cells, a thin tinted outline, square corners; 6 px 8 px in
+ * every cell, like the items table.
+ */
+.mn-doc .mn-item-desc .toastui-editor-contents table,
+.mn-doc .mn-note-body .toastui-editor-contents table {
+  border: 1px solid var(--mn-line);
+  border-collapse: collapse;
+  background: var(--mn-paper);
+}
+
+.mn-doc .mn-item-desc .toastui-editor-contents :is(th, td),
+.mn-doc .mn-note-body .toastui-editor-contents :is(th, td) {
+  padding: 6px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--mn-line);
+  background: none;
+  color: var(--mn-ink);
+  text-align: start;
+  height: auto; /* the viewer's 32 px on top of the padding made every row 44 px tall */
+}
+
+.mn-doc .mn-item-desc .toastui-editor-contents th,
+.mn-doc .mn-note-body .toastui-editor-contents th {
+  background: var(--mn-head-tint);
+  color: var(--mn-ink);
+  font-weight: 500;
+}
+
+/* Each heading overlaps the next by a pixel, as the items table's: painted cell by cell, the
+   hairline seams between them showed the body's tint as light lines. */
+.mn-doc .mn-item-desc .toastui-editor-contents th:not(:last-child),
+.mn-doc .mn-note-body .toastui-editor-contents th:not(:last-child) {
+  box-shadow: 1px 0 0 var(--mn-head-tint);
+}
+
+/* List markers in the text's own colour (user request): the viewer greys both. */
+.mn-doc .mn-item-desc .toastui-editor-contents :is(ul, ol) > li::before,
+.mn-doc .mn-note-body .toastui-editor-contents :is(ul, ol) > li::before {
+  color: currentcolor;
+}
+
+/* The bullet is a dot painted with a background, not text. */
+.mn-doc .mn-item-desc .toastui-editor-contents ul > li::before,
+.mn-doc .mn-note-body .toastui-editor-contents ul > li::before {
+  background-color: currentcolor;
+}
+
+
+/* ------------------------------------------------------------ narrow screens */
+
+/*
+ * Narrow pages. The layout answers to its own width, not the screen's (a container query):
+ * a phone, an A5 page and A4 at a large print size (zoomSize 1.1–1.2, which the renderer
+ * applies as html zoom) all leave it under the design's widths, and a media query sees
+ * none of the last two. The container is .mn-doc on screen and the page body in print, so
+ * the footer fixed to each printed page is never inside it.
+ */
+.mn-doc {
+  container: mn-doc / inline-size;
+}
+
+@media screen and (width <= 720px) {
+  .mn-doc {
+    --mn-gutter: 16px;
+  }
+}
+
+/* Under 600 px: the cards stack one per row, the totals take the full width under the cards,
+   the UPI QR goes under the bank rows. */
+@container mn-doc (width < 600px) {
+  /* The three columns stack: Billed By, Billed To, the details; Shipped From, Shipped To,
+     Transport. The logo above the title side. */
+  .mn-band-parties,
+  .mn-band-logistics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mn-band-parties > .mn-doc-details,
+  .mn-band-logistics > .mn-transport {
+    grid-column: 1;
+  }
+
+  .mn-band > .mn-title-block {
+    flex-direction: column;
+  }
+
+  .mn-title-side {
+    align-items: flex-start;
+    max-width: none;
+    margin-inline-start: 0;
+    text-align: start;
+  }
+
+  .mn-title-row {
+    justify-content: flex-start;
+  }
+
+  .mn-bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mn-bottom-side {
+    flex-basis: auto;
+    margin-inline-start: 0;
+    padding-block: 0;
+  }
+
+  .mn-bank {
+    flex-wrap: wrap;
+  }
+
+  .mn-upi {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  /* Headings wrap; a summary's first column is a date, a code or a rate, and never does. */
+  .mn-widget-table .ceres-table th {
+    white-space: normal;
+  }
+}
+
+/* Printed narrow (A5, or a large text scale): the stacked parties may break between the logo,
+   the seller and Billed To, each whole, so the title never takes a page of its own. */
+@media print {
+  @container mn-doc (width < 600px) {
+    .mn-band-row.mn-band-parties {
+      break-inside: auto;
+    }
+
+    .mn-band-parties > * {
+      break-inside: avoid;
+    }
+  }
+}
+
+/* Under 420 px (a phone). */
+@container mn-doc (width < 420px) {
+  /* refrens.com on a phone: up to 180 px wide. */
+  .mn-doc .mn-logo .mn-logo-image {
+    max-width: 180px;
+  }
+}
+
+/* ------------------------------------------------------------------ print / PDF */
+
+/*
+ * Print at the screen's size, as the E-commerce template does (user, 2026-11-02, after a day at
+ * Refrens' 75 %: the print preview read too small): 13 px body text prints at 13 px at text
+ * scale 1; 0.8, 0.9, 1.1 and 1.2 print at 80, 90, 110 and 120 % (user, 2026-11-02: Smaller
+ * printed as Normal), by the renderer's html zoom or, at 0.8 and unset, the template's own
+ * (helpers.ts mapPrint ownPrintZoom). The page fills the printable width with
+ * no gutter of its own (margins belong to the browser or the PDF service).
+ */
+@media print {
+  .mn-doc {
+    /* Every text size prints as on screen, headings too (user, 2026-10-21: print 1:1). */
+    --mn-gutter: 0px;
+
+    /*
+     * Nothing shrinks to fit the paper: every text, the tables' included, prints at the print
+     * size (zoomSize, the renderer's html zoom), and a table too wide for the page is cut off at
+     * its edge (.mn-items-scroll clips it); landscape gives it room (user, 2026-11-01).
+     */
+    zoom: var(--mn-print-scale, 1);
+    width: calc(100% / var(--mn-print-scale, 1));
+
+    /* Never wider than the paper's printable width (helpers.ts mapPrint): Refrens' PDF
+       service lays the page out in a window wider than the paper before it prints. */
+    max-width: calc(var(--mn-print-width, 100000px) / var(--mn-print-scale, 1));
+
+    /* Centred: a browser's own print keeps 1 cm margins, so a document set to wider ones
+       (xMargins 2) sits in the middle of the page rather than against its left edge. */
+    margin: 0 auto;
+  }
+
+  /* Refrens' PDF service (body.isDibella) lays the page out in its own window before it
+     prints, narrower than a landscape or A3 page: the document takes the paper's printable
+     width there, so the table is fitted to the paper and not to the window. */
+  [class~="isDibella"] .mn-doc {
+    width: calc(var(--mn-print-width, 100%) / var(--mn-print-scale, 1));
+    max-width: none;
+  }
+
+  /* A browser's own print: the paper's whole width, whichever way its dialog turns it (user,
+     2026-11-03: landscape kept the portrait width, the sides left empty). */
+  body:not([class~="isDibella"]) .mn-doc.is-browser-print {
+    max-width: none;
+  }
+
+  .mn-status.no-print {
+    display: none;
+  }
+
+  /* The planner's widths are for the 1000 px canvas: on paper the table sizes to the page. */
+  .mn-doc .mn-items th[style]:not(.mn-col-serial) {
+    width: auto !important;
+  }
+
+  /* The screen's Description floor (.mn-items .mn-desc-min) gives way to the page width. */
+  .mn-items .mn-desc-min {
+    display: none;
+  }
+
+  .mn-items-scroll,
+  .mn-widget-table {
+    overflow: clip;
+  }
+
+  /* Column headings repeat on every page a table spans; its totals print once, at the end. */
+  .mn-items > thead,
+  .mn-widget-table .ceres-table thead {
+    display: table-header-group;
+  }
+
+  .mn-widget-table .ceres-table tfoot {
+    display: table-row-group;
+  }
+
+  /* Summary-table rows stay whole. Each line item prints whole: its name, description and
+     image rows move to the next page together (user rule, 2026-10-19). */
+  .mn-widget-table .ceres-table tr,
+  .mn-items > tbody > tr {
+    break-inside: avoid;
+  }
+
+  /* A group's heading row goes with its first item: never left alone at a page's foot (user
+     rule: a heading stays with its content, 2026-10-24). */
+  .mn-items .mn-item-row.has-name-row,
+  .mn-items .mn-detail-row,
+  .mn-items .mn-image-row,
+  .mn-items .mn-group-row + tr {
+    break-before: avoid;
+  }
+
+  /* An item's original images never taller than 55 % of a page, in proportion, so an item
+     and its images print together on one page (user, 2026-10-19; as the Viraj template). */
+  .mn-large-image {
+    /* px cap: on a Pageless PDF's one tall page vh is the whole document. --mn-vh is the
+       page's vh while a browser's print is measured beforehand (prepareBrowserPrint). */
+    max-height: min(calc(55 * var(--mn-vh, 1vh)), 600px);
+
+    /* Never wider than its row: at the 600 px cap a wide photo ran 730 px on a 736 px Legal
+       page, past the table's room, and the whole table printed at 98 % to make way for it. */
+    max-width: 100%;
+    object-fit: contain;
+
+    /* Capped, the picture sits at the row's start, not in the middle of its box (user,
+       2026-11-12). */
+    object-position: left top;
+  }
+
+  .mn-doc[dir="rtl"] .mn-large-image {
+    object-position: right top;
+  }
+
+  /* A row cut by a page break (an item taller than what is left of the page) closes with a
+     rule at the page's foot, and every page's piece of the table with it (user rule,
+     2026-10-20): the item table's repeated footer (.mn-items-corners, below) draws that rule
+     and the rounded corners under each page's last row. The items wrapper draws no rule of
+     its own: a newer Chrome's print runs a box broken across pages down to the page's foot,
+     so its rule came out a second line under the table, apart from it (user, 2026-11-12).
+     Chrome 122 (the PDF service) ends the piece at the last row, where the footer is. */
+  .mn-doc.is-stretch .mn-items-scroll {
+    --mn-column-rule-width: 1px;
+  }
+
+  :where(.mn-doc.is-stretch .mn-items) > :where(thead, tbody, tfoot) {
+    background-color: var(--mn-paper);
+  }
+
+
+  /* A table in a description or note breaks between its rows, its headings repeated at the top
+     of every page it spans (user, 2026-10-19). */
+  .mn-doc :is(.mn-item-desc, .mn-note-body) .toastui-editor-contents thead {
+    display: table-header-group;
+  }
+
+  .mn-doc :is(.mn-item-desc, .mn-note-body) .toastui-editor-contents tr {
+    break-inside: avoid;
+  }
+
+
+  /* The totals stay together. */
+  .mn-totals-table {
+    break-inside: avoid;
+  }
+
+  /*
+   * A table split across pages would draw its outline down to the foot of the page; the
+   * cells draw it instead, so each page's table ends right under its last row.
+   */
+  .mn-items {
+    border: 0;
+  }
+
+  /* Boxes and short sections never split across pages; a heading stays with its content. The
+     totals column (totals, words, signature) stays whole; the left column beside it carries
+     its terms and notes on line by line (Minimal design: they sit under the bank details). */
+  .mn-bottom-side,
+  .mn-card,
+  .mn-words,
+  .mn-signature,
+  .mn-doc .mn-letterhead-footer:not(.mn-footer-spacer) {
+    break-inside: avoid;
+  }
+
+  /* The last-page footer never starts a page by itself (a Legal or text-scale-1.2 PDF ended on
+     a page holding only the footer): the content before it goes over with it. */
+  .mn-page-body > .mn-letterhead-footer {
+    break-before: avoid-page;
+  }
+
+  .mn-card-title {
+    break-after: avoid-page;
+  }
+
+  /*
+   * The band prints row by row: the title, the parties, the details, the shipping row, each
+   * whole (the band's colour carries on over a page break, the rows never split).
+   */
+  .mn-band-row,
+  .mn-band-logistics > * {
+    break-inside: avoid;
+  }
+
+  /*
+   * The three-column rows may break between field lines when they cannot fit under the
+   * letterhead (A5, landscape, text scale 1.2, a long details column): kept whole they left
+   * page 1 holding only the letterhead. Each line stays whole and a caption stays with the
+   * name under it.
+   */
+  .mn-band > .mn-band-row:is(.mn-band-parties, .mn-band-logistics),
+  .mn-band-logistics > *,
+  .mn-band :is(.mn-party, .mn-fields, .mn-meta-list, .mn-details-compliance, .mn-supply) {
+    break-inside: auto;
+  }
+
+  .mn-band :is(.mn-party-name, .mn-party-address, .mn-field-label, .mn-field-value, .mn-qr) {
+    break-inside: avoid;
+  }
+
+  .mn-band .mn-band-caption {
+    break-after: avoid-page;
+  }
+
+  /* A table too wide for the page at the design's 12 px cell padding prints with 6 px
+     (helpers.ts printTight): the text keeps its size. */
+  .mn-items.is-print-tight > * > tr > :is(th, td) {
+    padding-inline: 6px;
+  }
+
+  .mn-title-block {
+    break-after: avoid-page;
+  }
+
+  /* The enquiry line never starts a page alone (user rule): the content before it comes along. */
+  .mn-doc .mn-enquiry {
+    break-before: avoid-page;
+  }
+
+  /*
+   * Terms and Conditions, Notes and Attachments carry on line by line across a page break
+   * (user rule), and so does the row that holds them; a list item still keeps its lines.
+   */
+  .mn-card:is(
+      [data-section="terms"],
+      [data-section="notes"],
+      [data-section="additional"],
+      [data-section="attachments"]
+    ) {
+    break-inside: auto;
+  }
+
+  /*
+   * Footer on every page (pdfOptions.footerOnLastPage off): the real footer is fixed to the
+   * foot of each printed page and the frame's repeating <tfoot> holds an invisible copy of it.
+   * Last page only: it follows the content, and helpers.ts sets it on the page's bottom edge.
+   */
+  .mn-page-frame {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .mn-page-frame > tbody {
+    display: table-row-group;
+  }
+
+  .mn-page-frame-header {
+    display: table-header-group;
+  }
+
+  /* The repeated letterhead keeps the 16 px section gap above each page's content. */
+  .mn-page-frame-header .mn-letterhead:not(.is-empty) {
+    margin-bottom: var(--mn-section-gap);
+  }
+
+  /*
+   * Chrome stops repeating a page header (and the footer's spacer) taller than about a quarter
+   * of the page: a full-width letterhead on a landscape page lost its copies after page 1
+   * (measured 2026-10-23, A4 / A5 / Letter landscape). The every-page copies keep within a
+   * fifth of the page height, scaled whole; portrait pages keep them at full width.
+   */
+  .mn-page-frame-header .mn-letterhead img,
+  .mn-letterhead-footer.mn-footer-fixed img,
+  .mn-footer-spacer img {
+    width: auto;
+    max-width: 100%;
+    max-height: calc(20 * var(--mn-vh, 1vh));
+  }
+
+  .mn-page-frame-footer {
+    display: table-footer-group;
+  }
+
+  .mn-page-frame > * > tr {
+    display: table-row;
+  }
+
+  .mn-page-frame > * > tr > td {
+    display: table-cell;
+    padding: 0;
+    vertical-align: top;
+  }
+
+  /*
+   * A browser's own print (Refrens' Print button, Ctrl+P): the page's top and bottom margins are
+   * 0 (helpers.ts applyBrowserPrintPage), which keeps Chrome from printing its date, title, URL
+   * and page-number stamps there (user, 2026-11-02). A row at the top and foot of the page frame,
+   * repeated on each page, gives every page its 1 cm back; an every-page letterhead or footer
+   * image sits on the page's edge instead, as the PDF service stamps it. Never in the PDF
+   * service (its own margins) nor on a Long PDF (one page, no @page rule).
+   */
+  .mn-page-frame > * > tr.mn-page-margin {
+    display: none;
+  }
+
+  body:not([class~="isDibella"]) .mn-doc:not(.is-pageless) .mn-page-frame > * > tr.mn-page-margin {
+    display: table-row;
+  }
+
+  .mn-page-frame > * > tr.mn-page-margin > td {
+    height: calc(1cm / var(--mn-page-zoom, 1));
+  }
+
+  /* The PDF service's stamped letterhead and footer, taller than their margins on a page wider
+     than A4 portrait: that much more room (helpers.ts placeStampRoom, user 2026-11-02). */
+  .mn-page-frame > * > tr.mn-stamp-room {
+    display: none;
+  }
+
+  body[class~="isDibella"] .mn-doc:not(.is-pageless) .mn-page-frame > * > tr.mn-stamp-room {
+    display: table-row;
+  }
+
+  .mn-page-frame > * > tr.mn-stamp-room.is-top > td {
+    height: var(--mn-stamp-top, 0);
+  }
+
+  .mn-page-frame > * > tr.mn-stamp-room.is-bottom > td {
+    height: var(--mn-stamp-bottom, 0);
+  }
+
+  /* The PDF service's own "electronically generated" line, as it prints it on Refrens'
+     templates: centred at the foot of every page, at the template's smallest size, 10 px
+     (helpers.ts ownSignatureNote). */
+  body[class~="isDibella"] .mn-doc:not(.is-pageless) .mn-page-frame > * > tr.mn-signature-note {
+    display: table-row;
+  }
+
+  .mn-page-frame > * > tr.mn-signature-note > td > p {
+    margin: 0;
+    padding-top: 12px;
+    color: var(--mn-ink);
+    font-size: calc(10px * var(--mn-text-scale, 1));
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  /* The stamped letterhead and footer reach into the page area there: the document's white
+     ground and the watermark painted over their edges (user, 2026-11-03). The paper is white;
+     the watermark keeps to the room between them (only where that room is added: A4 portrait
+     keeps its watermark as it was). */
+  body[class~="isDibella"] .mn-doc {
+    background: transparent;
+  }
+
+  /* The watermark setting's scale grows the box around its centre: the box is that much
+     smaller, so the scaled watermark still fits the room. */
+  :root[data-mn-stamp-room] body[class~="isDibella"]::after {
+    --mn-mark-room: calc(100% - var(--mn-stamp-page-top, 0px) - var(--mn-stamp-page-bottom, 0px));
+
+    /* A turned watermark reaches further: |cos| + |sin| of its angle (a square one). */
+    --mn-mark-cos: max(cos(var(--watermark-rotate, 0deg)), -1 * cos(var(--watermark-rotate, 0deg)));
+    --mn-mark-sin: max(sin(var(--watermark-rotate, 0deg)), -1 * sin(var(--watermark-rotate, 0deg)));
+    --mn-mark-turn: calc(var(--mn-mark-cos) + var(--mn-mark-sin));
+    --mn-mark-shrink: max(1, calc(var(--watermark-scale, 1) * var(--mn-mark-turn)));
+    --mn-mark-gap: calc((var(--mn-mark-room) - var(--mn-mark-room) / var(--mn-mark-shrink)) / 2);
+
+    top: calc(var(--mn-stamp-page-top, 0px) + var(--mn-mark-gap));
+    height: calc(var(--mn-mark-room) / var(--mn-mark-shrink));
+  }
+
+  body:not([class~="isDibella"]) .mn-doc:not(.is-pageless) .mn-page-frame-header:has(.mn-letterhead:not(.is-empty)) > tr.mn-page-margin,
+  body:not([class~="isDibella"]) .mn-doc:not(.is-pageless) .mn-page-frame-footer:has(.mn-footer-spacer:not(.is-empty)) > tr.mn-page-margin {
+    display: none;
+  }
+
+  /* The page body is the narrow-page container in print (see the container queries). The
+     letterhead, the template and the footer meet with no gap (user, 2026-11-12: a 16 px strip
+     under the letterhead in print and the PDF). */
+  .mn-doc {
+    container-type: normal;
+    row-gap: 0;
+  }
+
+  /* A browser's print: the frame's 1 cm top margin row is for the pages after the first; on
+     the first it fell under a first-page letterhead (already at the paper's top edge), a 1 cm
+     strip between it and the template. The frame starts under the letterhead instead. */
+  body:not([class~="isDibella"]) .mn-doc:not(.is-pageless) > .mn-letterhead:not(.is-empty) + .mn-page-frame {
+    margin-top: calc(-1cm / var(--mn-page-zoom, 1));
+  }
+
+  /* A plain block in print, its sections spaced by margins: as a flex column, Chrome 122
+     (Refrens' PDF service) moved the whole page body after a first-page letterhead to page 2 at
+     some sizes (text scale 0.9, 2026-11-06), leaving page 1 with the letterhead alone. */
+  .mn-page-body {
+    display: block;
+    container: mn-doc / inline-size;
+  }
+
+  /* Measured once more with the text a touch wider, as Chrome prints it a little wider than it
+     lays it out (helpers.ts stretchItemTable, flowBreakFills): on only while measuring. */
+  .mn-doc.is-flow-measure .mn-page-frame * {
+    letter-spacing: 0.02em;
+  }
+
+  .mn-doc.is-flow-measure .mn-items,
+  .mn-doc.is-flow-measure .mn-items * {
+    letter-spacing: calc(0.02em - 0.25px);
+  }
+
+  /* .mn-doc first: the paragraph reset (.mn-doc p { margin: 0 }) took the enquiry line's gap. */
+  .mn-doc .mn-page-body > * + * {
+    margin-top: var(--mn-section-gap);
+  }
+
+  /* 28 px from the band to the table and from the table to the bank and totals, as on screen. */
+  .mn-doc .mn-page-body > .mn-band + *,
+  .mn-doc .mn-page-body > .mn-bottom {
+    margin-top: 28px;
+  }
+
+  .mn-footer-spacer {
+    padding-top: var(--mn-section-gap);
+    visibility: hidden;
+  }
+
+  .mn-doc .mn-footer-spacer.is-empty {
+    display: none;
+  }
+
+  .mn-letterhead-footer.mn-footer-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /*
+   * The PDF service draws an every-page letterhead and footer in its own page margins (from
+   * data-ceres-page-header / -footer, policy "all"), so those copies hide there; a first-page
+   * letterhead and a last-page footer stay in the document, as the other templates keep them.
+   */
+  body[class~="isDibella"]
+    .mn-doc
+    .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+    display: none;
+  }
+}
+
+/* A Long PDF is not laid out in print media: its stamped letterhead and footer hide there too
+   (user, 2026-11-02: printed twice). */
+body[class~="isDibella"]
+  .mn-doc.is-pageless
+  .no-dibella:is(.invoice-letterhead, .invoice-letterhead-footer) {
+  display: none;
+}
+
+/*
+ * The filler row (helpers.ts stretchItemTable), on screen and in print alike: in print when the
+ * business stretches its tables (.is-stretch), on screen whenever the preview's A4 sheet has
+ * room to fill (user, 2026-10-31). Stretched, the empty row closes the table: the corners move
+ * to it, and the last item's rule goes so the space reads as the table running on, not an empty
+ * box under it (user, 2026-10-26). On screen the Total row stays in the table under it.
+ */
+.mn-doc.is-filled .mn-items .mn-filler {
+  display: table-row;
+}
+
+.mn-doc.is-filled .mn-items > tbody > tr:is(:has(+ .mn-filler), :has(+ tr[style*="none"] + .mn-filler)) > td {
+  --mn-sep: 0 0 transparent;
+
+  border-bottom: 0;
+}
+
+.mn-doc.is-filled .mn-items > tbody:last-of-type > tr:is(:has(+ .mn-filler), :has(+ tr[style*="none"] + .mn-filler)) > td {
+  border-radius: 0;
+}
+
+.mn-doc.is-filled .mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr.mn-filler:last-child > td:first-child {
+  border-end-start-radius: 0;
+}
+
+.mn-doc.is-filled .mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr.mn-filler:last-child > td:last-child {
+  border-end-end-radius: 0;
+}
+
+/* Stretched, the space closes the table: its bottom rule is the outline's. */
+.mn-doc.is-filled .mn-items:not(:has(+ [data-mn-totals-split])) > tbody:last-of-type > tr.mn-filler:last-child > td {
+  --mn-sep: 0 0 transparent;
+
+  border-bottom: 1px solid var(--mn-close-line, var(--mn-line));
+}
+
+.mn-doc.is-filled .mn-items .mn-filler > td {
+  height: var(--mn-filler-height, 0);
+  padding-block: 0;
+}
+
+/* Not the table's end: the space carries no rule of its own (the separator is a border now,
+   2026-11-12) — an empty space row drew a 1 px line and took that pixel from a full page, a
+   line of the terms went over, and the last-page footer with it (quotation A00052-D). */
+.mn-doc.is-filled .mn-items .mn-filler:not(:last-child) > td {
+  border-bottom: 0;
+}
+
+/* A group's Sub total under the space: the separator above it, at the space's foot (the row
+   above the space gave its own up, so the page's fit is unchanged; user, 2026-11-13: no line
+   between the last item and the Sub total in the PDF). */
+.mn-doc.is-filled .mn-items .mn-filler:has(+ .mn-group-total-row) > td {
+  border-bottom: var(--mn-separator) solid var(--mn-sep-color);
+}
+
+/* A Sub total under the space (helpers.ts placeFiller) stays with it: the summary rows never
+   stretch, nor move to a page of their own (user, 2026-11-02). */
+@media print {
+  .mn-items .mn-filler + .mn-group-total-row {
+    break-before: avoid;
+  }
+}
+
+/* The space carries on the last item's zebra colour, so it reads as that row running on
+   (user, 2026-10-26). */
+.mn-doc.is-filled .mn-items > tbody > tr.is-stripe + .mn-filler > td,
+.mn-doc.is-filled .mn-items > tbody > tr.is-stripe + tr[style*="none"] + .mn-filler > td {
+  background: var(--mn-zebra);
+}
+
+.mn-doc.is-filled .mn-items > tbody > tr.is-stripe + .mn-filler > td:not(:last-child),
+.mn-doc.is-filled .mn-items > tbody > tr.is-stripe + tr[style*="none"] + .mn-filler > td:not(:last-child) {
+  box-shadow: none; /* white rows: no seam to cover, and a shadow would cut the separator */
+}
+
+/*
+ * A box split by a page break closes at the foot of the page and opens again at the top of the
+ * next: its border, corners and padding are drawn on each piece (user, 2026-10-19).
+ */
+@media print {
+  .mn-card {
+    /* stylelint-disable-next-line property-no-vendor-prefix -- Chrome before 130 needs it */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* A card that can split (terms, notes, additional info, attachments) lays out as a block:
+     Chrome split a column flex card at its very start, leaving an empty box at the page's
+     foot. The 8 px between its parts moves from the gap to margins. */
+  .mn-bottom-main > .mn-card:not(.mn-bank) {
+    display: block;
+  }
+
+  .mn-bottom-main > .mn-card:not(.mn-bank) > * + * {
+    margin-top: 8px;
+  }
+}
+
+/* The page-break corners (below) are print only. */
+.mn-items-corners {
+  display: none;
+}
+
+/*
+ * Corners at a page break (user request, 2026-10-24): every page's piece of the item table is
+ * rounded, as the whole table is. Chrome 122 (Refrens' PDF service) does not round each piece
+ * of a box broken across pages, but it repeats a table's header and footer on every page:
+ * the header's end cells round its top corners, and an empty footer row draws the bottom
+ * corners over the page's last row, the curve in the rule's colour and the paper outside it.
+ * Where the totals follow the items (splitTotals), the items' last row keeps square corners
+ * (helpers.ts marks its edge cells is-joint-left / is-joint-right), as the totals close the
+ * table with their own.
+ */
+@media print {
+  .mn-items > thead > tr {
+    background: none;
+  }
+
+  /* Cell by cell, in the heading row's 20 % tint (as on screen); each heading overlaps the
+     next by a pixel, so no hairline seam shows. */
+  .mn-items > thead > tr > th {
+    background: var(--mn-head-tint);
+  }
+
+  /* The seams are covered by the middle headings, each over both its neighbours: a rounded end
+     heading's shadow, shifted a pixel, showed past its own curve (a notch at the table's top
+     corner, user 2026-11-13). */
+  .mn-items > thead > tr > th:not(:first-child, :last-child) {
+    box-shadow: 1px 0 0 var(--mn-head-tint), -1px 0 0 var(--mn-head-tint);
+  }
+
+  .mn-items > thead > tr > th:first-child {
+    border-start-start-radius: 0;
+  }
+
+  .mn-items > thead > tr > th:last-child {
+    border-start-end-radius: 0;
+  }
+
+  /*
+   * The heading's outline in one shape over the row, not cell by cell: at a fractional print
+   * size Chrome snaps a square cell's border to the pixel grid but draws a rounded one as a
+   * curve, so the top rule stepped where the corner cells met the others and ran on past the
+   * curves (user, 2026-11-13). Drawn on every page's repeated heading.
+   */
+  .mn-items > thead > tr {
+    position: relative;
+  }
+
+  .mn-items > thead > tr > th {
+    border-color: transparent;
+  }
+
+  .mn-items > thead > tr::after {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--mn-line);
+    border-bottom: 0;
+    border-radius: 0;
+    content: "";
+    pointer-events: none;
+  }
+
+  .mn-items > .mn-items-corners {
+    display: table-footer-group;
+  }
+
+  .mn-items > .mn-items-corners td {
+    height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  /*
+   * The page piece's foot in one shape, over the rows (positioned, it paints after them): the
+   * curves, the side rules' ends and the rule between them, in the outline's colour. Drawn as
+   * a rule over each cell, the last row's own separator, painted later, showed instead (a light
+   * line at each page break, running out past the curves; user, 2026-11-13). Its shadow, spread
+   * outward and kept below its top by the clip, is the paper over the rows' square corners;
+   * drawn as shapes, never a radial-gradient (a PDF stores that as a picture, 2026-11-04).
+   * Where the Total row follows in its own table, that table, positioned after it, covers it
+   * with its own top rule.
+   */
+  .mn-items > .mn-items-corners > tr {
+    position: relative;
+  }
+
+  /* The table's last row draws no bottom rule of its own (the shape above draws it, on the same
+     spot): cell by cell, the rounded end cells and the square ones between them landed a hair
+     apart at a fractional print size, a stepped line under the last column (user, 2026-11-13).
+     Only a table with that shape: the split totals' table keeps its own. */
+  .mn-items:has(> .mn-items-corners) {
+    --mn-close-line: transparent;
+  }
+
+  .mn-items > .mn-items-corners > tr::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    box-sizing: border-box;
+    height: 10px; /* the side rules start above the curves, over the table's own */
+    border: 0 solid var(--mn-line);
+    border-width: 0 1px 1px;
+    border-radius: 0;
+    background: none;
+    box-shadow: 0 0 0 8px var(--mn-paper);
+    clip-path: inset(2px -8px -8px -8px);
+    content: "";
+    pointer-events: none;
+  }
+
+  /* The totals follow: the items' table ends square, a piece hung from the totals' top corners
+     (helpers.ts markJointCorners) drawn over the curve above: the last row's ground with the
+     table's side rule, down to the rule the two tables share. */
+  .mn-items[data-mn-totals-split] {
+    position: relative;
+  }
+
+  .mn-items[data-mn-totals-split]:is(.is-joint-left, .is-joint-right)::before,
+  .mn-items[data-mn-totals-split].is-joint-right::after {
+    position: absolute;
+    z-index: 1;
+    top: -9px;
+    box-sizing: border-box;
+    width: 9px;
+    height: 9px;
+    border: 0 solid var(--mn-line);
+    background: var(--mn-joint-bg, var(--mn-paper));
+    content: none;
+    pointer-events: none;
+  }
+
+  .mn-items[data-mn-totals-split].is-joint-left::before {
+    left: 0;
+    border-width: 0 0 0 1px;
+    content: "";
+  }
+
+  .mn-items[data-mn-totals-split].is-joint-right::after {
+    right: 0;
+    border-width: 0 1px 0 0;
+    content: "";
+  }
+}
+
+/*
+ * In print the totals sit in a table of their own under the items (helpers.ts splitTotals), so a
+ * page holding only them repeats no item headings. It overlaps the item table by one rule, so
+ * the two meet on a single line.
+ */
+@media print {
+  /* Over the item table's bottom rule by exactly its width, drawing it again as their own top
+     edge (helpers.ts markJointCorners measures it): one line where they meet, and a top edge
+     when the totals start a page. Overlapping by a fixed pixel left the rule covered at one print
+     size and doubled at another (user, 2026-11-03). */
+  .mn-items[data-mn-totals-split] {
+    /* Two rules up: its ground covers the page-break corner row's rule, which lands a hair off
+       the same spot on the last piece (a doubled line), and its own rule is the one drawn. */
+    margin-top: calc(-2 * var(--mn-joint-rule, 1px));
+  }
+
+  /* The totals' ground and top edge are the table's, in one piece: painted cell by cell, some
+     PDF viewers drew each cell's edge as a faint vertical line in the Total row (user,
+     2026-11-03). */
+  .mn-items[data-mn-totals-split] {
+    box-shadow: inset 0 var(--mn-joint-rule, 1px) 0 var(--mn-sep-color);
+  }
+
+  .mn-items[data-mn-totals-split] > :is(thead, tbody, tfoot),
+  .mn-items[data-mn-totals-split] > :is(thead, tbody, tfoot) > tr,
+  .mn-items[data-mn-totals-split] > tbody > tr > td {
+    background: none;
+    box-shadow: none;
+  }
+
+  .mn-items td.is-joint-row {
+    --mn-sep: 0 0 transparent;
+
+    border-bottom-color: transparent;
+  }
+
+
+  /* One solid ground under the totals: painted cell by cell, the hairline seams between their
+     empty cells let the stretch column rules (columnRules) show through. */
+
+  /* In the Total row's tint, with the table's rounded foot: the hairline seams between its cells
+     (fractional column widths) showed the paper as vertical lines (user, 2026-11-03). */
+  .mn-items[data-mn-totals-split] {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+    background-color: var(--mn-zebra);
+  }
+
+}
+
+/* ------------------------------------------------------------ phones and tablets */
+
+/*
+ * On a phone or tablet screen the item table reads as on refrens.com's own invoice pages (user
+ * requests, 2026-10-20 and 2026-10-24). fitItemsToScreen (helpers.ts) chooses: on a screen
+ * narrower than 576 px each item reads as a card (is-cards): its number and name across the
+ * top, its codes and description under them, then each column's heading and figure in two
+ * aligned columns (as Bank Details), the last one (the amount) bold. Narrower than an A4 page
+ * (794 px) the headings stay in a row and each item's name and description run across the
+ * table above its figures (is-grid); the columns are shared by every row and sized to their
+ * figures (numbers never wrap), and the table scrolls sideways only when they cannot fit.
+ * Print keeps the table as it is.
+ */
+@media screen {
+  .mn-doc .mn-items-scroll:has(> .mn-items.is-cards) {
+    overflow-x: visible;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid),
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > :is(thead, tbody),
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr,
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr > :is(th, td) {
+    display: block;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr > :is(th, td) {
+    --mn-sep: 0 0 transparent;
+
+    border: 0;
+    text-align: start;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > :is(thead, tbody) > tr + tr,
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > tbody + tbody > tr:first-child,
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > thead + tbody > tr:first-child {
+    border-top: var(--mn-separator) solid var(--mn-sep-color);
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-desc-min,
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-filler {
+    display: none;
+  }
+
+  /* An item card: number and name, codes and description, then a line per figure. */
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > thead {
+    display: none;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > tbody > tr {
+    padding: 8px 12px;
+  }
+
+  /* The zebra tint fills the item's whole band, gaps included. */
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > tbody > tr.is-stripe {
+    background: var(--mn-zebra);
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) > tbody > tr > td {
+    background: none;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-name-row, .mn-total-row) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px 8px;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-name-row, .mn-total-row) > td {
+    grid-column: 1 / -1;
+    padding: 0;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-name-row) > .mn-col-serial {
+    grid-column: 1;
+    font-weight: 600;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-name-row) > :is(.mn-col-name, .mn-col-serial + td) {
+    grid-column: 2;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-total-row) > td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    text-align: start;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-total-row) > td[data-label]::before {
+    content: attr(data-label);
+    color: var(--mn-muted);
+    text-align: start;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-total-row) > td[data-label]:empty {
+    display: none;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-total-row) > td[data-label]:last-child {
+    font-weight: 600;
+  }
+
+  /* The name on a line of its own above the figures (Item Name Full Width), the
+     description and the large images under them: the same card, no rule between. */
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-name-row + .mn-item-row,
+  .mn-doc .mn-items:is(.is-cards, .is-grid) :is(.mn-item-row, .mn-detail-row) + :is(.mn-detail-row, .mn-image-row) {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-detail-row > .mn-col-serial,
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-total-row > .mn-col-serial:empty {
+    display: none;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-group-row {
+    font-weight: 600;
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-total-row {
+    background: var(--mn-fill);
+  }
+
+  .mn-doc .mn-items:is(.is-cards, .is-grid) .mn-total-row > .mn-col-name {
+    font-weight: 600;
+  }
+
+  /* is-grid: one grid for the whole table, every row on its columns (subgrid): the serial,
+     then one column per figure, as wide as its widest figure or heading word and sharing what
+     is left; each item's name and description run across the figure columns above them.
+     Anchored on .mn-items-scroll to outrank the card rules above. */
+  .mn-doc .mn-items-scroll:has(> .mn-items.is-grid) {
+    overflow: auto hidden;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid {
+    display: grid;
+    grid-template-columns: var(--mn-serial-width, 32px) repeat(var(--mn-figures, 1), minmax(min-content, 1fr));
+    width: auto;
+    min-width: min-content; /* wider than the screen only when the figures need it */
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > :is(thead, tbody) {
+    display: contents;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > :is(thead, tbody) > tr {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    gap: 0;
+    padding: 0;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > :is(thead, tbody) > :is(.mn-filler, tr[style*="none"]) {
+    display: none;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > :is(thead, tbody) > tr > :is(th, td) {
+    grid-column: auto;
+    padding: 6px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* The headings' widths are set on each heading for the table's own layout; on the grid each
+     heading takes its column instead, wrapping at its spaces ("GST / Rate") as refrens.com's do. */
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > thead > tr > th {
+    width: auto !important;
+    white-space: normal;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > thead > tr > .mn-col-name {
+    display: none;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid tr > .mn-col-serial {
+    grid-column: 1;
+  }
+
+  /* What runs across the figures: the item's name, its description and images, group rows.
+     Size containment keeps it from widening the figure columns. */
+  .mn-doc .mn-items-scroll > .mn-items.is-grid :is(.mn-item-row, .mn-name-row, .mn-total-row) > :is(.mn-col-name, .mn-col-serial + td) {
+    grid-column: 2 / -1;
+    contain: inline-size;
+    text-align: start;
+    white-space: normal;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid :is(.mn-detail-row, .mn-image-row, .mn-group-row) > td:not(.mn-col-serial) {
+    grid-column: 2 / -1;
+    contain: inline-size;
+    padding: 6px 8px;
+    text-align: start;
+    white-space: normal;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid > tbody > tr.mn-group-row > td:not(.mn-col-serial) {
+    grid-column: 1 / -1;
+  }
+
+  /* The first figure under the first heading; the rest follow in order. */
+  .mn-doc .mn-items-scroll > .mn-items.is-grid tr > :nth-child(1 of :not(.mn-col-serial, .mn-col-name)) {
+    grid-column-start: 2;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid :is(.mn-item-row, .mn-total-row) > td[data-label] {
+    display: block;
+    text-align: center;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid :is(.mn-item-row, .mn-total-row) > td[data-label]::before {
+    content: none;
+  }
+
+  .mn-doc .mn-items-scroll > .mn-items.is-grid :is(.mn-item-row, .mn-total-row) > td[data-label]:empty,
+  .mn-doc .mn-items-scroll > .mn-items.is-grid .mn-total-row > .mn-col-serial:empty {
+    display: block;
+  }
+}
+
+
+/*
+ * The totals on a phone screen come straight after the items (user request, 2026-10-24): the
+ * right column's boxes join the bottom's own column, the totals first, then the cards, then the
+ * signature. Print keeps the totals beside or under the cards (an A5 page is as narrow).
+ */
+@media screen {
+  @container mn-doc (width < 600px) {
+    .mn-bottom-side {
+      display: contents;
+    }
+
+    /* The amount in words stays under the Total bar it spells out. */
+    .mn-bottom-side > :is(.mn-totals-table, .mn-words) {
+      order: -1;
+    }
+
+    .mn-doc .mn-bottom-side > .mn-words {
+      margin-top: 0;
+    }
+  }
+}
+
+/*
+ * The summaries on a phone screen (user request, 2026-10-24): fitItemsToScreen (helpers.ts)
+ * marks them is-stacked under 576 px and gives each cell its column's heading. Each row of the
+ * table reads as heading | figure pairs, one per column, one under another, in the table's own
+ * design: the title above it as on a wide screen, each heading cell in the theme colour with
+ * white medium text and the header's light rules (as the table's header row), each figure as
+ * a body cell, the footer's Total across the box in the totals' fill, the words row last.
+ * Rounded corners, no grey rule beside the theme-coloured headings. Print keeps the tables as
+ * they are.
+ */
+@media screen {
+  .mn-doc .mn-widget-table.is-stacked .ceres-table,
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot),
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr {
+    display: block;
+    width: 100%;
+  }
+
+  /* The outline on the figures' side and under the box; the headings' side has none. */
+  .mn-doc .mn-widget-table.is-stacked .ceres-table-section > .ceres-table {
+    border: 1px solid var(--mn-line);
+    border-top: 0;
+    border-inline-start: 0;
+    border-radius: 0;
+  }
+
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > thead {
+    display: none;
+  }
+
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td {
+    display: block;
+    padding: 6px 8px;
+    border: 0;
+    border-top: 1px solid var(--mn-line);
+    border-radius: 0;
+    text-align: center;
+  }
+
+  /* Heading | figure, two halves; a long figure widens its half. */
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td[data-label] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 8px;
+    align-items: center;
+    padding: 0 8px 0 0;
+  }
+
+  /* The heading cell as the table's header: the 20 % tint, theme-coloured text, light rules. */
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td[data-label]::before {
+    content: attr(data-label);
+    align-self: stretch;
+    margin-top: -1px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--mn-line);
+    background: var(--mn-head-tint);
+    color: var(--mn-ink);
+    font-weight: 500;
+    white-space: normal;
+  }
+
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > tbody:first-of-type > tr:first-child > td[data-label]:first-child::before {
+    border-top-color: var(--mn-line);
+  }
+
+  /* The footer's Total across the box, in the totals' fill. */
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > tfoot > tr > td:not([data-label], .ceres-table-words) {
+    font-weight: 600;
+  }
+
+  /* A payment's amount in the business's currency, under the amount. */
+  .mn-doc .mn-widget-table.is-stacked td[data-label] > .mn-payment-converted {
+    grid-column: 2;
+  }
+
+  .mn-doc .mn-widget-table.is-stacked td[data-label]:has(> .mn-payment-converted)::before {
+    grid-row: span 2;
+  }
+
+  .mn-doc .mn-widget-table.is-stacked :is(.mn-stock-table, .mn-payments-table) td:not(.mn-num) {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .mn-doc .mn-widget-table.is-stacked .ceres-table .ceres-table-words {
+    text-align: start;
+  }
+
+  /* An empty cell (the footer under a rate, a batch with no maker) prints no line. */
+  .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td:empty {
+    display: none;
+  }
+}
