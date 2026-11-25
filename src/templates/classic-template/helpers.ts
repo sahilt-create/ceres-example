@@ -204,6 +204,22 @@ export const formatContext = (invoice: UnknownRecord): FormatContext => ({
  * summary, payment record) print every figure with the same decimals as the table — a whole
  * amount as "625,975.00", not "625,975".
  */
+/*
+ * A custom currency symbol made only of invisible characters (a business's way to print figures
+ * with no symbol, e.g. U+3164 HANGUL FILLER) shows as a crossed box in the PDF and the preview:
+ * the fonts have no glyph for it. It becomes WORD JOINER (U+2060), which browsers never draw,
+ * and removeHiddenSymbol takes it and the space after it out of the page once drawn (ported
+ * from Enterprise / BPS Technologies; user 2026-11-25, quotation LTG3443).
+ */
+export const HIDDEN_SYMBOL = "\u2060";
+const INVISIBLE =
+  /[\s\p{Cf}\p{Zs}\p{Mn}\u115F\u1160\u3164\uFFA0\u2800\u180E\u2028\u2029]/gu;
+
+export const isInvisibleSymbol = (value: unknown): boolean =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  value.replace(INVISIBLE, "") === "";
+
 export const withMoneyDefaults = <T>(state: T): T => {
   const invoice = asRecord(asRecord(state).invoice);
   if (
@@ -212,7 +228,24 @@ export const withMoneyDefaults = <T>(state: T): T => {
   ) {
     invoice.subUnitLength = moneyDigits(invoice);
   }
+  if (isInvisibleSymbol(invoice.customCurrencySymbol)) {
+    invoice.customCurrencySymbol = HIDDEN_SYMBOL;
+  }
   return state;
+};
+
+/* The hidden symbol and the space the formatter puts after it, out of every text in the page. */
+export const removeHiddenSymbol = (root: ParentNode = document): void => {
+  if (typeof document === "undefined") return;
+  root.querySelectorAll<HTMLElement>(".cl-doc").forEach((doc) => {
+    const walker = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const value = node.nodeValue || "";
+      if (value.includes(HIDDEN_SYMBOL)) {
+        node.nodeValue = value.replace(/\u2060[\s\u00a0]?/g, "");
+      }
+    }
+  });
 };
 
 export const formatQuantity = (value: unknown, ctx: FormatContext): string =>
@@ -3023,7 +3056,7 @@ export const mapItemTable = (
         // image rows share its colour.
         isStripe: stripeIndex % 2 === 0,
         // "1.", as refrens.com numbers items (from 1 again in each group).
-        serial: isGroupTotal ? "" : String(serial).padStart(2, "0"),
+        serial: isGroupTotal ? "" : `${serial}.`, // "1." as Refrens' native Classic
         name: text(item.name),
         inlineCodes,
         description,
@@ -6656,6 +6689,7 @@ export const fitDetails = (root: ParentNode = document): void => {
 };
 
 export const fitItemsToScreen = (root: ParentNode = document): void => {
+  removeHiddenSymbol(root);
   fitDetails(root);
   const printing =
     typeof window.matchMedia === "function" &&
@@ -6888,6 +6922,7 @@ export const registerClassicWords = (): void => {
   const schedule = () => {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
+      removeHiddenSymbol();
       prepareReadableStylesheet();
       applyBrowserPrintPage();
       loadScriptFonts();

@@ -10,6 +10,8 @@ import {
   formatDocumentDate,
   formatFigure,
   foreignAmountInWords,
+  isInvisibleSymbol,
+  withMoneyDefaults,
   withRefrensDefaults,
   mapCompliance,
   mapParty,
@@ -321,11 +323,13 @@ describe("Classic Template — render", () => {
     );
     expect(groups).toEqual(["OUTDOOR UNITS", "INDOOR UNITS", "REFNET JOINT"]);
     const serials = Array.from(
-      html.matchAll(/<tr class="cl-item-row[\s\S]*?data-testid="num">(\d+)</g),
+      html.matchAll(
+        /<tr class="cl-item-row[\s\S]*?data-testid="num">(\d+\.)</g
+      ),
       (m) => m[1]
     );
-    // Two digits, "01", as Refrens' Classic numbers them.
-    expect(serials).toEqual(["01", "01", "02", "03", "04", "01", "02", "03"]);
+    // "1.", as Refrens' native Classic numbers them (invoice 0029, 2026-11-25).
+    expect(serials).toEqual(["1.", "1.", "2.", "3.", "4.", "1.", "2.", "3."]);
   });
 
   it("keeps sample-free sections out until the document has their data", () => {
@@ -754,16 +758,20 @@ describe("Classic Template — boolean settings", () => {
       html.indexOf('class="cl-bottom-main"'),
       html.indexOf('class="cl-bottom-side"')
     );
-    expect(main).toContain('data-section="bank"');
+    expect(main).not.toContain('data-section="bank"');
+    // Native Classic: Bank and UPI in a row of their own under terms | totals.
+    expect(html).toMatch(
+      /class="cl-bank-part">\s*<section class="cl-card cl-bank"/
+    );
     // User request (2026-10-27): every summary table at the end, after terms, notes,
     // additional info and attachments; only the enquiry line follows them.
-    // classic.pdf: Bank and UPI details first, then terms, notes and the rest.
+    // Native Classic: terms, notes and the rest, then Bank and UPI, then the summaries.
     const order = [
-      "bank",
       "terms",
       "notes",
       "additional",
       "attachments",
+      "bank",
       "hsn",
       "tax-summary",
       "enquiry",
@@ -996,8 +1004,8 @@ describe("Classic Template — view model", () => {
       invoice.documentReason = "Product Return";
       invoice.linkedInvoices = [{ _id: "x", invoiceNumber: "INV-7" }];
     });
-    // "Credit Note Details" over the rows (Refrens' Classic: "Invoice Details").
-    expect(html).toContain('cl-band-caption">Credit Note Details<');
+    // No "Credit Note Details" heading over the rows (user, 2026-11-25).
+    expect(html).not.toContain("Credit Note Details");
     expect(html).toMatch(/cl-detail-label">Linked Document<[\s\S]*?INV-7/);
     expect(html).toMatch(/cl-detail-label">Reason<[\s\S]*?Product Return/);
   });
@@ -1125,17 +1133,17 @@ describe("Classic Template — files and CSS", () => {
       ""
     );
     expect(withoutRtl).not.toMatch(/text-align: (?:left|right)/);
-    expect(source).toMatch(/var\(--cl-script-font, "Inter"\)/);
+    expect(source).toMatch(/var\(--cl-script-font, "Open Sans"\)/);
   });
 
-  it("uses the colours measured on classic.pdf (2026-11-19)", () => {
+  it("uses the colours measured on Refrens' native Classic (2026-11-25)", () => {
     [
-      "#15a8df",
-      "--cl-ink: #313844;",
-      "--cl-muted: #696e77;",
-      "--cl-rule: #1c2f34;",
-      "--cl-head-tint: color-mix(in srgb, var(--cl-accent) 12%, var(--cl-paper));",
-      "--cl-line: #1c2f34;",
+      "#16a9e0",
+      "--cl-ink: #161c26;",
+      "--cl-caption: #2b2b2b;",
+      "--cl-rule: #000;",
+      "--cl-head-tint: color-mix(in srgb, var(--cl-accent) 11%, var(--cl-paper));",
+      "--cl-line: #000;",
     ].forEach((token) => expect(source).toContain(token));
   });
 });
@@ -1315,7 +1323,7 @@ describe("Classic Template — the platform's other settings, under every alias"
     expect(onThemeColor("#1f4e79")).toBe("#ffffff");
     const css = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
     expect(css).toContain(
-      "--cl-accent: var(--primary-color, var(--cl-theme, #15a8df))"
+      "--cl-accent: var(--primary-color, var(--cl-theme, #16a9e0))"
     );
   });
 });
@@ -1513,7 +1521,7 @@ describe("Classic Template — editor settings (accordions)", () => {
     expect(css).toMatch(/--cl-accent: var\(--primary-color,/);
     // refrens.com's Secondary Color / Primary + Secondary Background are shades of the theme
     // (header fill, 20 % card tint), never the page or the text (orange quotation, 2026-10-24).
-    expect(css).toMatch(/--cl-ink: #313844;/);
+    expect(css).toMatch(/--cl-ink: #161c26;/);
     expect(css).toMatch(/--cl-paper: #fff;/);
     expect(css).not.toMatch(
       /var\(--(?:primary-background|secondary-background)/
@@ -1970,11 +1978,11 @@ describe("Classic Template — review round 5 (2026-10-24)", () => {
   });
 
   // classic.pdf: the UPI note at 10 px.
-  it("sets the UPI note in 10 px", () => {
+  it("sets the UPI note in 12 px (native Classic)", () => {
     expect(css()).toMatch(
       /\.cl-upi-note \{[^}]*font-size: calc\(var\(--cl-font-size-label\)/
     );
-    expect(css()).toMatch(/--cl-font-size-label: 10px;/);
+    expect(css()).toMatch(/--cl-font-size-label: 12px;/);
   });
 
   it("sets the UPI caption in the ink colour at 11 px, medium (classic.pdf)", () => {
@@ -2074,8 +2082,8 @@ describe("Classic Template — line height and browser-print margins (2026-11-02
     fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
 
   // User: the lines read too far apart; every line height follows the text scale.
-  it("sets body lines at 10 on 16.25 (classic.pdf) and no line height in fixed pixels", () => {
-    expect(css()).toMatch(/--cl-lh: 1\.625;/);
+  it("sets body lines at 13 on 20 (native Classic) and no line height in fixed pixels", () => {
+    expect(css()).toMatch(/--cl-lh: 1\.5385;/);
     expect(css()).not.toMatch(/line-height: \d+px/);
   });
 
@@ -2160,7 +2168,7 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     // Every block under its caption, the details too.
     expect(band).toMatch(/cl-band-caption">Billed By</);
     expect(band).toMatch(/cl-band-caption">Client Name</); // the business's own label
-    expect(band).toMatch(/cl-band-caption">[^<]+ Details</);
+    expect(band).not.toMatch(/cl-band-caption">[^<]+ Details</); // no details heading (user, 2026-11-25)
   });
 
   it("puts Country / Place of Supply and the document QR in the details column", () => {
@@ -2199,6 +2207,36 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     expect(html).toMatch(/cl-words-value">Ten Lakh Twenty One Thousand [A-Z]/);
   });
 
+  // User 2026-11-25: a row with two lines on one side (a converted amount, a long custom
+  // value) left the other cell short and its rules half way down ("ye kya layout hai").
+  it("keeps every totals row one ruled box: cells as tall as the row, no outline over the bar", () => {
+    const sheet = fs.readFileSync(
+      path.join(TEMPLATE_DIR, "styles.css"),
+      "utf8"
+    );
+    expect(sheet).toMatch(
+      /\.cl-totals-table \.cl-totals > tr \{[^}]*grid-template-columns: subgrid;[^}]*align-items: stretch;/
+    );
+    expect(sheet).toMatch(
+      /\.cl-totals-table \.cl-totals th,\s*\.cl-totals-table \.cl-totals td \{[^}]*border-bottom: 1px solid var\(--cl-rule\);/
+    );
+    expect(sheet).not.toMatch(/\.cl-grand-row \{[^}]*outline:/);
+  });
+
+  // User 2026-11-25 (quotation LTG3443): an invisible custom currency symbol prints as it is.
+  it("prints an invisible custom currency symbol as nothing, never a box", () => {
+    expect(isInvisibleSymbol("\u3164")).toBe(true);
+    expect(isInvisibleSymbol("₹")).toBe(false);
+    const html = template(
+      withMoneyDefaults(
+        state((invoice) => {
+          invoice.customCurrencySymbol = "\u3164";
+        })
+      )
+    );
+    expect(html).not.toContain("\u3164");
+  });
+
   it("keeps terms and notes in the left column under the bank details (classic.pdf)", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
@@ -2213,13 +2251,13 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     expect(main).toContain('data-section="notes"');
   });
 
-  it("draws the table in #1c2f34 rules under a theme-tinted heading row (classic.pdf)", () => {
+  it("draws the table in black rules under a theme-tinted heading row (native Classic)", () => {
     const sheet = css();
     expect(sheet).toMatch(
-      /--cl-accent: var\(--primary-color, var\(--cl-theme, #15a8df\)\)/
+      /--cl-accent: var\(--primary-color, var\(--cl-theme, #16a9e0\)\)/
     );
     expect(sheet).toMatch(
-      /--cl-head-tint: color-mix\(in srgb, var\(--cl-accent\) 12%, var\(--cl-paper\)\);/
+      /--cl-head-tint: color-mix\(in srgb, var\(--cl-accent\) 11%, var\(--cl-paper\)\);/
     );
     expect(sheet).toMatch(
       /\.cl-items-section \{[^}]*--cl-line: var\(--cl-rule\);/
@@ -2238,7 +2276,7 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     );
   });
 
-  it("sets capitals only on captions and table headings; never above weight 600", () => {
+  it("sets capitals only on captions and table headings; 700 only where native Classic has it", () => {
     const sheet = css();
     const blocks =
       sheet.match(/[^{}]+\{[^{}]*text-transform: uppercase;[^{}]*\}/g) || [];
@@ -2246,7 +2284,15 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     selectors.forEach((selector) =>
       expect(selector).toMatch(/caption|card-title|section-title|thead|th\b/)
     );
-    expect(sheet).not.toMatch(/font-weight: (700|800|900|bold)/);
+    expect(sheet).not.toMatch(/font-weight: (800|900|bold)/);
+    // Native Classic (2026-11-25): bold 700 only on party names and the seller's field names.
+    const bold = Array.from(
+      sheet.matchAll(/([^{}]+)\{[^{}]*font-weight: 700;/g),
+      (m) => m[1].trim().split("\n").pop()
+    );
+    bold.forEach((selector) =>
+      expect(selector).toMatch(/cl-party-name|cl-billed-by .cl-field-label/)
+    );
   });
 });
 

@@ -131,7 +131,7 @@
               {{/each}}
               {{#if view.hasDetailsRow}}
                 <div class="cl-party cl-doc-details" data-testid="section" data-section="details">
-                  {{#if view.detailsTitle}}<h2 class="cl-band-caption">{{view.detailsTitle}}</h2>{{/if}}
+                  {{!-- No "<Document> Details" heading over the details (user, 2026-11-25; classic.pdf has none). --}}
                   <div class="cl-fields cl-meta-list">
                     {{#each view.details}}
                       <p class="cl-field cl-detail cl-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="cl-field-label cl-detail-label">{{label}}</span><span class="cl-field-value cl-detail-value{{#if isNum}} cl-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{#if isDate}}{{clDate value @root.invoice.ownerOffset}}{{else if isUtcDate}}{{clDate value 0}}{{else}}{{value}}{{/if}}</span></p>
@@ -342,35 +342,8 @@
 
           <div class="cl-bottom">
             <div class="cl-bottom-main">
-              {{!-- Left column beside the totals (classic.pdf): Bank and UPI details first, then
-                    Terms, Notes, Additional Information and Attachments. --}}
-              {{#if view.bank.show}}
-                <section class="cl-card cl-bank" data-testid="section" data-section="bank">
-                  <div class="cl-bank-main">
-                    {{#if view.bank.title}}<h2 class="cl-card-title" data-role="title">{{view.bank.title}}</h2>{{/if}}
-                    <div class="cl-kv cl-bank-rows">
-                      {{#each view.bank.rows}}
-                        <span class="cl-kv-label cl-bank-{{key}}">{{label}}</span>
-                        <span class="cl-kv-value{{#if isNum}} cl-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
-                      {{/each}}
-                      {{!-- The UPI ID prints once, as refrens.com prints it: under the QR when there
-                            is one, else here with the bank rows. --}}
-                      {{#if view.bank.upi}}{{#unless view.bank.upi.qr}}
-                        <span class="cl-kv-label cl-bank-upi">{{view.bank.upi.label}}</span>
-                        <span class="cl-kv-value cl-num" data-testid="num">{{view.bank.upi.id}}</span>
-                      {{/unless}}{{/if}}
-                    </div>
-                  </div>
-                  {{#if view.bank.upi.qr}}
-                    <figure class="cl-upi">
-                      <figcaption class="cl-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
-                      {{#if view.bank.upi.note}}<p class="cl-upi-note">{{view.bank.upi.note}}</p>{{/if}}
-                      <img class="cl-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
-                      <p class="cl-upi-id cl-num">{{view.bank.upi.id}}</p>
-                    </figure>
-                  {{/if}}
-                </section>
-              {{/if}}
+              {{!-- Left column beside the totals (Refrens' native Classic): Terms, Notes,
+                    Additional Information and Attachments. --}}
 
               {{#each view.terms}}
                 <section class="cl-card cl-terms" data-testid="section" data-section="terms">
@@ -459,7 +432,6 @@
                     "For <business>" line, as refrens.com prints it. --}}
               {{#if view.signature.show}}
                 <section class="cl-signature" data-testid="signature">
-                  {{#if view.signature.forLine}}<p class="cl-signature-for">{{view.signature.forLine}}</p>{{/if}}
                   <div class="cl-signature-mark">
                     {{#if view.signature.image}}
                       {{> CeresImage src=view.signature.image alt=view.signature.label class="cl-signature-image"}}
@@ -472,10 +444,43 @@
                       </p>
                     {{/if}}
                   </div>
-                  {{#if view.signature.label}}<p class="cl-signature-label">{{view.signature.label}}</p>{{/if}}
+                  {{!-- Under the signature: "For <business>" (Refrens' native Classic prints no "Authorised Signatory"). --}}
+                  {{#if view.signature.forLine}}<p class="cl-signature-for">{{view.signature.forLine}}</p>{{/if}}
                 </section>
               {{/if}}
             </div>
+          </div>
+
+          {{!-- Bank and UPI details in a row of their own under terms | totals (Refrens' native
+                Classic, invoice 0029). --}}
+          <div class="cl-bank-part">
+          {{#if view.bank.show}}
+            <section class="cl-card cl-bank" data-testid="section" data-section="bank">
+              <div class="cl-bank-main">
+                {{#if view.bank.title}}<h2 class="cl-card-title" data-role="title">{{view.bank.title}}</h2>{{/if}}
+                <div class="cl-kv cl-bank-rows">
+                  {{#each view.bank.rows}}
+                    <span class="cl-kv-label cl-bank-{{key}}">{{label}}</span>
+                    <span class="cl-kv-value{{#if isNum}} cl-num{{/if}}"{{#if isNum}} data-testid="num"{{/if}}>{{value}}</span>
+                  {{/each}}
+                  {{!-- The UPI ID prints once, as refrens.com prints it: under the QR when there
+                        is one, else here with the bank rows. --}}
+                  {{#if view.bank.upi}}{{#unless view.bank.upi.qr}}
+                    <span class="cl-kv-label cl-bank-upi">{{view.bank.upi.label}}</span>
+                    <span class="cl-kv-value cl-num" data-testid="num">{{view.bank.upi.id}}</span>
+                  {{/unless}}{{/if}}
+                </div>
+              </div>
+              {{#if view.bank.upi.qr}}
+                <figure class="cl-upi">
+                  <figcaption class="cl-upi-caption">{{view.bank.upi.scanLabel}}</figcaption>
+                  {{#if view.bank.upi.note}}<p class="cl-upi-note">{{view.bank.upi.note}}</p>{{/if}}
+                  <img class="cl-upi-qr" data-testid="upi-qr" src="{{view.bank.upi.qr}}" alt="{{view.bank.upi.label}} {{view.bank.upi.id}}" />
+                  <p class="cl-upi-id cl-num">{{view.bank.upi.id}}</p>
+                </figure>
+              {{/if}}
+            </section>
+          {{/if}}
           </div>
 
           {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered

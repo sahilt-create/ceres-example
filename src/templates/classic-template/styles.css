@@ -1,4 +1,4 @@
-@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+@import "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap";
 
 /*
  * Classic Template: Refrens' Classic layout, measured on the user's classic.pdf (2026-11-19, an
@@ -26,7 +26,7 @@
   /* The host's live colour (Lydia's theme picker sets --primary-color on <html>) wins over the
      document's colour as rendered, so a change shows without a re-render. Only the grand
      total's bar carries it (Refrens' Classic). */
-  --cl-accent: var(--primary-color, var(--cl-theme, #15a8df));
+  --cl-accent: var(--primary-color, var(--cl-theme, #16a9e0));
   --cl-on-accent: #fff;
 
   /* The theme colour as text on the paper; a light theme colour takes the ink instead
@@ -38,58 +38,65 @@
   --cl-zebra: var(--cl-paper);
 
   /* The item table's heading row: a light tint of the theme colour (#e4f9ff on #15a8df). */
-  --cl-head-tint: color-mix(in srgb, var(--cl-accent) 12%, var(--cl-paper));
+  --cl-head-tint: color-mix(in srgb, var(--cl-accent) 11%, var(--cl-paper));
 
   /* Text colours measured on the reference: #313844 text and field names, the totals
      labels and item descriptions. */
-  --cl-ink: #313844;
-  --cl-strong: #313844; /* the grand total */
-  --cl-muted: #696e77; /* the UPI note and the codes */
-  --cl-caption: #313844; /* summary titles */
-  --cl-code: #696e77; /* SKU, HSN/SAC and the other codes under an item's name */
-  --cl-desc: #313844; /* an item's description under its name: the text colour (Classic) */
-  --cl-label: #313844; /* field names: the text colour (Classic) */
-  --cl-rule: #1c2f34; /* the item table's and the totals' rules */
+
+  /* Refrens' native Classic (invoice 0029, 2026-11-25): rgb(22,28,38) text, #2b2b2b headings,
+     black table text and rules, #222 descriptions, rgb(102,102,112) codes. */
+  --cl-ink: #161c26;
+  --cl-strong: #161c26; /* the grand total */
+  --cl-muted: rgb(0 0 0 / 50%); /* the subtitle */
+  --cl-caption: #2b2b2b; /* section headings: Billed To, Terms and Conditions, Bank Details */
+  --cl-code: #666670; /* SKU, HSN/SAC and the other codes under an item's name */
+  --cl-desc: #222; /* an item's description under its name */
+  --cl-label: #161c26; /* field names */
+  --cl-table-ink: #000; /* the item table's text */
+  --cl-rule: #000; /* the item table's and the totals' rules */
   --cl-paper: #fff;
   --cl-card: var(--cl-paper);
   --cl-fill: #f0f2f5; /* group rows */
-  --cl-line: #1c2f34; /* the table's rules */
+  --cl-line: #000; /* the table's rules */
 
-  /* 10 px text on 16.25 px lines; every line height a ratio, so it follows the text scale. */
-  --cl-lh: 1.625;
+  /* 13 px text on 20 px lines (native Classic); every line height a ratio, so it follows the
+     text scale. */
+  --cl-lh: 1.5385;
 
   /*
    * --cl-script-font is the Noto face for the document's Language/Script setting (set inline
    * by the template, loaded from Google Fonts); it fills in the glyphs the main face lacks.
    */
-  --cl-font: var(--subtitle-font, "Inter"), var(--cl-script-font, "Inter"), sans-serif;
-  --cl-title-font: var(--title-font, "Inter"), var(--cl-script-font, "Inter"), sans-serif;
+  --cl-font: var(--subtitle-font, "Open Sans"), var(--cl-script-font, "Open Sans"), sans-serif;
+  --cl-title-font: var(--title-font, "Open Sans"), var(--cl-script-font, "Open Sans"), sans-serif;
   --cl-table-font: var(--cl-font);
   --cl-label-font: var(--cl-font);
 
-  /* Type scale (classic.pdf ÷ 0.8): 10 px text, 11 px captions, 12 px names and grand total,
-     14 px status tag, 20 px title. Print uses the same sizes (user, 2026-10-21: print 1:1). */
-  --cl-font-size-code: 9px;
-  --cl-font-size-xs: 10px;
-  --cl-font-size-sm: 10px;
-  --cl-font-size-s: 10px;
-  --cl-font-size-base: 10px;
-  --cl-font-size-m: 10px;
-  --cl-font-size-l: 10px;
-  --cl-font-size-lg: 10px;
-  --cl-font-size-xl: 20px; /* the title */
-  --cl-font-size-heading: 11px; /* section headings */
-  --cl-font-size-subheading: 11px;
-  --cl-font-size-grand: 12px; /* the grand total, label and figure */
-  --cl-font-size-name: 12px; /* party names */
-  --cl-font-size-brand: 12px;
-  --cl-font-size-section: 11px; /* headings under the items */
-  --cl-font-size-label: 10px; /* Scan to pay note, UPI ID */
-  --cl-font-size-status: 14px; /* the status tag */
-  --cl-font-size-words: 10px;
-  --cl-font-size-grand-figure: 12px;
-  --cl-font-size-caption: 11px; /* the summary tables' titles */
-  --cl-font-size-thead: 10px; /* the item table's headings */
+  /* Type scale (Refrens' native Classic, measured on its own render of invoice 0029,
+     2026-11-25): 13 px text, 16 px bold names, 28 px title, 12 px tag and UPI lines, 10 px item
+     codes. Print uses the same sizes times the text scale (user, 2026-10-21: print 1:1). */
+  --cl-font-size-code: 10px;
+  --cl-font-size-xs: 13px;
+  --cl-font-size-sm: 13px;
+  --cl-font-size-s: 13px;
+  --cl-font-size-base: 13px;
+  --cl-font-size-m: 13px;
+  --cl-font-size-l: 13px;
+  --cl-font-size-lg: 13px;
+  --cl-font-size-xl: 28px; /* the title */
+  --cl-font-size-heading: 13px; /* section headings */
+  --cl-font-size-subheading: 13px;
+  --cl-font-size-grand: 13px; /* the grand total, label and figure */
+  --cl-font-size-name: 16px; /* party names */
+  --cl-font-size-brand: 16px;
+  --cl-font-size-section: 13px; /* headings under the items */
+  --cl-font-size-label: 12px; /* Scan to pay via UPI, the UPI ID */
+  --cl-font-size-status: 12px; /* the status tag */
+  --cl-font-size-words: 13px;
+  --cl-font-size-grand-figure: 13px;
+  --cl-font-size-caption: 13px; /* the summary tables' titles */
+  --cl-font-size-thead: 13px; /* the item table's headings */
+  --cl-font-size-for: 16px; /* "For <business>" under the signature */
 
   /* 24 px in from the page's sides; the letterhead and footer run to the edges. */
   --cl-gutter: 24px;
@@ -276,9 +283,21 @@
   max-width: none;
 }
 
-/* The title block keeps its own width on the right, logo or not (classic.pdf). */
+/* The title, status tag and address centred in the room beside the logo (user, 2026-11-25). */
 .cl-band > .cl-title-block > .cl-title-side {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  align-items: center;
+  max-width: none;
+  margin-inline-start: 0;
+  text-align: center;
+}
+
+.cl-band > .cl-title-block .cl-title-row {
+  justify-content: center;
+}
+
+.cl-band > .cl-title-block .cl-header-address {
+  margin-inline: auto;
 }
 
 .cl-title-row {
@@ -551,6 +570,7 @@
 /* Under the items the sections sit on the paper, no box (Classic design): Bank and UPI, terms,
    notes, additional information, attachments, the summaries. */
 .cl-bottom .cl-card,
+.cl-bank-part .cl-card,
 .cl-card.cl-widget-table,
 [data-section="logistics-below"] .cl-card {
   padding: 0;
@@ -795,10 +815,6 @@
   border-inline-start: 1px solid var(--cl-line);
 }
 
-/* The amount, the last column, on the right (classic.pdf). */
-.cl-items > :is(thead, tbody) > tr:not(.cl-name-row, .cl-detail-row, .cl-image-row, .cl-group-row) > :is(td, th):last-child:not(:first-child, .cl-col-name) {
-  text-align: end;
-}
 
 /* The last visible row closes the table with rounded corners: the Total row when there is
    one, else the last item's last visible row (the stretch row and a hidden live-toggle
@@ -914,6 +930,14 @@
 .cl-items .cl-detail-row > td,
 .cl-items .cl-image-row > td {
   padding-top: 4px;
+}
+
+/* "Show Description In Full Width": the item's row closes with a rule above its full-width
+   description, across every column but the serial, which runs on through both rows (user,
+   2026-11-25: the rule was missing; default for every new template). */
+.cl-doc .cl-items > tbody > tr.cl-item-row:has(+ .cl-detail-row:not([style*="none"])) > td:not(.cl-col-serial) {
+  padding-bottom: 6px;
+  border-bottom: var(--cl-separator) solid var(--cl-sep-color);
 }
 
 /* Group rows take their turn in the zebra, no grey of their own (user request, 2026-10-24). */
@@ -1076,7 +1100,7 @@
 /* Bank and UPI: the rows on the left, "Scan to pay via UPI" and the QR centred on the right. */
 
 /* A long account number widens the rows (figures never wrap); the QR then moves under them. */
-.cl-bottom-main > .cl-bank {
+.cl-bank-part > .cl-bank {
   margin-bottom: 0;
 }
 
@@ -1261,7 +1285,7 @@
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  align-items: start;
+  align-items: stretch; /* each cell the row's height: a wrapped label left the figure's rule half way down (user, 2026-11-25) */
 }
 
 .cl-totals-table .cl-totals th,
@@ -1298,15 +1322,12 @@
    met in a visible seam). */
 .cl-totals-table .cl-totals .cl-grand-row {
   background: var(--cl-accent);
-  outline: 1px solid var(--cl-accent-text); /* only seen on a light theme colour (white box) */
-  outline-offset: -1px;
 }
 
 .cl-totals-table .cl-totals .cl-grand-row > * {
   align-self: stretch;
   padding: 6px 8px; /* a 28 px bar (classic.pdf) */
-  border-bottom: 1px solid var(--cl-rule);
-  border-inline-end: 0;
+  border-bottom: 1px solid var(--cl-rule); /* ruled like every row (user, 2026-11-25) */
   background: none;
   color: var(--cl-on-accent);
   line-height: 1.3;
@@ -1603,6 +1624,292 @@
   line-height: var(--cl-lh);
 }
 
+/* ============================================================ Refrens' native Classic
+ * Measured on Refrens' own render of its native Classic template (inventory business, invoice
+ * 0029, 1000 px page, 2026-11-25; user: "same font size, font weight and field placements as the
+ * existing Classic template"). These rules follow the general ones above and set what differs.
+ */
+
+/* Header: a 28 px regular title and a small 12 px tag; the subtitle grey and medium. The block
+   stays centred beside the logo (user, 2026-11-25). */
+.cl-title {
+  color: #000;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.cl-doc .cl-status .invoice-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1.6667; /* a 22 px tag */
+}
+
+.cl-doc .cl-subtitle {
+  color: var(--cl-muted);
+  font-weight: 500;
+}
+
+/* Three columns 30 px apart; 16 px from the header, about 24 px to the table. The third
+   (document details, transport) keeps at least its unbreakable width (a document number, a
+   Transporter ID never wrap); the two address columns give way first — at text scale 1.2 the
+   printed page is ~600 px wide and transport ran off the page (user, 2026-11-25). */
+.cl-band-parties,
+.cl-band-logistics {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(min-content, 1fr);
+  gap: 24px 30px;
+}
+
+.cl-band {
+  gap: 16px;
+}
+
+.cl-doc .cl-band {
+  margin-bottom: calc(24px - var(--cl-section-gap));
+}
+
+.cl-doc .cl-bottom {
+  margin-top: calc(30px - var(--cl-section-gap));
+}
+
+/* Captions ("Billed To", "Shipped To", "Transport Details") 13 px semibold #2b2b2b, each as the
+   business labelled it: a blank label prints none (invoice 0029's seller). */
+.cl-band-caption {
+  color: var(--cl-caption);
+  font-size: calc(var(--cl-font-size-heading) * var(--cl-text-scale, 1));
+  font-weight: 600;
+  line-height: var(--cl-lh);
+}
+
+/* Names 16 px bold on 24 px lines. */
+.cl-party-name {
+  margin-bottom: 4px;
+  color: var(--cl-ink);
+  font-size: calc(var(--cl-font-size-name) * var(--cl-text-scale, 1));
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.cl-party {
+  gap: 0;
+}
+
+.cl-party-address {
+  margin-bottom: 4px;
+}
+
+/* Party fields read "GSTIN: 05BJEPG1956K1Z7": the name bold with its colon, the value straight
+   after it, a line each, 24 px apart (bold 700 for the seller, 600 for the others). */
+.cl-party:not(.cl-doc-details, .cl-transport) > .cl-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cl-party:not(.cl-doc-details, .cl-transport) > .cl-fields > .cl-field {
+  display: block;
+}
+
+.cl-party:not(.cl-doc-details, .cl-transport) .cl-field-label {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+.cl-party:not(.cl-doc-details, .cl-transport) .cl-field-label::after {
+  content: ": ";
+}
+
+.cl-party.cl-billed-by .cl-field-label {
+  font-weight: 700;
+}
+
+/* Document details: names semibold in black, values regular on the right, 28 px apart. */
+.cl-doc-details .cl-fields {
+  gap: 8px 16px;
+}
+
+.cl-doc-details .cl-detail-label {
+  color: #000;
+  font-weight: 600;
+}
+
+/* Transport details: names semibold, values beside them. */
+.cl-transport .cl-field-label {
+  color: var(--cl-ink);
+  font-weight: 600;
+}
+
+/* Item table: ruled both ways in black, 4 px in every cell, headings 13 px semibold black on the
+   light theme tint, figures centred, the item's name semibold. */
+.cl-items {
+  color: var(--cl-table-ink);
+}
+
+.cl-items th,
+.cl-items td {
+  padding: 4px;
+}
+
+.cl-items > thead > tr > th {
+  padding-block: 4px;
+  color: var(--cl-table-ink);
+  font-size: calc(var(--cl-font-size-thead) * var(--cl-text-scale, 1));
+  font-weight: 600;
+}
+
+.cl-item-name {
+  font-weight: 600;
+}
+
+.cl-item-codes {
+  line-height: 1.6;
+}
+
+.cl-item-desc {
+  line-height: 1.6;
+}
+
+/* Under the items: Terms, notes and the rest on the left; on the right the totals, the amount in
+   words and the signature in 40 % of the width (374 of 936 px), 7 % from the left column, so the
+   notes keep their share at every text scale (a fixed 374 px left them 200 px at 1.2). */
+.cl-bottom-side {
+  flex: 0 0 40%;
+}
+
+.cl-bottom {
+  gap: 24px 7%;
+}
+
+/* Headings under the items 13 px semibold #2b2b2b. */
+.cl-bottom .cl-card-title,
+.cl-bank-part .cl-card-title,
+.cl-section-title {
+  color: var(--cl-caption);
+  font-weight: 600;
+}
+
+.cl-bottom-main > .cl-card {
+  gap: 8px;
+}
+
+/* Terms numbered 1. 2. 3., 4 px apart. */
+.cl-terms-list {
+  padding-inline-start: 15px;
+  list-style: decimal;
+}
+
+/* Totals: labels on the right of their 60 % column, figures medium; rows 29 px; ruled. */
+.cl-totals-table .cl-totals {
+  grid-template-columns: minmax(min-content, 3fr) minmax(min-content, 2fr);
+}
+
+.cl-totals-table .cl-totals .ceres-subtotal-label {
+  color: var(--cl-ink);
+  text-align: end;
+}
+
+.cl-totals-table .cl-totals .ceres-subtotal-value {
+  font-weight: 500;
+}
+
+.cl-totals-table .cl-totals .cl-grand-row > * {
+  padding: 4px 8px;
+  line-height: var(--cl-lh);
+}
+
+.cl-totals-table .cl-totals .cl-grand-row > .ceres-subtotal-label {
+  align-items: flex-end;
+  text-align: end;
+}
+
+/* The amount in words: its own bordered box under the totals, "Total (in words) :" semibold. */
+.cl-doc .cl-words-label::after {
+  content: " :";
+}
+
+.cl-doc .cl-words .cl-words-label {
+  color: var(--cl-ink);
+}
+
+/* The signature on the paper (no panel), centred, "For <business>" 16 px under it. */
+.cl-signature-mark {
+  min-height: 0;
+  padding: 0;
+  background: none;
+}
+
+.cl-signature {
+  gap: 16px;
+}
+
+.cl-signature-for {
+  font-size: calc(var(--cl-font-size-for) * var(--cl-text-scale, 1));
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Bank and UPI in a row of their own under terms | totals: the rows (names 141 px, 28 px apart),
+   then "Scan to pay via UPI", the QR and the UPI ID 20 px to their right. */
+.cl-bank-part {
+  margin-top: calc(24px - var(--cl-section-gap));
+}
+
+.cl-bank-part:not(:has(.cl-bank)) {
+  display: none;
+}
+
+.cl-bank-part > .cl-bank {
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* A long value (an account name) wraps beside the QR; the QR moves under the rows only when
+   the values would have less than 12 characters' room (the Enterprise rule, 2026-11-19; user
+   2026-11-25: a long account name pushed the QR under the rows). The rows start at no width
+   (flex basis 0) so the line breaks on their narrowest layout, then grow up to their one-line
+   width, the UPI block right after them. */
+.cl-bank-part > .cl-bank > .cl-bank-main {
+  flex: 1 1 0;
+  min-width: min-content;
+  max-width: max-content;
+}
+
+.cl-bank-rows {
+  grid-template-columns:
+    minmax(min-content, 129px)
+    minmax(max(12ch, min-content), 1fr);
+  gap: 8px 12px; /* names wrap inside the 141 px column ("Bank Branch / Address") */
+}
+
+.cl-bank-rows .cl-kv-value:not(.cl-num) {
+  overflow-wrap: break-word;
+}
+
+.cl-bank-rows .cl-kv-value {
+  color: #000;
+}
+
+.cl-upi-caption {
+  color: var(--cl-caption);
+  font-size: calc(var(--cl-font-size-label) * var(--cl-text-scale, 1));
+  font-weight: 600;
+}
+
+.cl-upi-id {
+  color: #000;
+  font-weight: 400;
+}
+
+/* The enquiry line in a 1 px box, 12 px in, centred; the email and phone semibold. */
+.cl-enquiry {
+  padding: 12px;
+  border: 1px solid var(--cl-rule);
+}
+
+.cl-enquiry :is(strong, b) {
+  font-weight: 600;
+}
+
 /* ------------------------------------------------------------ markdown (notes, descriptions) */
 
 /*
@@ -1648,10 +1955,9 @@
 }
 
 /*
- * Tables written into a description or note, as Refrens' own Classic template draws them
- * (user, 2026-11-04): the heading row in the theme colour with white text, the body on a light
- * tint of it, no rules between the cells, a thin tinted outline, square corners; 6 px 8 px in
- * every cell, like the items table.
+ * Tables written into a description or note: the tinted heading row, ruled both ways in the
+ * items table's #1c2f34 (column rules: user, 2026-11-25), square corners; 6 px 8 px in every
+ * cell, like the items table.
  */
 .cl-doc .cl-item-desc .toastui-editor-contents table,
 .cl-doc .cl-note-body .toastui-editor-contents table {
@@ -1678,11 +1984,11 @@
   font-weight: 500;
 }
 
-/* Each heading overlaps the next by a pixel, as the items table's: painted cell by cell, the
-   hairline seams between them showed the body's tint as light lines. */
-.cl-doc .cl-item-desc .toastui-editor-contents th:not(:last-child),
-.cl-doc .cl-note-body .toastui-editor-contents th:not(:last-child) {
-  box-shadow: 1px 0 0 var(--cl-head-tint);
+/* Ruled both ways, as the items table (user, 2026-11-25): a column rule before every cell but
+   the first, in the heading row and the body alike. */
+.cl-doc .cl-item-desc .toastui-editor-contents :is(th, td) + :is(th, td),
+.cl-doc .cl-note-body .toastui-editor-contents :is(th, td) + :is(th, td) {
+  border-inline-start: 1px solid var(--cl-line);
 }
 
 /* List markers in the text's own colour (user request): the viewer greys both. */
@@ -1989,8 +2295,26 @@
     break-inside: auto;
   }
 
-  .cl-band :is(.cl-party-name, .cl-party-address, .cl-field-label, .cl-field-value, .cl-qr) {
+  .cl-band :is(.cl-party-name, .cl-qr) {
     break-inside: avoid;
+  }
+
+  /*
+   * A long value (a custom field of several lines, a long address) breaks between its lines,
+   * never moves to the next page whole: kept whole it left the rest of the page empty (user,
+   * 2026-11-25, quotation LTG3443 "Costum Fields"; default for every new template). Each line
+   * stays whole; two lines at least either side of the break.
+   */
+  .cl-band :is(.cl-party-address, .cl-field-label, .cl-field-value),
+  .cl-kv-label,
+  .cl-kv-value {
+    break-inside: auto;
+    orphans: 2;
+    widows: 2;
+  }
+
+  .cl-card[data-section="additional"] {
+    break-inside: auto;
   }
 
   .cl-band .cl-band-caption {
@@ -2877,5 +3201,58 @@ body[class~="isDibella"]
   /* An empty cell (the footer under a rate, a batch with no maker) prints no line. */
   .cl-doc .cl-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td:empty {
     display: none;
+  }
+}
+
+/*
+ * Print = preview for the item table's heading row (user, 2026-11-25: the rule under the
+ * headings was missing in the PDF). Classic rules the table both ways, so in print the headings
+ * draw their own rules as on screen: top, bottom and the column rules, square corners; the
+ * one-shape outline and the seam-covering shadows of the rounded-corner engine are not used.
+ */
+@media print {
+  .cl-items > thead > tr > th {
+    border-color: var(--cl-line);
+    box-shadow: none;
+  }
+
+  .cl-items > thead > tr > th:not(:first-child, :last-child) {
+    box-shadow: none;
+  }
+
+  .cl-items > thead > tr::after {
+    content: none;
+  }
+}
+
+/*
+ * The stretched space under a full-width row (an item's original photos, a full-width
+ * description, a group's name) draws no column rules: those columns end above that row, and
+ * rules restarting in the empty space below it read as a stray grid (user, 2026-11-25,
+ * quotation 6a671504: "these lines are totally unnecessary"). Only the table's two sides run
+ * on, as in the preview.
+ */
+.cl-doc .cl-items > tbody > tr:is(.cl-image-row, .cl-detail-row:not([style*="none"]), .cl-group-row) + tr.cl-filler > td + td,
+.cl-doc .cl-items > tbody > tr:is(.cl-image-row, .cl-detail-row:not([style*="none"]), .cl-group-row) + tr[style*="none"] + tr.cl-filler > td + td {
+  border-inline-start-width: 0;
+}
+
+/*
+ * Print = preview at the item table's edges (user, 2026-11-25: a thick stub beside the last
+ * heading and one under the table's last row). Classic's cells are square and draw every rule
+ * themselves, so the rounded-corner engine's extra pieces are off: no page-foot shape over each
+ * page's last row (its short side rules landed half a pixel off the cells' and read as a stub),
+ * no joint pieces where the split totals meet the items, and the last row keeps its own bottom
+ * rule. Rows never split across pages, so every page's piece still closes with a rule.
+ */
+@media print {
+  .cl-items > .cl-items-corners > tr::after,
+  .cl-items[data-cl-totals-split]:is(.is-joint-left, .is-joint-right)::before,
+  .cl-items[data-cl-totals-split].is-joint-right::after {
+    content: none;
+  }
+
+  .cl-items:has(> .cl-items-corners) {
+    --cl-close-line: var(--cl-line);
   }
 }
