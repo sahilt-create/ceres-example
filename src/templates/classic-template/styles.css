@@ -283,21 +283,31 @@
   max-width: none;
 }
 
-/* The title, status tag and address centred in the room beside the logo (user, 2026-11-25). */
+/* The title with its status tag and the subtitle under it on the right, logo or not (Refrens'
+   native Classic; user, 2026-11-25, replacing the centred block). */
 .cl-band > .cl-title-block > .cl-title-side {
-  flex: 1 1 auto;
-  align-items: center;
-  max-width: none;
-  margin-inline-start: 0;
-  text-align: center;
+  flex: 0 1 auto;
+  align-items: flex-end;
+  max-width: none; /* a long title takes the room beside the logo, as native Classic */
+  margin-inline-start: auto;
+  text-align: end;
 }
 
+/* The status tag stays beside the title's first line; a long title wraps before it (native
+   Classic, LTG3443's two-line title). */
 .cl-band > .cl-title-block .cl-title-row {
-  justify-content: center;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
-.cl-band > .cl-title-block .cl-header-address {
-  margin-inline: auto;
+.cl-band > .cl-title-block .cl-title {
+  min-width: 0;
+}
+
+.cl-band > .cl-title-block .cl-status {
+  flex: none;
+  margin-top: max(0px, calc(var(--cl-font-size-xl) * 1.4 * var(--cl-text-scale, 1) / 2 - 12px)); /* centred on the first line */
 }
 
 .cl-title-row {
@@ -386,7 +396,7 @@
 .cl-doc .cl-logo .cl-logo-image {
   display: block;
   width: auto;
-  max-width: 200px;
+  max-width: 133px; /* Refrens' native Classic: up to 133 x 80 */
   height: auto;
   max-height: 80px; /* Refrens' Classic: 80 px tall */
   border: 0;
@@ -888,7 +898,7 @@
 }
 
 .cl-items .cl-col-serial {
-  width: 32px;
+  width: 48px; /* "Sr.No" on one line */
   white-space: nowrap;
 }
 
@@ -1022,6 +1032,25 @@
   height: auto;
 }
 
+/* An item's original images in its own cell, 186 px wide (Refrens' native Classic), never
+   wider than the cell. */
+.cl-item-originals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cl-item-originals > .cl-large-image {
+  width: 186px;
+  max-width: 100%;
+  object-fit: scale-down;
+}
+
+.cl-item-originals > .cl-large-image + .cl-large-image {
+  margin-top: 0;
+}
+
 .cl-large-image + .cl-large-image {
   margin-top: 8px;
 }
@@ -1101,6 +1130,9 @@
 
 /* A long account number widens the rows (figures never wrap); the QR then moves under them. */
 .cl-bank-part > .cl-bank {
+  /* Bank | UPI keep to the terms column's width, as Refrens' native Classic: a long value
+     wraps there (bank wrap rule); on a narrow page the whole width. */
+  max-width: max(53%, min(100%, 380px));
   margin-bottom: 0;
 }
 
@@ -1228,7 +1260,7 @@
 .cl-attachments {
   contain: inline-size;
   padding: 0;
-  list-style: none;
+  list-style: decimal inside; /* "1. file.png", numbered as Refrens' native Classic */
   color: var(--cl-ink);
   font-size: calc(var(--cl-font-size-s) * var(--cl-text-scale, 1));
   line-height: var(--cl-lh);
@@ -1279,6 +1311,10 @@
   gap: 0;
   border: 1px solid var(--cl-rule);
   border-bottom: 0;
+}
+
+.cl-totals-table .cl-totals > tr.is-blank-row {
+  display: none;
 }
 
 .cl-totals-table .cl-totals > tr {
@@ -1731,6 +1767,39 @@
 .cl-doc-details .cl-detail-label {
   color: #000;
   font-weight: 600;
+}
+
+/*
+ * Each detail a line of its own, as Refrens' native Classic lays them (a table of flex rows):
+ * the name as wide as it reads, the value on the right edge beside it; a value that does not
+ * fit beside its name takes the next line, right-aligned, across the whole column (a long
+ * custom field, the IRN). A row added or removed moves only the rows under it.
+ */
+.cl-doc-details .cl-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-doc-details .cl-fields .cl-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  justify-content: space-between;
+}
+
+.cl-doc-details .cl-fields .cl-field[style*="none"] {
+  display: none;
+}
+
+.cl-doc-details .cl-detail-label {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.cl-doc-details .cl-detail-value {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: auto;
 }
 
 /* Transport details: names semibold, values beside them. */

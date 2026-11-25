@@ -223,9 +223,9 @@ describe("Classic Template — render", () => {
           .replace(/\s+/g, " ")
           .trim()
     );
-    // "#" over the serial numbers (Refrens' Classic).
+    // "Sr.No" over the serial numbers (user, 2026-11-25).
     expect(labels).toEqual([
-      "#",
+      "Sr.No",
       "Product Description",
       "Location",
       "Remote Type",
@@ -765,13 +765,16 @@ describe("Classic Template — boolean settings", () => {
     );
     // User request (2026-10-27): every summary table at the end, after terms, notes,
     // additional info and attachments; only the enquiry line follows them.
-    // Native Classic: terms, notes and the rest, then Bank and UPI, then the summaries.
+    // Native Classic: terms and notes beside the totals, then Bank | UPI, then Attachments
+    // and Additional Information across the page, then the summaries.
+    expect(main).not.toContain('data-section="attachments"');
+    expect(main).not.toContain('data-section="additional"');
     const order = [
       "terms",
       "notes",
-      "additional",
-      "attachments",
       "bank",
+      "attachments",
+      "additional",
       "hsn",
       "tax-summary",
       "enquiry",
@@ -948,12 +951,73 @@ describe("Classic Template — boolean settings", () => {
     const html = render((invoice) => {
       invoice.signature = "https://example.com/sign.png";
     });
-    // "For <business>" above the signature (Refrens' Classic).
-    expect(html).toMatch(/cl-signature-for">For [^<]+</);
+    // Native Classic: under the signature the business's signature label as typed, nothing
+    // when it is blank or unset.
+    expect(html).not.toContain("cl-signature-for");
+    const labelled = render((invoice) => {
+      invoice.signature = "https://example.com/sign.png";
+      invoice.customLabels = {
+        ...(invoice.customLabels as object),
+        signature: "[ A. NAME - PARTNER ]",
+      };
+    });
+    expect(labelled).toMatch(/cl-signature-for">\[ A\. NAME - PARTNER \]</);
     // In the right-hand column, after the totals.
     const at = html.indexOf('data-testid="signature"');
     expect(at).toBeGreaterThan(html.indexOf('class="cl-bottom-side"'));
     expect(at).toBeGreaterThan(html.indexOf('data-testid="totals-table"'));
+  });
+});
+
+describe("Classic Template — native Classic placement (2026-11-25)", () => {
+  const source = fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
+  it("logo only from the document; transport and supply labels end in a colon", () => {
+    const html = render((invoice) => {
+      invoice.logo = "";
+      (invoice.billedBy as Record<string, unknown>).logo =
+        "https://x.test/profile.png";
+      invoice.transportDetails = { transportMode: "Rail" };
+    });
+    expect(html).not.toContain("profile.png");
+    expect(html).toContain("has-no-logo");
+    expect(html).toMatch(/cl-transport-transportMode">Transport Mode:</);
+    expect(html).toMatch(/cl-detail-label">Country of Supply:</);
+  });
+
+  it("an item's original images sit in its own cell, 186 px wide", () => {
+    const html = render((invoice) => {
+      (invoice.items as Record<string, unknown>[])[1].originalImages = [
+        "https://x.test/orig.png",
+      ];
+    });
+    expect(html).toMatch(
+      /cl-item-originals"><img class="cl-large-image"[^>]*orig\.png/
+    );
+    expect(html).not.toMatch(
+      /<tr class="cl-image-row(?! cl-group)[^"]*"[\s\S]*?orig\.png/
+    );
+    expect(source).toMatch(
+      /\.cl-item-originals > \.cl-large-image \{\s*width: 186px;\s*max-width: 100%;/
+    );
+  });
+
+  it("a totals row with nothing visible takes no room", () => {
+    expect(source).toMatch(
+      /\.cl-totals-table \.cl-totals > tr\.is-blank-row \{\s*display: none;/
+    );
+    const rows = view().totals.rows as { label: string; value: string }[];
+    expect(rows.every((row) => `${row.label}${row.value}`.trim() !== "")).toBe(
+      true
+    );
+  });
+
+  it("each detail is a row of its own: value beside its name, else under it", () => {
+    expect(source).toMatch(
+      /\.cl-doc-details \.cl-fields \.cl-field \{\s*display: flex;\s*flex-wrap: wrap;/
+    );
+    expect(source).toMatch(
+      /\.cl-doc-details \.cl-detail-value \{\s*flex: 0 1 auto;\s*min-width: 0;\s*margin-inline-start: auto;/
+    );
   });
 });
 
@@ -1052,10 +1116,10 @@ describe("Classic Template — view model", () => {
     );
   });
 
-  it("sizes the table from the Figma's 934 px table with a 32 px serial column", () => {
+  it("sizes the table from the Figma's 934 px table with a 48 px serial column for Sr.No", () => {
     const s = state();
     const table = mapItemTable(s, formatContext(s.invoice));
-    expect(table.serialWidth).toBe(32);
+    expect(table.serialWidth).toBe(48);
     expect(
       table.header.find((cell: Json) => cell.key === "rate")?.width
     ).toBeGreaterThanOrEqual(80);
@@ -1109,9 +1173,9 @@ describe("Classic Template — files and CSS", () => {
     ].forEach((sample) => expect(code).not.toContain(sample));
   });
 
-  it("lists attachments without an indent; a long name never widens its column", () => {
+  it("numbers attachments without an indent; a long name never widens its column", () => {
     expect(source).toMatch(
-      /\.cl-attachments \{\s*contain: inline-size;\s*padding: 0;\s*list-style: none;/
+      /\.cl-attachments \{\s*contain: inline-size;\s*padding: 0;\s*list-style: decimal inside;/
     );
     // The totals move under the cards rather than run past the page edge.
     expect(source).toMatch(
@@ -2157,7 +2221,6 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     const order = [
       'class="cl-logo"',
       'class="cl-title"',
-      'data-role="business-address"',
       'data-role="billed-by"',
       'data-role="billed-to"',
       'data-section="details"',
@@ -2165,6 +2228,8 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     ].map((marker) => band.indexOf(marker));
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // Under the title the subtitle only, never the business address (user, 2026-11-25).
+    expect(band).not.toContain('data-role="business-address"');
     // Every block under its caption, the details too.
     expect(band).toMatch(/cl-band-caption">Billed By</);
     expect(band).toMatch(/cl-band-caption">Client Name</); // the business's own label
