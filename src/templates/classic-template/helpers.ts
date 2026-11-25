@@ -215,6 +215,13 @@ export const HIDDEN_SYMBOL = "\u2060";
 const INVISIBLE =
   /[\s\p{Cf}\p{Zs}\p{Mn}\u115F\u1160\u3164\uFFA0\u2800\u180E\u2028\u2029]/gu;
 
+/* A totals row whose label and figures are all empty or invisible characters. */
+const isBlankTotalsRow = (row: object): boolean =>
+  ["label", "value", "note", "converted"].every((key) => {
+    const value = (row as Record<string, unknown>)[key];
+    return typeof value !== "string" || value.replace(INVISIBLE, "") === "";
+  }) && !(row as Record<string, unknown>).extra;
+
 export const isInvisibleSymbol = (value: unknown): boolean =>
   typeof value === "string" &&
   value.length > 0 &&
@@ -245,6 +252,13 @@ export const removeHiddenSymbol = (root: ParentNode = document): void => {
         node.nodeValue = value.replace(/\u2060[\s\u00a0]?/g, "");
       }
     }
+
+    // A totals row left with no visible text (its label and figure were only the hidden
+    // symbol) takes no room either.
+    doc.querySelectorAll<HTMLElement>(".cl-totals > tr").forEach((row) => {
+      const blank = (row.textContent || "").replace(INVISIBLE, "") === "";
+      row.classList.toggle("is-blank-row", blank);
+    });
   });
 };
 
@@ -316,6 +330,10 @@ export const formatDocumentDate = (
 /* A row label: the business override when set, otherwise the fallback word. */
 const labelOr = (labels: UnknownRecord, key: string, fallback: string) =>
   firstText(labels[key], fallback);
+
+/* "Transport Mode" → "Transport Mode:" (a label that already ends in a colon keeps its own). */
+const withColon = (label: string) =>
+  /[:：]\s*$/.test(label) ? label : `${label}:`;
 
 /*
  * A section heading: an empty override deliberately hides it (the platform's guarded
@@ -1895,7 +1913,7 @@ export const mapSupply = (state: UnknownRecord) => {
   const rows = [
     {
       key: "countryOfSupply",
-      label: labelOr(labels, "countryOfSupply", "Country of Supply"),
+      label: labelOr(labels, "countryOfSupply", "Country of Supply:"),
       value: regionName(
         normalizeCountryOfSupply(invoice as unknown as FlattenedInvoicePayload)
       ),
@@ -1904,7 +1922,7 @@ export const mapSupply = (state: UnknownRecord) => {
     },
     {
       key: "placeOfSupply",
-      label: labelOr(labels, "placeOfSupply", "Place of Supply"),
+      label: labelOr(labels, "placeOfSupply", "Place of Supply:"),
       value: placeOfSupplyText(invoice),
       isHidden: !(
         place.configured ??
@@ -2115,6 +2133,8 @@ export const mapTransport = (state: UnknownRecord) => {
     .filter((row) => row.label && row.value)
     .map((row) => ({
       ...row,
+      // "Transport Mode:" — Refrens' native Classic closes each transport label with a colon.
+      label: withColon(row.label),
       // A code or figure keeps to one line; a worded entry in a number field wraps.
       isNum: Boolean(row.isDate || (row.isNum && isFigureLike(row.value))),
     }));
@@ -2639,7 +2659,7 @@ const isRealItem = (item: UnknownRecord) =>
 /* 960 px of content less the table's own 1 px outline on each side. */
 const DESIGN_TABLE_WIDTH = 944; // the 1000 px canvas less 2 × 28 px (Refrens' Classic)
 /* The serial column: "1." with 8 px either side. */
-const SERIAL_WIDTH = 32;
+const SERIAL_WIDTH = 48; // "Sr.No" on one line, 4 px either side
 // The most figure columns a tablet lays out side by side under the item's name (styles.css).
 const TABLET_FIGURE_COLUMNS = 8;
 const MIN_DESCRIPTION_SHARE = 0.22;
@@ -3040,9 +3060,8 @@ export const mapItemTable = (
       const description = isGroupTotal
         ? ""
         : htmlToMarkdown(text(item.description));
-      // images[] travel with the description, wherever it is placed. originalImages[] always
-      // take a row of their own under the item, across the whole table at its full width,
-      // whether or not the description is full width.
+      // images[] travel with the description, wherever it is placed. originalImages[] sit in
+      // the item's own cell under its description (Refrens' native Classic, 2026-11-25).
       const images = isGroupTotal ? [] : imageList(item.images);
       const originalImages = isGroupTotal ? [] : imageList(item.originalImages);
       const hasDetail = description !== "" || images.length > 0;
@@ -3064,7 +3083,10 @@ export const mapItemTable = (
         originalImages,
         hasDetail,
         // Rows are vertically centred; one with a note or images reads from the top.
-        isRich: hasDetail || (showThumbnail && thumbnailOf(item) !== ""),
+        isRich:
+          hasDetail ||
+          originalImages.length > 0 ||
+          (showThumbnail && thumbnailOf(item) !== ""),
         detailInline: hasDetail && !inDetailRow,
         detailRow: inDetailRow,
         // The full-width row keeps the serial column and spans everything after it.
@@ -3072,7 +3094,7 @@ export const mapItemTable = (
         // "Item name full width": the name (and its codes) reads across the row above the
         // item's figures, the name cell below left for the description.
         nameRow: itemNameFullWidth && !isGroupTotal,
-        imageRow: originalImages.length > 0,
+        imageRow: false, // originals sit in the item's cell (template.hbs cl-item-originals)
         thumbnail: showThumbnail ? thumbnailOf(item) : "",
         cells: columns.map((column) => {
           // A group total row only repeats its money figures.
@@ -3132,7 +3154,8 @@ export const mapItemTable = (
     manyFigures:
       columns.filter((column) => column.kind !== "name").length >
       TABLET_FIGURE_COLUMNS,
-    serialLabel: labelOr(labels, "serialNumber", "#"),
+    // "Sr.No" over the serials unless the business named the column (user, 2026-11-25).
+    serialLabel: labelOr(labels, "serialNumber", "Sr.No"),
     serialWidth: SERIAL_WIDTH,
     mergeUnit,
     smallNumbers: layout.smallNumbers,
@@ -3915,10 +3938,9 @@ export const mapSignature = (state: UnknownRecord) => {
     signerName: text(signer.signerName),
     verifyUrl: text(asRecord(invoice.share).pdf),
     label: heading(labels, "signature", "Authorized Signatory"),
-    // "For <business>" above the signature (Refrens' Classic, user's PDF 2026-11-19).
-    forLine: text(asRecord(invoice.billedBy).name)
-      ? `For ${text(asRecord(invoice.billedBy).name)}`
-      : "",
+    // Under the signature: the business's own signature label as typed ("[ NAME - PARTNER ]",
+    // "For <business>"), nothing when it is blank or unset — as Refrens' native Classic prints it.
+    forLine: text(labels.signature),
   };
 };
 
@@ -4404,7 +4426,9 @@ export const buildClassicView = (root: unknown) => {
     invoice.billedBy,
     heading(labels, "billedBy", "Billed By")
   );
-  const logo = firstText(invoice.logo, asRecord(invoice.billedBy).logo);
+  // The document's own logo only: with it removed Refrens' native Classic prints none (the
+  // business profile's logo does not stand in).
+  const logo = text(invoice.logo);
 
   const settings = mapSettings(state);
   const options = resolveSettings(state);
@@ -4546,6 +4570,8 @@ export const buildClassicView = (root: unknown) => {
       ...totals,
       // One list in the side column: the totals, the grand total between its rules, then
       // what was paid and what is due.
+      // A row with nothing to show (no label, no figure — or only invisible characters) is
+      // left out: it printed as an empty ruled strip above the Total bar (user, 2026-11-25).
       rows: [
         ...totals.main,
         ...totals.extra.map((row) => ({
@@ -4554,7 +4580,7 @@ export const buildClassicView = (root: unknown) => {
           emphasis: "normal",
         })),
         ...totals.due,
-      ],
+      ].filter((row) => !isBlankTotalsRow(row)),
     },
     words: mapWords(state, options),
     terms,
@@ -6784,7 +6810,8 @@ const runPrintLayoutIfPrinting = (): void => {
  * (landscape, A3) the stamp came out taller than its margin and covered the content (real PDF
  * 2026-11-02, A4 landscape, a 1000 × 200 letterhead: 169 pt stamped in a 135 pt margin). The
  * difference is kept free at the top and foot of every page (a row in the page frame's header
- * and footer, styles.css .cl-stamp-room); none on A4 portrait or narrower.
+ * and footer, styles.css .cl-stamp-room); none on A4 portrait or narrower at text scale 1 and
+ * up. Under a smaller text scale Chrome shrinks the margin with the html zoom: that much too.
  */
 const A4_PORTRAIT_WIDTH = (210 / 25.4) * 96;
 
@@ -6796,8 +6823,13 @@ export const placeStampRoom = (root: ParentNode = document): void => {
     printZoom() *
     (parseFloat(getComputedStyle(doc).getPropertyValue("--cl-print-scale")) ||
       1);
+  // Chrome lays the service's page margins out under the html zoom (the text scale): at 0.8
+  // a margin the letterhead's height came out 80 % of it, and the title ran under the stamp
+  // (real PDF, quotation A00052-D, 2026-11-25).
+  const marginZoom = printZoom();
   const room = (img: HTMLImageElement | null): number => {
-    if (!img || !(paper > A4_PORTRAIT_WIDTH)) return 0;
+    if (!img || !(paper > 0)) return 0;
+    if (!(paper > A4_PORTRAIT_WIDTH) && !(marginZoom < 1)) return 0;
     if (!img.complete || !img.naturalWidth) {
       img.addEventListener(
         "load",
@@ -6809,8 +6841,11 @@ export const placeStampRoom = (root: ParentNode = document): void => {
       );
       return 0;
     }
+    // The stamp across the paper, less the margin the service keeps for it (its A4 portrait
+    // height) as Chrome draws that margin.
     return (
-      ((paper - A4_PORTRAIT_WIDTH) * img.naturalHeight) /
+      (Math.max(0, paper - A4_PORTRAIT_WIDTH * marginZoom) *
+        img.naturalHeight) /
       img.naturalWidth /
       zoom
     );
