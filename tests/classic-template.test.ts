@@ -988,21 +988,41 @@ describe("Classic Template — native Classic placement (2026-11-25)", () => {
     expect(html).toMatch(/cl-detail-label">Country of Supply:</);
   });
 
-  it("an item's original images sit in its own cell, 186 px wide", () => {
+  it("an item's original images take their own row across the whole table, as Enterprise", () => {
+    // User (2026-11-26): in the item's cell (186 px) the big image printed smaller than its
+    // thumbnails; Enterprise's structure — a full-width row under the item — in every template.
     const html = render((invoice) => {
       (invoice.items as Record<string, unknown>[])[1].originalImages = [
         "https://x.test/orig.png",
       ];
     });
     expect(html).toMatch(
-      /cl-item-originals"><img class="cl-large-image"[^>]*orig\.png/
+      /<tr class="cl-image-row[^"]*"[^>]*>\s*<td colspan="\d+">\s*<img class="cl-large-image"[^>]*orig\.png/
     );
-    expect(html).not.toMatch(
-      /<tr class="cl-image-row(?! cl-group)[^"]*"[\s\S]*?orig\.png/
+    expect(html).not.toMatch(/cl-item-originals/);
+    expect(source).not.toMatch(/width: 186px/);
+    expect(source).toMatch(
+      /\.cl-large-image \{\s*display: block;\s*width: 100%;\s*height: auto;\s*max-height: min\(calc\(0\.55 \* 141\.4cqw\), 600px\);\s*object-fit: contain;/
+    );
+  });
+
+  it("closes every page's piece of the item table with a rule, a split row too, never doubled", () => {
+    // User (2026-11-26): a tall item (long description, nested table) broke across pages and
+    // its first page ended open. The repeated footer draws a rule as wide as the rows' own
+    // (measured in print), over the last pixel above it, with 2 px of room under it.
+    expect(source).toMatch(
+      /\.cl-items > \.cl-items-corners > tr::after \{\s*position: absolute;\s*top: calc\(-1 \* var\(--cl-close-rule, 1px\)\);\s*right: 0;\s*left: 0;\s*height: var\(--cl-close-rule, 1px\);[^}]*background: var\(--cl-line\);[^}]*content: "";/
     );
     expect(source).toMatch(
-      /\.cl-item-originals > \.cl-large-image \{\s*width: 186px;\s*max-width: 100%;/
+      /\.cl-items > \.cl-items-corners td \{\s*height: var\(--cl-close-room\);/
     );
+    expect(source).toMatch(/--cl-close-room: 2px;/);
+    expect(source).toMatch(
+      /margin-top: calc\(-2 \* var\(--cl-joint-rule, 1px\) - var\(--cl-close-room, 0px\)\);/
+    );
+    expect(
+      fs.readFileSync(path.join(TEMPLATE_DIR, "helpers.ts"), "utf8")
+    ).toMatch(/setProperty\("--cl-close-rule", `\$\{width\}px`\)/);
   });
 
   it("keeps 24 px between the letterhead / footer and the content in every view", () => {
@@ -2383,6 +2403,11 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     expect(css()).toMatch(/\.cl-totals-table \.cl-totals \{[^}]*border: 0;/);
     expect(css()).toMatch(
       /> tr:nth-child\(1 of :not\(\.is-hidden-by-totals, \.is-hidden-by-taxes, \.is-blank-row, \[style\*="none"\]\)\)\s*> \* \{\s*border-top: 1px solid var\(--cl-rule\);/
+    );
+    // User (2026-11-26, AED invoice): no white hairline between the row above and the bar in
+    // the preview — the rule above the bar is the bar's own border, over the row's rule.
+    expect(css()).toMatch(
+      /> tr\.cl-grand-row:not\(:nth-child\(1 of [^)]*\)\)\)\s*> \* \{\s*position: relative;\s*margin-top: -1px;\s*border-top: 1px solid var\(--cl-rule\);/
     );
   });
 

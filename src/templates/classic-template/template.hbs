@@ -261,11 +261,6 @@
                                   {{/unless}}
                                 </div>
                               {{/if}}
-                              {{!-- Original images inside the item's cell, under its description, as
-                                    Refrens' native Classic places them (186 px wide). --}}
-                              {{#if ../originalImages.length}}
-                                <div class="cl-item-originals">{{#each ../originalImages}}<img class="cl-large-image" data-testid="large-image" src="{{this}}" alt="{{../../name}}" referrerpolicy="no-referrer" />{{/each}}</div>
-                              {{/if}}
                             </td>
                           {{else}}
                             <td class="{{className}}" data-col="{{col}}" data-label="{{label}}">{{#if isNum}}<span class="cl-num" data-testid="num">{{value}}</span>{{else}}{{value}}{{/if}}</td>
@@ -285,6 +280,16 @@
                                 </div>
                               {{/if}}
                             </div>
+                          </td>
+                        </tr>
+                      {{/if}}
+                      {{#if imageRow}}
+                        {{!-- Original images: their own row under the item, across the whole table at
+                              full size (Enterprise's structure; user, 2026-11-26: in the item's cell
+                              the big image printed smaller than the thumbnails' row). --}}
+                        <tr class="cl-image-row{{#if isStripe}} is-stripe{{/if}}" data-testid="item-detail-row" data-item-index="{{itemIndex}}">
+                          <td colspan="{{colspan}}">
+                            {{#each originalImages}}<img class="cl-large-image" data-testid="large-image" src="{{this}}" alt="{{../name}}" referrerpolicy="no-referrer" />{{/each}}
                           </td>
                         </tr>
                       {{/if}}
