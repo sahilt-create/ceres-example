@@ -748,7 +748,7 @@ describe("Classic Template — boolean settings", () => {
     expect(noParties).toMatch(/cl-transport-vehicleNumber[\s\S]*?WB01AB1234/);
   });
 
-  it("bank first beside the totals, then terms and notes; attachments and additional info across the page, the summaries last", () => {
+  it("terms, notes, bank and attachments beside the totals; the summaries, then additional info last", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
       invoice.attachments = ["https://example.com/drawing.pdf"];
@@ -758,28 +758,29 @@ describe("Classic Template — boolean settings", () => {
       html.indexOf('class="cl-bottom-main"'),
       html.indexOf('class="cl-bottom-side"')
     );
-    // User (2026-11-25): Bank | UPI first in the column beside the totals.
-    expect(main).toMatch(
-      /^class="cl-bottom-main">[\s\S]*?\{\{|^class="cl-bottom-main">\s*<div class="cl-bank-part">/
+    // User (2026-11-26, native Classic): Terms, Notes, then Bank | UPI, then Attachments.
+    expect(main.indexOf('data-section="bank"')).toBeGreaterThan(
+      main.indexOf('data-section="notes"')
     );
-    expect(main.indexOf('data-section="bank"')).toBeGreaterThan(0);
     expect(main.indexOf('data-section="bank"')).toBeLessThan(
-      main.indexOf('data-section="terms"')
+      main.indexOf('data-section="attachments"')
     );
     // User request (2026-10-27): every summary table at the end, after terms, notes,
     // additional info and attachments; only the enquiry line follows them.
     // Native Classic: terms and notes beside the totals, then Bank | UPI, then Attachments
     // and Additional Information across the page, then the summaries.
-    expect(main).not.toContain('data-section="attachments"');
+    // User (2026-11-26): all of them in the one column beside the totals.
+    expect(main).toContain('data-section="attachments"');
+    // User (2026-11-26): Additional Information last, after the summaries (native Classic).
     expect(main).not.toContain('data-section="additional"');
     const order = [
-      "bank",
       "terms",
       "notes",
+      "bank",
       "attachments",
-      "additional",
       "hsn",
       "tax-summary",
+      "additional",
       "enquiry",
     ].map((section) => html.indexOf(`data-section="${section}"`));
     expect(order.every((at) => at > 0)).toBe(true);
@@ -2341,7 +2342,7 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     expect(html).not.toContain("\u3164");
   });
 
-  it("keeps terms and notes in the left column under the bank details (classic.pdf)", () => {
+  it("keeps terms and notes in the left column above the bank details (native Classic)", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
     });
@@ -2349,7 +2350,7 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
       html.indexOf('class="cl-bottom-main"'),
       html.indexOf('class="cl-bottom-side"')
     );
-    expect(main.indexOf('data-section="bank"')).toBeLessThan(
+    expect(main.indexOf('data-section="bank"')).toBeGreaterThan(
       main.indexOf('data-section="terms"')
     );
     expect(main).toContain('data-section="notes"');
@@ -2371,12 +2372,17 @@ describe("Classic Template — Classic design (2026-11-19)", () => {
     );
   });
 
-  it("fills the grand total's bar with the theme colour, one fill on the row", () => {
+  it("fills the grand total's bar with the theme colour on the row and each cell, the outline on the cells", () => {
     expect(css()).toMatch(
       /\.cl-totals \.cl-grand-row \{[^}]*background: var\(--cl-accent\);/
     );
     expect(css()).toMatch(
-      /\.cl-grand-row > \* \{[^}]*background: none;[^}]*color: var\(--cl-on-accent\);/
+      /\.cl-grand-row > \* \{[^}]*background: var\(--cl-accent\);[^}]*color: var\(--cl-on-accent\);/
+    );
+    // User (2026-11-26): no hairline between the top rule and the bar; rules meet cleanly.
+    expect(css()).toMatch(/\.cl-totals-table \.cl-totals \{[^}]*border: 0;/);
+    expect(css()).toMatch(
+      /> tr:nth-child\(1 of :not\(\.is-hidden-by-totals, \.is-hidden-by-taxes, \.is-blank-row, \[style\*="none"\]\)\)\s*> \* \{\s*border-top: 1px solid var\(--cl-rule\);/
     );
   });
 

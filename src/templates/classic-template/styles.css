@@ -1349,8 +1349,26 @@
      broke letter by letter ("CGS/T", "Tot/al"; real PDF, quotation A00052-E, 2026-11-01). */
   grid-template-columns: minmax(min-content, 1fr) minmax(min-content, 1fr);
   gap: 0;
-  border: 1px solid var(--cl-rule);
-  border-bottom: 0;
+
+  /* The box's outline is drawn by the cells, not the row group: at a fractional print position
+     a row-group border and the Total bar's fill left a thin white line between them, and the
+     column rule stopped short of the top rule (user, 2026-11-26, invoice 0009). */
+  border: 0;
+}
+
+/* The side rules on the row, which spans the box exactly: on the cells (fractional column
+   widths) the right rule landed a hair inside the amount-in-words box's rule below it in the
+   PDF, a step at the corner. */
+.cl-totals-table .cl-totals > tr {
+  border-inline: 1px solid var(--cl-rule);
+}
+
+/* The top rule on the first row that shows (hidden rows skipped). */
+.cl-totals-table
+  .cl-totals
+  > tr:nth-child(1 of :not(.is-hidden-by-totals, .is-hidden-by-taxes, .is-blank-row, [style*="none"]))
+  > * {
+  border-top: 1px solid var(--cl-rule);
 }
 
 .cl-totals-table .cl-totals > tr.is-blank-row {
@@ -1394,8 +1412,9 @@
  * the 20 px column gap into the figure's, so the box reads as one.
  */
 
-/* One bar: the fill on the row, the cells clear (cell by cell the label's and figure's fills
-   met in a visible seam). */
+/* The fill on each cell, right up to its own rules (a row's fill left a hairline gap under the
+   rule above it in print, user 2026-11-26); the column rule between the cells hides their
+   meeting edge. The row keeps the fill too, behind any sub-pixel gap. */
 .cl-totals-table .cl-totals .cl-grand-row {
   background: var(--cl-accent);
 }
@@ -1404,7 +1423,7 @@
   align-self: stretch;
   padding: 6px 8px; /* a 28 px bar (classic.pdf) */
   border-bottom: 1px solid var(--cl-rule); /* ruled like every row (user, 2026-11-25) */
-  background: none;
+  background: var(--cl-accent);
   color: var(--cl-on-accent);
   line-height: 1.3;
 }
@@ -1927,7 +1946,7 @@
 
 /* Totals: labels on the right of their 60 % column, figures medium; rows 29 px; ruled. */
 .cl-totals-table .cl-totals {
-  grid-template-columns: minmax(min-content, 3fr) minmax(min-content, 2fr);
+  grid-template-columns: minmax(min-content, 60%) minmax(min-content, 1fr); /* 60 / 40; one fr track takes the exact rest, so the rows span the box to the pixel */
 }
 
 .cl-totals-table .cl-totals .ceres-subtotal-label {
@@ -3373,8 +3392,15 @@ body[class~="isDibella"]
  * quotation 6a671504: "these lines are totally unnecessary"). Only the table's two sides run
  * on, as in the preview.
  */
-.cl-doc .cl-items > tbody > tr:is(.cl-image-row, .cl-detail-row:not([style*="none"]), .cl-group-row) + tr.cl-filler > td + td,
-.cl-doc .cl-items > tbody > tr:is(.cl-image-row, .cl-detail-row:not([style*="none"]), .cl-group-row) + tr[style*="none"] + tr.cl-filler > td + td {
+.cl-doc .cl-items > tbody > tr:is(.cl-image-row, .cl-group-row) + tr.cl-filler > td + td,
+.cl-doc .cl-items > tbody > tr:is(.cl-image-row, .cl-group-row) + tr[style*="none"] + tr.cl-filler > td + td {
+  border-inline-start-width: 0;
+}
+
+/* A full-width description keeps the serial column beside it: its rule runs on to the
+   table's foot; only the columns after it stop (user, 2026-11-26). */
+.cl-doc .cl-items > tbody > tr.cl-detail-row:not([style*="none"]) + tr.cl-filler > td + td + td,
+.cl-doc .cl-items > tbody > tr.cl-detail-row:not([style*="none"]) + tr[style*="none"] + tr.cl-filler > td + td + td {
   border-inline-start-width: 0;
 }
 
