@@ -748,7 +748,7 @@ describe("Classic Template — boolean settings", () => {
     expect(noParties).toMatch(/cl-transport-vehicleNumber[\s\S]*?WB01AB1234/);
   });
 
-  it("bank on the left beside the totals; terms, notes, additional info and attachments across the page, the summaries last", () => {
+  it("bank first beside the totals, then terms and notes; attachments and additional info across the page, the summaries last", () => {
     const html = render((invoice) => {
       invoice.notes = "Thank you";
       invoice.attachments = ["https://example.com/drawing.pdf"];
@@ -758,10 +758,13 @@ describe("Classic Template — boolean settings", () => {
       html.indexOf('class="cl-bottom-main"'),
       html.indexOf('class="cl-bottom-side"')
     );
-    expect(main).not.toContain('data-section="bank"');
-    // Native Classic: Bank and UPI in a row of their own under terms | totals.
-    expect(html).toMatch(
-      /class="cl-bank-part">\s*<section class="cl-card cl-bank"/
+    // User (2026-11-25): Bank | UPI first in the column beside the totals.
+    expect(main).toMatch(
+      /^class="cl-bottom-main">[\s\S]*?\{\{|^class="cl-bottom-main">\s*<div class="cl-bank-part">/
+    );
+    expect(main.indexOf('data-section="bank"')).toBeGreaterThan(0);
+    expect(main.indexOf('data-section="bank"')).toBeLessThan(
+      main.indexOf('data-section="terms"')
     );
     // User request (2026-10-27): every summary table at the end, after terms, notes,
     // additional info and attachments; only the enquiry line follows them.
@@ -770,9 +773,9 @@ describe("Classic Template — boolean settings", () => {
     expect(main).not.toContain('data-section="attachments"');
     expect(main).not.toContain('data-section="additional"');
     const order = [
+      "bank",
       "terms",
       "notes",
-      "bank",
       "attachments",
       "additional",
       "hsn",
@@ -1001,6 +1004,41 @@ describe("Classic Template — native Classic placement (2026-11-25)", () => {
     );
   });
 
+  it("keeps 24 px between the letterhead / footer and the content in every view", () => {
+    expect(source).toMatch(/--cl-letterhead-gap: 24px;/);
+    expect(source).toMatch(
+      /\.cl-doc \.cl-letterhead:not\(\.is-empty\) \{\s*padding-bottom: var\(--cl-letterhead-gap\);/
+    );
+    expect(source).toMatch(
+      /\.cl-doc \.cl-letterhead-footer:not\(\.is-empty\) \{\s*padding-top: var\(--cl-letterhead-gap\);/
+    );
+    expect(source).toMatch(
+      /tr\.cl-stamp-room\.is-top > td \{\s*height: calc\(var\(--cl-stamp-top, 0px\) \+ var\(--cl-letterhead-gap\)\);/
+    );
+  });
+
+  it("party fields keep the value beside its name (never wrapped under it)", () => {
+    expect(source).toMatch(
+      /\.cl-party:not\(\.cl-doc-details, \.cl-transport\) > \.cl-fields > \.cl-field \{\s*display: flex;/
+    );
+    expect(source).toMatch(
+      /> \.cl-field > \.cl-field-value \{\s*flex: 1 1 0;\s*min-width: 0;/
+    );
+  });
+
+  it("draws currency symbols Open Sans lacks (₹ ₱ ₩ …) in Noto Sans, not a heavy system face", () => {
+    expect(source).toMatch(
+      /@import "https:\/\/fonts\.googleapis\.com\/css2\?family=Noto\+Sans:/
+    );
+    expect(source).toMatch(
+      /--cl-font: [^;]*var\(--cl-symbol-fonts\), sans-serif;/
+    );
+    expect(source).toMatch(
+      /--cl-title-font: [^;]*var\(--cl-symbol-fonts\), sans-serif;/
+    );
+    expect(source).toMatch(/text-rendering: optimizelegibility;/);
+  });
+
   it("a totals row with nothing visible takes no room", () => {
     expect(source).toMatch(
       /\.cl-totals-table \.cl-totals > tr\.is-blank-row \{\s*display: none;/
@@ -1011,12 +1049,12 @@ describe("Classic Template — native Classic placement (2026-11-25)", () => {
     );
   });
 
-  it("each detail is a row of its own: value beside its name, else under it", () => {
+  it("each detail is a row of its own: a long value wraps beside its name, never under it", () => {
     expect(source).toMatch(
-      /\.cl-doc-details \.cl-fields \.cl-field \{\s*display: flex;\s*flex-wrap: wrap;/
+      /\.cl-doc-details \.cl-fields \.cl-field \{\s*display: flex;\s*flex-wrap: nowrap;/
     );
     expect(source).toMatch(
-      /\.cl-doc-details \.cl-detail-value \{\s*flex: 0 1 auto;\s*min-width: 0;\s*margin-inline-start: auto;/
+      /\.cl-doc-details \.cl-detail-value \{\s*flex: 1 1 0;\s*min-width: 0;\s*text-align: end;/
     );
   });
 });
@@ -1204,7 +1242,8 @@ describe("Classic Template — files and CSS", () => {
     [
       "#16a9e0",
       "--cl-ink: #161c26;",
-      "--cl-caption: #2b2b2b;",
+      "--cl-caption: #000;", // darker than native, user 2026-11-25
+      "--cl-label: #000;",
       "--cl-rule: #000;",
       "--cl-head-tint: color-mix(in srgb, var(--cl-accent) 11%, var(--cl-paper));",
       "--cl-line: #000;",
@@ -2041,12 +2080,12 @@ describe("Classic Template — review round 5 (2026-10-24)", () => {
     );
   });
 
-  // classic.pdf: the UPI note at 10 px.
-  it("sets the UPI note in 12 px (native Classic)", () => {
+  // User (2026-11-25): the UPI note at 11 px in a readable grey.
+  it("sets the UPI note in 11 px grey", () => {
     expect(css()).toMatch(
-      /\.cl-upi-note \{[^}]*font-size: calc\(var\(--cl-font-size-label\)/
+      /\.cl-upi-note \{[^}]*color: var\(--cl-code\);[^}]*font-size: calc\(11px \* var\(--cl-text-scale, 1\)\)/
     );
-    expect(css()).toMatch(/--cl-font-size-label: 12px;/);
+    expect(css()).toMatch(/--cl-code: #666670;/);
   });
 
   it("sets the UPI caption in the ink colour at 11 px, medium (classic.pdf)", () => {
