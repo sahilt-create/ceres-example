@@ -1,5 +1,10 @@
 @import "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap";
 
+/* Currency symbols Open Sans has no glyph for (₹ ₱ ₩ ₦ ₽ ₺ ₴ ₸ ₿ …; ฿ ৳ ៛): Noto Sans, the same
+   design family, instead of a heavier system face that read too dark (user, 2026-11-25, ₱).
+   Google serves them by unicode-range, so only the subsets a page uses download. */
+@import "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&family=Noto+Sans+Khmer:wght@400;600&display=swap";
+
 /*
  * Classic Template: Refrens' Classic layout, measured on the user's classic.pdf (2026-11-19, an
  * A4 print at text scale 0.8, so every size here is the PDF's ÷ 0.8): 24 px page gutters, 10 px
@@ -48,10 +53,10 @@
   --cl-ink: #161c26;
   --cl-strong: #161c26; /* the grand total */
   --cl-muted: rgb(0 0 0 / 50%); /* the subtitle */
-  --cl-caption: #2b2b2b; /* section headings: Billed To, Terms and Conditions, Bank Details */
+  --cl-caption: #000; /* section headings: Billed To, Terms and Conditions, Bank Details (darker than native #2b2b2b, user 2026-11-25) */
   --cl-code: #666670; /* SKU, HSN/SAC and the other codes under an item's name */
   --cl-desc: #222; /* an item's description under its name */
-  --cl-label: #161c26; /* field names */
+  --cl-label: #000; /* field names (darker, user 2026-11-25) */
   --cl-table-ink: #000; /* the item table's text */
   --cl-rule: #000; /* the item table's and the totals' rules */
   --cl-paper: #fff;
@@ -67,8 +72,9 @@
    * --cl-script-font is the Noto face for the document's Language/Script setting (set inline
    * by the template, loaded from Google Fonts); it fills in the glyphs the main face lacks.
    */
-  --cl-font: var(--subtitle-font, "Open Sans"), var(--cl-script-font, "Open Sans"), sans-serif;
-  --cl-title-font: var(--title-font, "Open Sans"), var(--cl-script-font, "Open Sans"), sans-serif;
+  --cl-symbol-fonts: "Noto Sans", "Noto Sans Thai", "Noto Sans Bengali", "Noto Sans Khmer";
+  --cl-font: var(--subtitle-font, "Open Sans"), var(--cl-script-font, "Open Sans"), var(--cl-symbol-fonts), sans-serif;
+  --cl-title-font: var(--title-font, "Open Sans"), var(--cl-script-font, "Open Sans"), var(--cl-symbol-fonts), sans-serif;
   --cl-table-font: var(--cl-font);
   --cl-label-font: var(--cl-font);
 
@@ -87,7 +93,7 @@
   --cl-font-size-heading: 13px; /* section headings */
   --cl-font-size-subheading: 13px;
   --cl-font-size-grand: 13px; /* the grand total, label and figure */
-  --cl-font-size-name: 16px; /* party names */
+  --cl-font-size-name: 13px; /* party names (user, 2026-11-25; native 16) */
   --cl-font-size-brand: 16px;
   --cl-font-size-section: 13px; /* headings under the items */
   --cl-font-size-label: 12px; /* Scan to pay via UPI, the UPI ID */
@@ -117,6 +123,9 @@
   line-height: var(--cl-lh);
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+
+  /* Even glyph shapes and kerning (user, 2026-11-25; the smoothing is set at the top). */
+  text-rendering: optimizelegibility;
 }
 
 .cl-doc,
@@ -204,6 +213,37 @@
 .cl-doc .cl-letterhead-footer {
   width: auto;
   margin-inline: calc(-1 * var(--cl-gutter));
+}
+
+/*
+ * 24 px between the letterhead and the content, and between the content and the footer, in
+ * the preview, a browser's print and the PDF alike (user, 2026-11-25, Refrens' native Classic
+ * keeps that gap; replaces the 2026-11-12 "no gap" rule). Padding, not margin: the footer's
+ * page-edge placement sets its own margin (helpers.ts placeFootersOnPageEdge), and the first
+ * page's letterhead meets a negative frame margin in a browser's print.
+ */
+.cl-doc {
+  --cl-letterhead-gap: 24px;
+}
+
+.cl-doc .cl-letterhead:not(.is-empty) {
+  padding-bottom: var(--cl-letterhead-gap);
+}
+
+.cl-doc .cl-letterhead-footer:not(.is-empty) {
+  padding-top: var(--cl-letterhead-gap);
+}
+
+/* On screen the document's 16 px flex gap already sits there: the padding makes up the rest,
+   so the preview shows the same 24 px as the print. */
+@media screen {
+  .cl-doc .cl-letterhead:not(.is-empty) {
+    padding-bottom: calc(var(--cl-letterhead-gap) - var(--cl-section-gap));
+  }
+
+  .cl-doc .cl-letterhead-footer:not(.is-empty) {
+    padding-top: calc(var(--cl-letterhead-gap) - var(--cl-section-gap));
+  }
 }
 
 /* The letterhead sits in the flow or in the print frame's header: either way, none, gutter. */
@@ -643,6 +683,7 @@
 
 .cl-card[data-section="additional"] .cl-kv-label {
   color: var(--cl-label);
+  font-weight: 600; /* bold names (user, 2026-11-25) */
 }
 
 .cl-card[data-section="additional"] .cl-kv-value {
@@ -1130,9 +1171,8 @@
 
 /* A long account number widens the rows (figures never wrap); the QR then moves under them. */
 .cl-bank-part > .cl-bank {
-  /* Bank | UPI keep to the terms column's width, as Refrens' native Classic: a long value
-     wraps there (bank wrap rule); on a narrow page the whole width. */
-  max-width: max(53%, min(100%, 380px));
+  /* First in the column beside the totals (user, 2026-11-25): its width; a long value wraps
+     there (bank wrap rule). */
   margin-bottom: 0;
 }
 
@@ -1222,8 +1262,8 @@
 /* The UPI note grey, between the caption and the QR (classic.pdf). */
 .cl-upi-note {
   margin-top: -4px;
-  color: var(--cl-label);
-  font-size: calc(var(--cl-font-size-label) * var(--cl-text-scale, 1)); /* 12 px, Refrens' Classic */
+  color: var(--cl-code); /* #666670 grey, 5.7:1 on white (user, 2026-11-25) */
+  font-size: calc(11px * var(--cl-text-scale, 1)); /* user, 2026-11-25 */
   line-height: var(--cl-lh);
 }
 
@@ -1742,8 +1782,22 @@
   gap: 4px;
 }
 
+/* "GSTIN: value": the value keeps beside its name and wraps in its own column, never under
+   the name (user, 2026-11-25: "values field ke niche wrap mat karo, kahi pe bhi"). */
 .cl-party:not(.cl-doc-details, .cl-transport) > .cl-fields > .cl-field {
-  display: block;
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.cl-party:not(.cl-doc-details, .cl-transport) > .cl-fields > .cl-field > .cl-field-label {
+  flex: 0 1 auto;
+  max-width: 50%;
+}
+
+.cl-party:not(.cl-doc-details, .cl-transport) > .cl-fields > .cl-field > .cl-field-value {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .cl-party:not(.cl-doc-details, .cl-transport) .cl-field-label {
@@ -1752,7 +1806,7 @@
 }
 
 .cl-party:not(.cl-doc-details, .cl-transport) .cl-field-label::after {
-  content: ": ";
+  content: ":"; /* the 4 px gap stands for the space */
 }
 
 .cl-party.cl-billed-by .cl-field-label {
@@ -1770,10 +1824,10 @@
 }
 
 /*
- * Each detail a line of its own, as Refrens' native Classic lays them (a table of flex rows):
- * the name as wide as it reads, the value on the right edge beside it; a value that does not
- * fit beside its name takes the next line, right-aligned, across the whole column (a long
- * custom field, the IRN). A row added or removed moves only the rows under it.
+ * Each detail a line of its own: the name on the left, the value beside it on the right edge.
+ * A long value wraps in its own column beside the name, never under it (user, 2026-11-25:
+ * "values field ke niche wrap nahi hona chahiye"); a long name wraps too, within half the
+ * column. A row added or removed moves only the rows under it.
  */
 .cl-doc-details .cl-fields {
   display: flex;
@@ -1782,8 +1836,9 @@
 
 .cl-doc-details .cl-fields .cl-field {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 16px;
+  flex-wrap: nowrap;
+  gap: 16px;
+  align-items: flex-start;
   justify-content: space-between;
 }
 
@@ -1794,12 +1849,13 @@
 .cl-doc-details .cl-detail-label {
   flex: 0 1 auto;
   min-width: 0;
+  max-width: 50%;
 }
 
 .cl-doc-details .cl-detail-value {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
-  margin-inline-start: auto;
+  text-align: end;
 }
 
 /* Transport details: names semibold, values beside them. */
@@ -1849,11 +1905,13 @@
   gap: 24px 7%;
 }
 
-/* Headings under the items 13 px semibold #2b2b2b. */
+/* Headings under the items 13 px semibold, in black (user, 2026-11-25: "a more dark"; native
+   #2b2b2b read too light). */
 .cl-bottom .cl-card-title,
 .cl-bank-part .cl-card-title,
+.cl-card:is([data-section="attachments"], [data-section="additional"]) > .cl-card-title,
 .cl-section-title {
-  color: var(--cl-caption);
+  color: #000;
   font-weight: 600;
 }
 
@@ -1917,10 +1975,10 @@
   line-height: 1;
 }
 
-/* Bank and UPI in a row of their own under terms | totals: the rows (names 141 px, 28 px apart),
+/* Bank and UPI first in the column beside the totals: the rows (names 141 px, 28 px apart),
    then "Scan to pay via UPI", the QR and the UPI ID 20 px to their right. */
 .cl-bank-part {
-  margin-top: calc(24px - var(--cl-section-gap));
+  margin-top: 0;
 }
 
 .cl-bank-part:not(:has(.cl-bank)) {
@@ -1966,12 +2024,12 @@
 
 .cl-upi-id {
   color: #000;
-  font-weight: 400;
+  font-weight: 600; /* a bit bold (user, 2026-11-25) */
 }
 
 /* The enquiry line in a 1 px box, 12 px in, centred; the email and phone semibold. */
 .cl-enquiry {
-  padding: 12px;
+  padding: 8px; /* user, 2026-11-25 */
   border: 1px solid var(--cl-rule);
 }
 
@@ -2339,6 +2397,10 @@
     break-before: avoid-page;
   }
 
+  .cl-doc .cl-page-body > .cl-letterhead-footer {
+    margin-top: 0; /* the 24 px gap is its padding */
+  }
+
   .cl-card-title {
     break-after: avoid-page;
   }
@@ -2438,9 +2500,9 @@
     display: table-header-group;
   }
 
-  /* The repeated letterhead keeps the 16 px section gap above each page's content. */
+  /* The repeated letterhead keeps the 24 px gap above each page's content (its padding). */
   .cl-page-frame-header .cl-letterhead:not(.is-empty) {
-    margin-bottom: var(--cl-section-gap);
+    margin-bottom: 0;
   }
 
   /*
@@ -2507,6 +2569,16 @@
 
   .cl-page-frame > * > tr.cl-stamp-room.is-bottom > td {
     height: var(--cl-stamp-bottom, 0);
+  }
+
+  /* The service's stamped letterhead and footer sit right on its margins: the same 24 px gap
+     between them and the content as everywhere else (user, 2026-11-25). */
+  body[class~="isDibella"] .cl-page-frame-header:has(.cl-letterhead.no-dibella:not(.is-empty)) > tr.cl-stamp-room.is-top > td {
+    height: calc(var(--cl-stamp-top, 0px) + var(--cl-letterhead-gap));
+  }
+
+  body[class~="isDibella"] .cl-page-frame-footer:has(.cl-footer-spacer.no-dibella:not(.is-empty)) > tr.cl-stamp-room.is-bottom > td {
+    height: calc(var(--cl-stamp-bottom, 0px) + var(--cl-letterhead-gap));
   }
 
   /* The PDF service's own "electronically generated" line, as it prints it on Refrens'
@@ -2600,7 +2672,7 @@
   }
 
   .cl-footer-spacer {
-    padding-top: var(--cl-section-gap);
+    padding-top: var(--cl-letterhead-gap);
     visibility: hidden;
   }
 
@@ -3324,4 +3396,28 @@ body[class~="isDibella"]
   .cl-items:has(> .cl-items-corners) {
     --cl-close-line: var(--cl-line);
   }
+}
+
+/* Every label in black (user, 2026-11-25: "make the label color more dark, for all the
+   labels"): captions, field names, bank / additional-info names and the totals' labels. */
+.cl-doc :is(
+    .cl-band-caption,
+    .cl-field-label,
+    .cl-kv-label,
+    .cl-card-title,
+    .cl-section-title,
+    .cl-upi-caption,
+    .cl-totals .ceres-subtotal-label:not(.cl-grand-row > *)
+  ) {
+  color: #000;
+}
+
+/* A Long PDF: the service stamps the letterhead and footer on its one page, with no page
+   frame to hold room for them: the same 24 px gap on the page body (user, 2026-11-25). */
+body[class~="isDibella"] .cl-doc.is-pageless:has(> .cl-letterhead.no-dibella:not(.is-empty)) .cl-page-body {
+  padding-top: var(--cl-letterhead-gap);
+}
+
+body[class~="isDibella"] .cl-doc.is-pageless:has(.cl-letterhead-footer.no-dibella:not(.is-empty)) .cl-page-body {
+  padding-bottom: var(--cl-letterhead-gap);
 }
