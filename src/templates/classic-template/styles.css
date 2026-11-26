@@ -21,6 +21,16 @@
  * document's text scale (--cl-text-scale).
  */
 
+/* Antialiased text everywhere on the page, the host's wrappers included (user, 2026-11-26:
+   "apply font smoothing: antialiased", a rule for every template). */
+:root:has(.cl-doc),
+:root:has(.cl-doc) body {
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -webkit-font-smoothing: antialiased;
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .cl-doc {
   /* Smooth, lighter glyph edges on macOS screens (user, 2026-11-04). */
   /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
@@ -1067,28 +1077,25 @@
   text-align: start;
 }
 
+/* An item's original images at the full width of the table, in their own row (Enterprise's
+   structure). The print cap (55 % of a page, at most 600 px) on the preview's sheet too, so the
+   picture is as large on screen as in the PDF; an A4 sheet is 1.414 times its width tall. Never
+   drawn smaller than the row allows (user, 2026-11-26: the big image showed smaller than its
+   thumbnails). */
 .cl-large-image {
   display: block;
   width: 100%;
   height: auto;
+  max-height: min(calc(0.55 * 141.4cqw), 600px);
+  object-fit: contain;
+  object-position: left top;
 }
 
-/* An item's original images in its own cell, 186 px wide (Refrens' native Classic), never
-   wider than the cell. */
-.cl-item-originals {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
+.cl-doc[dir="rtl"] .cl-large-image {
+  object-position: right top;
 }
 
-.cl-item-originals > .cl-large-image {
-  width: 186px;
-  max-width: 100%;
-  object-fit: scale-down;
-}
-
-.cl-item-originals > .cl-large-image + .cl-large-image {
+.cl-large-image + .cl-large-image {
   margin-top: 0;
 }
 
@@ -1426,6 +1433,20 @@
   background: var(--cl-accent);
   color: var(--cl-on-accent);
   line-height: 1.3;
+}
+
+/* The rule above the Total bar belongs to the bar itself, as in Refrens' Classic (one collapsed
+   table border): the bar's cells reach 1 px up over the previous row's rule and draw it as their
+   own top border, their fill under it. As two boxes (the row's bottom rule, then the bar's fill)
+   a fractional preview zoom left a white hairline between them (user, 2026-11-26, AED invoice
+   "Add: VAT @ 5%" / "Due Amount (AED)"). The first row that shows already has its top rule. */
+.cl-totals-table
+  .cl-totals
+  > tr.cl-grand-row:not(:nth-child(1 of :not(.is-hidden-by-totals, .is-hidden-by-taxes, .is-blank-row, [style*="none"])))
+  > * {
+  position: relative;
+  margin-top: -1px;
+  border-top: 1px solid var(--cl-rule);
 }
 
 .cl-totals-table .cl-totals .cl-grand-row > .ceres-subtotal-label {
@@ -2988,7 +3009,7 @@ body[class~="isDibella"]
   .cl-items[data-cl-totals-split] {
     /* Two rules up: its ground covers the page-break corner row's rule, which lands a hair off
        the same spot on the last piece (a doubled line), and its own rule is the one drawn. */
-    margin-top: calc(-2 * var(--cl-joint-rule, 1px));
+    margin-top: calc(-2 * var(--cl-joint-rule, 1px) - var(--cl-close-room, 0px)); /* and over the closing footer's room */
   }
 
   /* The totals' ground and top edge are the table's, in one piece: painted cell by cell, some
@@ -3407,13 +3428,10 @@ body[class~="isDibella"]
 /*
  * Print = preview at the item table's edges (user, 2026-11-25: a thick stub beside the last
  * heading and one under the table's last row). Classic's cells are square and draw every rule
- * themselves, so the rounded-corner engine's extra pieces are off: no page-foot shape over each
- * page's last row (its short side rules landed half a pixel off the cells' and read as a stub),
- * no joint pieces where the split totals meet the items, and the last row keeps its own bottom
- * rule. Rows never split across pages, so every page's piece still closes with a rule.
+ * themselves, so the rounded-corner engine's extra pieces are off: no joint pieces where the
+ * split totals meet the items, and the last row keeps its own bottom rule.
  */
 @media print {
-  .cl-items > .cl-items-corners > tr::after,
   .cl-items[data-cl-totals-split]:is(.is-joint-left, .is-joint-right)::before,
   .cl-items[data-cl-totals-split].is-joint-right::after {
     content: none;
@@ -3421,6 +3439,42 @@ body[class~="isDibella"]
 
   .cl-items:has(> .cl-items-corners) {
     --cl-close-line: var(--cl-line);
+  }
+
+  /*
+   * Every page's piece of the item table closes with a rule (user, 2026-11-26: a tall item —
+   * a long description, a nested table — broke across pages and its first page ended open).
+   * The footer row Chrome repeats at each page's foot draws one straight 1 px rule over the
+   * last pixel above it: on a row cut by the page break it is that page's closing rule; where
+   * the break falls between rows, and at the table's end, it lies exactly on the last row's own
+   * bottom rule, so the line stays single. Its width is that rule's as printed (helpers.ts
+   * splitTotals sets --cl-close-rule: under the print zoom a 1 px rule is 1.25 px, and a 1 px
+   * overlay sat a quarter pixel off it, a doubled line at some breaks). Square, from side rule to
+   * side rule (no curves or short side pieces: those read as stubs, 2026-11-25).
+   */
+  .cl-items > .cl-items-corners > tr::after {
+    position: absolute;
+    top: calc(-1 * var(--cl-close-rule, 1px));
+    right: 0;
+    left: 0;
+    height: var(--cl-close-rule, 1px);
+    border: 0;
+    border-radius: 0;
+    background: var(--cl-line);
+    box-shadow: none;
+    clip-path: none;
+    content: "";
+    pointer-events: none;
+  }
+
+  /* The footer keeps 2 px of its own under the rule: at 0 px Chrome laid it a fraction of a
+     pixel past a page whose row it cut, and the rule printed a third as thick as the others. */
+  .cl-items > .cl-items-corners td {
+    height: var(--cl-close-room);
+  }
+
+  .cl-items {
+    --cl-close-room: 2px;
   }
 }
 

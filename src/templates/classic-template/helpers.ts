@@ -3060,8 +3060,8 @@ export const mapItemTable = (
       const description = isGroupTotal
         ? ""
         : htmlToMarkdown(text(item.description));
-      // images[] travel with the description, wherever it is placed. originalImages[] sit in
-      // the item's own cell under its description (Refrens' native Classic, 2026-11-25).
+      // images[] travel with the description, wherever it is placed. originalImages[] always
+      // take a row of their own under the item, across the whole table at its full width.
       const images = isGroupTotal ? [] : imageList(item.images);
       const originalImages = isGroupTotal ? [] : imageList(item.originalImages);
       const hasDetail = description !== "" || images.length > 0;
@@ -3094,7 +3094,9 @@ export const mapItemTable = (
         // "Item name full width": the name (and its codes) reads across the row above the
         // item's figures, the name cell below left for the description.
         nameRow: itemNameFullWidth && !isGroupTotal,
-        imageRow: false, // originals sit in the item's cell (template.hbs cl-item-originals)
+        // Original images take a row of their own under the item, across the whole table at
+        // full size (Enterprise's structure; user, 2026-11-26).
+        imageRow: originalImages.length > 0,
         thumbnail: showThumbnail ? thumbnailOf(item) : "",
         cells: columns.map((column) => {
           // A group total row only repeats its money figures.
@@ -5186,6 +5188,16 @@ export const splitTotals = (root: ParentNode = document): void => {
     typeof window.matchMedia === "function" &&
     window.matchMedia("print").matches;
   if (!printing) return;
+  // The page-foot closing rule (styles.css .cl-items-corners) as wide as the rows' own bottom
+  // rule as printed, so it lies exactly on it where a page ends between rows.
+  root.querySelectorAll<HTMLTableElement>(".cl-items").forEach((table) => {
+    const width = Array.from(table.tBodies)
+      .flatMap((body) => Array.from(body.rows))
+      .flatMap((row) => Array.from(row.cells))
+      .map((cell) => parseFloat(getComputedStyle(cell).borderBottomWidth) || 0)
+      .find((value) => value > 0);
+    if (width) table.style.setProperty("--cl-close-rule", `${width}px`);
+  });
   root.querySelectorAll<HTMLTableElement>(".cl-items").forEach((table) => {
     const groups = Array.from(
       table.querySelectorAll<HTMLElement>(TOTALS_GROUPS)
