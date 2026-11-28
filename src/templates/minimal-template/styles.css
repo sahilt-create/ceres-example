@@ -1,5 +1,10 @@
 @import "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap";
 
+/* Currency symbols the main face may lack (₹ ₱ ₩ ₦ ₽ ₺ ₴ ₸ ₿ …; ฿ ৳ ៛): Noto Sans, instead of a
+   heavier system face that reads too dark (currency-symbol-font rule, user 2026-11-25). Google
+   serves them by unicode-range, so only the subsets a page uses download. */
+@import "https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&family=Noto+Sans+Khmer:wght@400;600&display=swap";
+
 /*
  * Minimal Template: Refrens' Minimal layout, measured on the user's "Minimal - Web View" PDF
  * (2026-11-19, a 1000 px canvas): 24 px page gutters, 13 px text on 20 px lines, 14 px names,
@@ -13,6 +18,16 @@
  * are the business's own editable text, so no rule changes their case. Text sizes follow the
  * document's text scale (--mn-text-scale).
  */
+
+/* Antialiased text everywhere on the page, the host's wrappers included (user, 2026-11-26:
+   a rule for every template). */
+:root:has(.mn-doc),
+:root:has(.mn-doc) body {
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -webkit-font-smoothing: antialiased;
+  /* stylelint-disable-next-line property-no-vendor-prefix -- no standard property */
+  -moz-osx-font-smoothing: grayscale;
+}
 
 .mn-doc {
   /* Smooth, lighter glyph edges on macOS screens (user, 2026-11-04). */
@@ -45,24 +60,30 @@
   --mn-muted: #7e7e7e; /* field names and captions */
   --mn-caption: #7e7e7e; /* summary titles */
   --mn-code: #7e7e7e; /* SKU, HSN/SAC and the other codes under an item's name */
-  --mn-desc: #7e7e7e; /* an item's description under its name */
+  --mn-desc: var(--mn-ink); /* an item's description under its name: the text colour (user, 2026-11-26) */
   --mn-label: #7e7e7e; /* field names under the items, the totals' labels */
   --mn-paper: #fff;
   --mn-card: var(--mn-paper);
   --mn-fill: #f0f2f5; /* group rows */
   --mn-line: #e8e8e8; /* the table's rules */
 
-  /* 13 px text on 20 px lines; every line height a ratio, so it follows the text scale. */
-  --mn-lh: 1.5385;
+  /* 13 px text on 18 px lines (1.4; user 2026-11-26: 20 px lines read too far apart); every
+     line height a ratio, so it follows the text scale. */
+  --mn-lh: 1.4;
 
   /*
    * --mn-script-font is the Noto face for the document's Language/Script setting (set inline
    * by the template, loaded from Google Fonts); it fills in the glyphs the main face lacks.
    */
-  --mn-font: var(--subtitle-font, "Roboto"), var(--mn-script-font, "Roboto"), sans-serif;
-  --mn-title-font: var(--title-font, "Roboto"), var(--mn-script-font, "Roboto"), sans-serif;
+  --mn-symbol-fonts: "Noto Sans", "Noto Sans Thai", "Noto Sans Bengali", "Noto Sans Khmer";
+  --mn-font: var(--subtitle-font, "Roboto"), var(--mn-script-font, "Roboto"), var(--mn-symbol-fonts), sans-serif;
+  --mn-title-font: var(--title-font, "Roboto"), var(--mn-script-font, "Roboto"), var(--mn-symbol-fonts), sans-serif;
   --mn-table-font: var(--mn-font);
-  --mn-label-font: var(--mn-font);
+  /* Heading Font (Change Color & Font, template.titleFont → --title-font): the title, captions,
+     section and table headings, every field / totals label, the Total bar and the signature
+     lines. Body Font (template.bodyFont → --subtitle-font): names, values and running text.
+     Either one alone sets both when the other is unset (the renderer copies body to title). */
+  --mn-label-font: var(--mn-title-font);
 
   /* Type scale (Refrens' Minimal): 13 px text, 14 px names, 12 px UPI captions, 16 px grand
      total, 28 px title. Print uses the same sizes (user, 2026-10-21: print 1:1). */
@@ -104,6 +125,7 @@
   font-size: calc(var(--mn-font-size-base) * var(--mn-text-scale, 1));
   font-weight: 400;
   line-height: var(--mn-lh);
+  text-rendering: optimizelegibility;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -193,6 +215,35 @@
 .mn-doc .mn-letterhead-footer {
   width: auto;
   margin-inline: calc(-1 * var(--mn-gutter));
+}
+
+/*
+ * 24 px between the letterhead and the content, and between the content and the footer, in
+ * the preview, a browser's print and the PDF alike (letterhead-content-gap rule, user
+ * 2026-11-25). Padding, not margin: the footer's page-edge placement sets its own margin, and
+ * the first page's letterhead meets a negative frame margin in a browser's print.
+ */
+.mn-doc {
+  --mn-letterhead-gap: 24px;
+}
+
+.mn-doc .mn-letterhead:not(.is-empty) {
+  padding-bottom: var(--mn-letterhead-gap);
+}
+
+.mn-doc .mn-letterhead-footer:not(.is-empty) {
+  padding-top: var(--mn-letterhead-gap);
+}
+
+/* On screen the document's 16 px flex gap already sits there: the padding makes up the rest. */
+@media screen {
+  .mn-doc .mn-letterhead:not(.is-empty) {
+    padding-bottom: calc(var(--mn-letterhead-gap) - var(--mn-section-gap));
+  }
+
+  .mn-doc .mn-letterhead-footer:not(.is-empty) {
+    padding-top: calc(var(--mn-letterhead-gap) - var(--mn-section-gap));
+  }
 }
 
 /* The letterhead sits in the flow or in the print frame's header: either way, none, gutter. */
@@ -334,15 +385,6 @@
   overflow-wrap: anywhere;
 }
 
-/* 20 px under the title, wrapping at about 200 px as Refrens' Minimal does. */
-.mn-doc .mn-header-address {
-  max-width: 200px;
-  margin-top: 16px;
-  color: var(--mn-ink);
-  font-size: calc(var(--mn-font-size-s) * var(--mn-text-scale, 1));
-  overflow-wrap: break-word;
-}
-
 /* The logo as refrens.com sizes it: its own size, down to 200 x 96, square corners. */
 .mn-logo {
   flex: none;
@@ -366,7 +408,8 @@
 .mn-band-parties,
 .mn-band-logistics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* The third column (details, transport) never narrower than its unbreakable figures. */
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(min-content, 1fr);
   gap: 24px 16px;
   align-items: start;
 }
@@ -404,10 +447,10 @@
 
 .mn-party-name {
   color: var(--mn-ink);
-  font-family: var(--mn-label-font);
+  font-family: var(--mn-font);
   font-size: calc(var(--mn-font-size-name) * var(--mn-text-scale, 1));
   font-weight: 500;
-  line-height: 1.5;
+  line-height: var(--mn-lh);
   overflow-wrap: anywhere;
 }
 
@@ -433,6 +476,7 @@
 
 .mn-field-label {
   color: var(--mn-muted);
+  font-family: var(--mn-label-font);
   font-weight: 400;
   overflow-wrap: break-word;
 }
@@ -454,9 +498,21 @@
   grid-template-columns: fit-content(55%) minmax(min-content, 1fr);
 }
 
-/* The details' names in a column at least 116 px wide (Refrens' Minimal: values 132 px in). */
+/* The details' names in a column up to 116 px wide (Refrens' Minimal: values 132 px in); it
+   narrows, its words wrapping, before a document number or date would run past the page edge
+   (Margin 3 printed "REF/2020-21/017" 4 pt into the margin, 2026-11-26). */
 .mn-doc-details .mn-fields {
-  grid-template-columns: minmax(min(116px, 45%), max-content) minmax(min-content, 1fr);
+  grid-template-columns: minmax(min-content, 116px) minmax(min-content, 1fr);
+}
+
+/* Long running-text details across the page under the three columns, label beside text. */
+.mn-wide-details .mn-fields {
+  grid-template-columns: minmax(min-content, 116px) minmax(0, 1fr);
+  column-gap: 24px;
+}
+
+.mn-wide-details .mn-field-value {
+  white-space: pre-line;
 }
 
 .mn-meta-list > :is(.mn-details-compliance, .mn-supply) {
@@ -523,6 +579,7 @@
    notes, additional information, attachments, the summaries. */
 .mn-bottom .mn-card,
 .mn-card.mn-widget-table,
+.mn-card.mn-additional,
 [data-section="logistics-below"] .mn-card {
   padding: 0;
   border: 0;
@@ -549,6 +606,7 @@
 /* Under the items the headings read as the text, medium: "Terms and Conditions", "Bank and
    UPI details", "Invoice total in words" (Refrens' Minimal). */
 .mn-bottom .mn-card-title,
+.mn-additional .mn-card-title,
 .mn-section-title,
 [data-section="logistics-below"] .mn-card-title {
   color: var(--mn-ink);
@@ -850,24 +908,37 @@
   height: 0;
 }
 
-/* An item's name and its description (or images) read as one row: no rule between them. */
+/* An item's name and its inline description read as one row: no rule between a name row and
+   its figures row. */
 
 /* (A detail row is in the page for the live "full width" toggle even while hidden.) */
-.mn-items > tbody > tr:is(.mn-name-row, .mn-item-row:has(+ :is(.mn-detail-row:not([style*="none"]), .mn-image-row)), .mn-item-row:has(+ .mn-detail-row[style*="none"] + .mn-image-row), .mn-detail-row:has(+ .mn-image-row)) > td {
+.mn-items > tbody > tr:is(.mn-name-row, .mn-item-row:has(+ .mn-detail-row:not([style*="none"]))) > td {
   --mn-sep: 0 0 transparent;
 
   border-bottom: 0;
 }
 
-.mn-items .mn-name-row > td,
-.mn-items .mn-item-row:has(+ :is(.mn-detail-row:not([style*="none"]), .mn-image-row)) > td,
-.mn-items .mn-item-row:has(+ .mn-detail-row[style*="none"] + .mn-image-row) > td {
+.mn-items .mn-name-row > td {
   padding-bottom: 0;
 }
 
-.mn-items .mn-detail-row > td,
-.mn-items .mn-image-row > td {
+/* "Show Description In Full Width": the item's row closes with a rule above its full-width
+   description, across every column but the serial, which runs on through both rows
+   (full-width-description-rule, user 2026-11-25). */
+.mn-doc .mn-items > tbody > tr.mn-item-row:has(+ .mn-detail-row:not([style*="none"])) > td:not(.mn-col-serial) {
+  padding-bottom: 6px;
+  border-bottom: var(--mn-separator) solid var(--mn-sep-color);
+}
+
+.mn-items .mn-detail-row > td {
   padding-top: 4px;
+}
+
+/* Original images: the row above closes with a full rule, serial column included (the image
+   row spans it), and the images start 8 px under it (original-images-full-width rule, user
+   2026-11-26). */
+.mn-items .mn-image-row > td {
+  padding-top: 8px;
 }
 
 /* Group rows take their turn in the zebra, no grey of their own (user request, 2026-10-24). */
@@ -946,10 +1017,20 @@
   text-align: start;
 }
 
+/* An item's original images at the full width of the table, in their own row (Enterprise's
+   structure). The print cap (55 % of a page, at most 600 px) on the preview's A4 sheet too, so
+   the picture is as large on screen as in the PDF (user, 2026-11-26). */
 .mn-large-image {
   display: block;
   width: 100%;
   height: auto;
+  max-height: min(calc(0.55 * 141.4cqw), 600px);
+  object-fit: contain;
+  object-position: left top;
+}
+
+.mn-doc[dir="rtl"] .mn-large-image {
+  object-position: right top;
 }
 
 .mn-large-image + .mn-large-image {
@@ -1036,8 +1117,8 @@
    2026-11-12). */
 .mn-bank {
   flex-flow: row wrap;
-  gap: 20px 40px;
-  align-items: center;
+  gap: 20px 24px;
+  align-items: flex-start; /* "Scan to pay via UPI" level with "Bank Details" (Refrens' Minimal) */
   justify-content: flex-start;
 }
 
@@ -1052,7 +1133,10 @@
    them; an unbreakable figure still widens them (min-width). */
 .mn-bank-main {
   display: flex;
-  flex: 1 1 calc(300px * var(--mn-text-scale, 1));
+  /* Basis 0 (bank-wrap rule, user 2026-11-25): the line breaks on the rows' narrowest layout,
+     so the UPI block stays beside them and a long value wraps; the rows then grow back to
+     their one-line width, the QR right after them. */
+  flex: 1 1 0;
   flex-direction: column;
   gap: 8px;
   min-width: min-content;
@@ -1081,7 +1165,7 @@
   gap: 8px;
   align-items: center;
   width: min-content;
-  min-width: 140px;
+  min-width: 120px; /* the QR's own width: the block stays beside the rows as long as it can */
   max-width: 100%;
   text-align: center;
 }
@@ -1090,12 +1174,13 @@
    requests, 2026-10-24). */
 
 /* "Scan to pay via UPI" in the theme colour, semibold, as the design's caption. */
+/* "Scan to pay via UPI" as the "Bank Details" heading beside it: 13 px, medium (user, 2026-11-26). */
 .mn-upi-caption {
   color: var(--mn-ink);
   font-family: var(--mn-label-font);
-  font-size: calc(var(--mn-font-size-label) * var(--mn-text-scale, 1));
-  font-weight: 400;
-  line-height: 1.5;
+  font-size: calc(var(--mn-font-size-section) * var(--mn-text-scale, 1));
+  font-weight: 500;
+  line-height: var(--mn-lh);
   letter-spacing: 0;
 }
 
@@ -1105,13 +1190,29 @@
   height: 120px;
 }
 
+/* Bank rows: labels wrap at word boundaries in their own column; values keep at least 12
+   characters of room and wrap there (figures never wrap). The QR drops under the rows only
+   when that room is gone (bank-wrap rule). */
+.mn-kv.mn-bank-rows {
+  grid-template-columns: minmax(min-content, max-content) minmax(max(12ch, min-content), 1fr);
+}
+
+.mn-bank-rows > .mn-kv-label {
+  overflow-wrap: normal;
+}
+
+.mn-bank-rows > .mn-kv-value:not(.mn-num) {
+  overflow-wrap: break-word;
+}
+
 .mn-upi-id {
   max-width: 100%;
   color: var(--mn-ink); /* semibold under the QR (Minimal design) */
-  overflow-wrap: break-word; /* only an ID wider than the whole card breaks */
+  white-space: normal; /* not a figure: it may break (bank-wrap rule) */
+  overflow-wrap: anywhere; /* a long UPI ID wraps under the QR rather than push it under the rows */
   font-size: calc(var(--mn-font-size-label) * var(--mn-text-scale, 1));
   font-weight: 500;
-  line-height: 1.5;
+  line-height: var(--mn-lh);
 }
 
 /* The UPI note at 11 px, like the item codes (user request, 2026-10-24). */
@@ -1126,7 +1227,7 @@
 .mn-terms-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px; /* paragraphs 6 px apart on 18 px lines (user, 2026-11-26) */
   padding-inline-start: 0;
   list-style: none;
   color: var(--mn-ink);
@@ -1204,6 +1305,10 @@
      broke letter by letter ("CGS/T", "Tot/al"; real PDF, quotation A00052-E, 2026-11-01). */
   grid-template-columns: minmax(min-content, 1fr) fit-content(60%);
   gap: 4px 20px; /* rows 24 px apart (Refrens' Minimal) */
+}
+
+.mn-totals-table .mn-totals > tr.is-blank-row {
+  display: none;
 }
 
 .mn-totals-table .mn-totals > tr {
@@ -1331,6 +1436,12 @@
   line-height: var(--mn-lh);
 }
 
+/* The totals' labels and the whole Total bar in the Heading Font. */
+.mn-totals-table .mn-totals .ceres-subtotal-label,
+.mn-totals-table .mn-totals .mn-grand-row > * {
+  font-family: var(--mn-label-font);
+}
+
 /* ------------------------------------------------------------ signature */
 
 /* "For <business>", the signature, "Authorised Signatory", centred in the column (Refrens'
@@ -1341,6 +1452,11 @@
   gap: 8px;
   text-align: center;
   letter-spacing: 0;
+}
+
+.mn-signature-for,
+.mn-signature-label {
+  font-family: var(--mn-label-font);
 }
 
 .mn-signature-for {
@@ -1459,6 +1575,7 @@
 }
 
 .mn-widget-table .ceres-table thead th {
+  font-family: var(--mn-label-font);
   background: none;
   color: var(--mn-ink);
   font-size: calc(var(--mn-font-size-caption) * var(--mn-text-scale, 1));
@@ -1529,6 +1646,12 @@
 }
 
 /* Refrens' closing line from the document's contact details: "For any enquiry, reach out via…". */
+/* The contact line in a grey ruled box, 8 px inside it (user, 2026-11-26; Refrens' Minimal). */
+.mn-doc .mn-enquiry {
+  padding: 8px;
+  border: 1px solid var(--mn-line);
+}
+
 .mn-enquiry {
   color: var(--mn-ink);
   text-align: center; /* user request, 2026-10-23 */
@@ -1892,9 +2015,16 @@
   }
 
   /* The last-page footer never starts a page by itself (a Legal or text-scale-1.2 PDF ended on
-     a page holding only the footer): the content before it goes over with it. */
+     a page holding only the footer): the content before it goes over with it. Released
+     (helpers.ts releaseTallFooter) when the part before it and the footer together are taller
+     than a page: kept, Chrome moved that part over too and the footer still did not fit, a
+     page holding only the table before it (landscape USD invoice 084, 2026-11-26). */
   .mn-page-body > .mn-letterhead-footer {
     break-before: avoid-page;
+  }
+
+  .mn-page-body > .mn-letterhead-footer.is-released {
+    break-before: auto;
   }
 
   .mn-card-title {
@@ -1916,14 +2046,32 @@
    * page 1 holding only the letterhead. Each line stays whole and a caption stays with the
    * name under it.
    */
-  .mn-band > .mn-band-row:is(.mn-band-parties, .mn-band-logistics),
+  .mn-band > .mn-band-row:is(.mn-band-parties, .mn-band-logistics, .mn-wide-details),
   .mn-band-logistics > *,
   .mn-band :is(.mn-party, .mn-fields, .mn-meta-list, .mn-details-compliance, .mn-supply) {
     break-inside: auto;
   }
 
-  .mn-band :is(.mn-party-name, .mn-party-address, .mn-field-label, .mn-field-value, .mn-qr) {
+  .mn-band :is(.mn-party-name, .mn-qr) {
     break-inside: avoid;
+  }
+
+  /*
+   * A long value (a custom field of several lines, a long address) breaks between its lines,
+   * never moves to the next page whole (field-line-breaks rule, user 2026-11-25). The label is
+   * not "avoid" either: it shares the grid row with its value, and Chrome's own print then
+   * moved the whole row. Two lines at least either side of the break.
+   */
+  .mn-band :is(.mn-party-address, .mn-field-label, .mn-field-value),
+  .mn-kv-label,
+  .mn-kv-value {
+    break-inside: auto;
+    orphans: 2;
+    widows: 2;
+  }
+
+  .mn-card[data-section="additional"] {
+    break-inside: auto;
   }
 
   .mn-band .mn-band-caption {
@@ -1978,9 +2126,10 @@
     display: table-header-group;
   }
 
-  /* The repeated letterhead keeps the 16 px section gap above each page's content. */
+  /* The repeated letterhead's own 24 px padding is the whole gap above each page's content
+     (letterhead-content-gap rule): no extra margin (it printed 40 px, user 2026-11-26). */
   .mn-page-frame-header .mn-letterhead:not(.is-empty) {
-    margin-bottom: var(--mn-section-gap);
+    margin-bottom: 0;
   }
 
   /*
@@ -2047,6 +2196,16 @@
 
   .mn-page-frame > * > tr.mn-stamp-room.is-bottom > td {
     height: var(--mn-stamp-bottom, 0);
+  }
+
+  /* The service's stamped letterhead and footer sit right on its margins: the same 24 px gap
+     between them and the content as everywhere else (user, 2026-11-25). */
+  body[class~="isDibella"] .mn-page-frame-header:has(.mn-letterhead.no-dibella:not(.is-empty)) > tr.mn-stamp-room.is-top > td {
+    height: calc(var(--mn-stamp-top, 0px) + var(--mn-letterhead-gap));
+  }
+
+  body[class~="isDibella"] .mn-page-frame-footer:has(.mn-footer-spacer.no-dibella:not(.is-empty)) > tr.mn-stamp-room.is-bottom > td {
+    height: calc(var(--mn-stamp-bottom, 0px) + var(--mn-letterhead-gap));
   }
 
   /* The PDF service's own "electronically generated" line, as it prints it on Refrens'
@@ -2133,14 +2292,15 @@
     margin-top: var(--mn-section-gap);
   }
 
-  /* 28 px from the band to the table and from the table to the bank and totals, as on screen. */
+  /* 24 px from the header to the table and from the table to the bank and totals, as on
+     screen (print = preview, user 2026-11-26). */
   .mn-doc .mn-page-body > .mn-band + *,
   .mn-doc .mn-page-body > .mn-bottom {
-    margin-top: 28px;
+    margin-top: 24px;
   }
 
   .mn-footer-spacer {
-    padding-top: var(--mn-section-gap);
+    padding-top: var(--mn-letterhead-gap);
     visibility: hidden;
   }
 
@@ -2810,4 +2970,67 @@ body[class~="isDibella"]
   .mn-doc .mn-widget-table.is-stacked .ceres-table > :is(tbody, tfoot) > tr > td:empty {
     display: none;
   }
+}
+
+/*
+ * Print = preview at the item table's edges (user, 2026-11-25: a thick stub beside the last
+ * heading and one under the table's last row). Minimal's cells are square and draw every rule
+ * themselves, so the rounded-corner engine's extra pieces are off: no joint pieces where the
+ * split totals meet the items, and the last row keeps its own bottom rule.
+ */
+@media print {
+  .mn-items[data-mn-totals-split]:is(.is-joint-left, .is-joint-right)::before,
+  .mn-items[data-mn-totals-split].is-joint-right::after {
+    content: none;
+  }
+
+  .mn-items:has(> .mn-items-corners) {
+    --mn-close-line: var(--mn-line);
+  }
+
+  /*
+   * Every page's piece of the item table closes with a rule (user, 2026-11-26: a tall item —
+   * a long description, a nested table — broke across pages and its first page ended open).
+   * The footer row Chrome repeats at each page's foot draws one straight 1 px rule over the
+   * last pixel above it: on a row cut by the page break it is that page's closing rule; where
+   * the break falls between rows, and at the table's end, it lies exactly on the last row's own
+   * bottom rule, so the line stays single. Its width is that rule's as printed (helpers.ts
+   * splitTotals sets --mn-close-rule: under the print zoom a 1 px rule is 1.25 px, and a 1 px
+   * overlay sat a quarter pixel off it, a doubled line at some breaks). Square, from side rule to
+   * side rule (no curves or short side pieces: those read as stubs, 2026-11-25).
+   */
+  .mn-items > .mn-items-corners > tr::after {
+    position: absolute;
+    top: calc(-1 * var(--mn-close-rule, 1px));
+    right: 0;
+    left: 0;
+    height: var(--mn-close-rule, 1px);
+    border: 0;
+    border-radius: 0;
+    background: var(--mn-line);
+    box-shadow: none;
+    clip-path: none;
+    content: "";
+    pointer-events: none;
+  }
+
+  /* The footer keeps 2 px of its own under the rule: at 0 px Chrome laid it a fraction of a
+     pixel past a page whose row it cut, and the rule printed a third as thick as the others. */
+  .mn-items > .mn-items-corners td {
+    height: var(--mn-close-room);
+  }
+
+  .mn-items {
+    --mn-close-room: 2px;
+  }
+}
+
+/* A Long PDF: the service stamps the letterhead and footer on its one page, with no page
+   frame to hold room for them: the same 24 px gap on the page body (user, 2026-11-25). */
+body[class~="isDibella"] .mn-doc.is-pageless:has(> .mn-letterhead.no-dibella:not(.is-empty)) .mn-page-body {
+  padding-top: var(--mn-letterhead-gap);
+}
+
+body[class~="isDibella"] .mn-doc.is-pageless:has(.mn-letterhead-footer.no-dibella:not(.is-empty)) .mn-page-body {
+  padding-bottom: var(--mn-letterhead-gap);
 }

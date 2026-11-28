@@ -88,7 +88,8 @@
           --}}
           {{!--
             Header (Refrens' Minimal, user's "Minimal - Web View" PDF 2026-11-19): the logo on the
-            left; the title with its status tag, the subtitle and the business address on the right.
+            left; the title with its status tag and the subtitle under it on the right (that place
+            is the subtitle's only, no address: user, 2026-11-26).
             Then Billed By | Billed To | <Document> Details, then Shipped From | Shipped To |
             Transport Details, three columns each. Each row prints whole.
           --}}
@@ -110,7 +111,6 @@
                 {{/if}}
                 {{#if view.subtitle}}<p class="mn-subtitle">{{view.subtitle}}</p>{{/if}}
                 {{#if view.copy}}<p class="mn-copy" data-role="tag">{{view.copy}}</p>{{/if}}
-                {{#if view.headerAddress}}<p class="mn-header-address" data-role="business-address">{{view.headerAddress}}</p>{{/if}}
               </div>
             </div>
 
@@ -169,6 +169,18 @@
               {{/if}}
             </div>
 
+            {{!-- Long running-text details (a custom field's paragraph): a full-width row under
+                  the three columns, the label beside the text (helpers.ts wideDetails). --}}
+            {{#if view.wideDetails.length}}
+              <div class="mn-band-row mn-wide-details" data-testid="section" data-section="wide-details">
+                <div class="mn-fields">
+                  {{#each view.wideDetails}}
+                    <p class="mn-field mn-detail mn-meta-{{key}}"{{#if attr}} {{attr}}{{/if}}{{#if isHidden}} style="display:none"{{/if}}><span class="mn-field-label mn-detail-label">{{label}}</span><span class="mn-field-value mn-detail-value">{{value}}</span></p>
+                  {{/each}}
+                </div>
+              </div>
+            {{/if}}
+
             {{!-- Shipped From | Shipped To | Transport Details: each takes the next column, no gap
                   where one is missing. The IRN and e-way bill sit among the details above. --}}
             <div class="mn-band-row mn-band-logistics" data-testid="section" data-section="logistics">
@@ -204,7 +216,8 @@
               <table class="mn-items{{#if view.printTight}} is-print-tight{{/if}}{{#if view.table.showThumbnail}} has-thumbnails{{/if}}{{#if view.table.smallNumbers}} has-small-numbers{{/if}}{{#if view.table.manyFigures}} has-many-figures{{/if}}" data-testid="items-table" style="--mn-figures: {{view.table.figureCount}}; --mn-serial-width: {{view.table.serialWidth}}px;">
                 <thead>
                   <tr data-testid="items-header">
-                    <th class="mn-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px">{{view.table.serialLabel}}</th>
+                    {{!-- No text over the serial numbers (user, 2026-11-26); its name kept for screen readers. --}}
+                    <th class="mn-col-serial" data-col="sr" style="width: {{view.table.serialWidth}}px" aria-label="{{view.table.serialLabel}}"></th>
                     {{#each view.table.header}}
                       <th class="{{className}}" data-col="{{col}}"{{#if width}} style="width: {{width}}px"{{/if}}>
                         {{#if isName}}<span class="mn-desc-min" aria-hidden="true" style="width: {{view.table.descriptionMin}}px"></span>{{/if}}
@@ -342,8 +355,8 @@
 
           <div class="mn-bottom">
             <div class="mn-bottom-main">
-              {{!-- Left column beside the totals (Refrens' Minimal): Terms, Notes, Additional
-                    Information, Attachments, then Bank and UPI details last. --}}
+              {{!-- Left column beside the totals: Terms, Notes, Attachments, then Bank and UPI
+                    details (user, 2026-11-26). --}}
               {{#each view.terms}}
                 <section class="mn-card mn-terms" data-testid="section" data-section="terms">
                   <h2 class="mn-card-title" data-role="title">{{title}}</h2>
@@ -357,18 +370,6 @@
                 <section class="mn-card mn-notes" data-testid="section" data-section="notes">
                   {{#if view.notes.title}}<h2 class="mn-card-title" data-role="title">{{view.notes.title}}</h2>{{/if}}
                   <div class="mn-note-body">{{> MarkdownViewer (prepareMarkdownViewerData view.notes.body) }}</div>
-                </section>
-              {{/if}}
-
-              {{#if view.additional}}
-                <section class="mn-card" data-testid="section" data-section="additional">
-                  {{#if view.additional.title}}<h2 class="mn-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
-                  <div class="mn-kv">
-                    {{#each view.additional.rows}}
-                      <span class="mn-kv-label" data-role="ai-label">{{label}}</span>
-                      <span class="mn-kv-value{{#if isDate}} mn-num{{/if}}" data-role="ai-value">{{#if isDate}}{{mnDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
-                    {{/each}}
-                  </div>
                 </section>
               {{/if}}
 
@@ -408,6 +409,7 @@
                   {{/if}}
                 </section>
               {{/if}}
+
 
             </div>
 
@@ -477,16 +479,17 @@
             </div>
           </div>
 
-          {{!-- Summaries last, after terms, notes and attachments (user request, 2026-10-27); rendered
+          {{!-- Summaries after the bottom part, Tax summary then HSN (Refrens' native Minimal, user
+                2026-11-26), then Additional Information; rendered
                 with their data, hidden while switched off (live toggles). --}}
-          <section class="mn-card mn-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
-            {{#if view.hsn.title}}<h3 class="mn-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
-            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
-          </section>
-
           <section class="mn-card mn-widget-table" data-testid="section" data-section="tax-summary" data-ceres-tax-summary{{#if view.taxSummary.hidden}} style="display: none;"{{/if}}>
             {{#if view.taxSummary.title}}<h3 class="mn-card-title" data-role="title">{{view.taxSummary.title}}</h3>{{/if}}
             {{> TaxSummaryTable (computeTaxSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
+          </section>
+
+          <section class="mn-card mn-widget-table" data-testid="section" data-section="hsn" data-ceres-hsn-summary{{#if view.hsn.hidden}} style="display: none;"{{/if}}>
+            {{#if view.hsn.title}}<h3 class="mn-card-title" data-role="title">{{view.hsn.title}}</h3>{{/if}}
+            {{> HsnSummaryTable (computeHsnSummary @root.invoice.items isIgst=(showIgst @root.invoice) isUtgst=(showUtgst @root.invoice)) }}
           </section>
 
           {{#if view.stock}}
@@ -524,6 +527,20 @@
                     <tfoot><tr data-testid="payments-total">{{#each view.payments.total}}<td class="mn-num">{{value}}</td>{{/each}}</tr></tfoot>
                   {{/if}}
                 </table>
+              </div>
+            </section>
+          {{/if}}
+
+          {{!-- Additional Information after the summaries, before the enquiry line (user,
+                2026-11-26). --}}
+          {{#if view.additional}}
+            <section class="mn-card mn-additional" data-testid="section" data-section="additional">
+              {{#if view.additional.title}}<h2 class="mn-card-title" data-role="title">{{view.additional.title}}</h2>{{/if}}
+              <div class="mn-kv">
+                {{#each view.additional.rows}}
+                  <span class="mn-kv-label" data-role="ai-label">{{label}}</span>
+                  <span class="mn-kv-value{{#if isDate}} mn-num{{/if}}" data-role="ai-value">{{#if isDate}}{{mnDate value @root.invoice.ownerOffset}}{{else}}{{value}}{{/if}}</span>
+                {{/each}}
               </div>
             </section>
           {{/if}}

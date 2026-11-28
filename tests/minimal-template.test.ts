@@ -221,9 +221,10 @@ describe("Minimal Template — render", () => {
           .replace(/\s+/g, " ")
           .trim()
     );
-    // "#" over the serial numbers (Refrens' Minimal).
+    // No text over the serial numbers (user, 2026-11-26); its name kept for screen readers.
+    expect(header).toContain('aria-label="Sr."></th>');
     expect(labels).toEqual([
-      "#",
+      "",
       "Product Description",
       "Location",
       "Remote Type",
@@ -755,17 +756,17 @@ describe("Minimal Template — boolean settings", () => {
       html.indexOf('class="mn-bottom-side"')
     );
     expect(main).toContain('data-section="bank"');
-    // User request (2026-10-27): every summary table at the end, after terms, notes,
-    // additional info and attachments; only the enquiry line follows them.
-    // Refrens' Minimal: terms, notes and the rest first, Bank and UPI details last.
+    // User (2026-11-26, Refrens' native Minimal): Terms, Notes, Attachments, Bank Details in
+    // the left column; then the Tax summary, the HSN summary, Additional Information and the
+    // enquiry line.
     const order = [
       "terms",
       "notes",
-      "additional",
       "attachments",
       "bank",
-      "hsn",
       "tax-summary",
+      "hsn",
+      "additional",
       "enquiry",
     ].map((section) => html.indexOf(`data-section="${section}"`));
     expect(order.every((at) => at > 0)).toBe(true);
@@ -1133,6 +1134,7 @@ describe("Minimal Template — files and CSS", () => {
       "#097dc4",
       "--mn-ink: #2b2b2b;",
       "--mn-muted: #7e7e7e;",
+      "--mn-desc: var(--mn-ink);",
       "--mn-head-tint: #f0f0f0;",
       "--mn-line: #e8e8e8;",
     ].forEach((token) => expect(source).toContain(token));
@@ -1974,9 +1976,9 @@ describe("Minimal Template — review round 5 (2026-10-24)", () => {
     expect(css()).toMatch(/--mn-font-size-label: 12px;/);
   });
 
-  it("sets the UPI caption in the ink colour at 12 px (Refrens' Minimal)", () => {
+  it("sets the UPI caption like the Bank Details heading: 13 px, medium (user, 2026-11-26)", () => {
     expect(css()).toMatch(
-      /\.mn-upi-caption \{[^}]*color: var\(--mn-ink\);[^}]*font-size: calc\(var\(--mn-font-size-label\)/
+      /\.mn-upi-caption \{[^}]*color: var\(--mn-ink\);[^}]*font-size: calc\(var\(--mn-font-size-section\)[^}]*font-weight: 500;/
     );
   });
 
@@ -2071,8 +2073,8 @@ describe("Minimal Template — line height and browser-print margins (2026-11-02
     fs.readFileSync(path.join(TEMPLATE_DIR, "styles.css"), "utf8");
 
   // User: the lines read too far apart; every line height follows the text scale.
-  it("sets body lines at 13 on 20 (Refrens' Minimal) and no line height in fixed pixels", () => {
-    expect(css()).toMatch(/--mn-lh: 1\.5385;/);
+  it("sets body lines at 1.4 (user, 2026-11-26) and no line height in fixed pixels", () => {
+    expect(css()).toMatch(/--mn-lh: 1\.4;/);
     expect(css()).not.toMatch(/line-height: \d+px/);
   });
 
@@ -2146,7 +2148,6 @@ describe("Minimal Template — Minimal design (2026-11-19)", () => {
     const order = [
       'class="mn-logo"',
       'class="mn-title"',
-      'data-role="business-address"',
       'data-role="billed-by"',
       'data-role="billed-to"',
       'data-section="details"',
@@ -2154,6 +2155,8 @@ describe("Minimal Template — Minimal design (2026-11-19)", () => {
     ].map((marker) => band.indexOf(marker));
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // No address under the title: that place is the subtitle's (user, 2026-11-26).
+    expect(band).not.toContain("mn-header-address");
     // Every block under its caption, the details too.
     expect(band).toMatch(/mn-band-caption">Billed By</);
     expect(band).toMatch(/mn-band-caption">Client Name</); // the business's own label
@@ -2269,5 +2272,26 @@ describe("Minimal Template — live colour contrast (Lydia)", () => {
     // Watches <html>'s style (where the renderer writes --primary-color) and new documents.
     expect(helpers).toMatch(/attributeFilter: \["style"\]/);
     expect(helpers).toMatch(/setProperty\("--mn-accent-text", INK_ON_LIGHT\)/);
+  });
+});
+
+describe("Minimal Template — Applied Exchange Rate label (user, 2026-11-26)", () => {
+  it("names the conversion-rate row Applied Exchange Rate, a business's own label kept", () => {
+    const rows = (edit: (invoice: Json) => void) =>
+      view((invoice) => {
+        invoice.currency = "USD";
+        invoice.businessCurrency = "INR";
+        invoice.conversionRates = { INR: 96.326 };
+        invoice.totalConversions = { INR: 1000 };
+        invoice.advanceOptions = {
+          ...(invoice.advanceOptions || {}),
+          showExchangeRateOnPdf: true,
+        };
+        edit(invoice);
+      }).totals.rows.filter((row: Json) => row.key === "conversionRate");
+    const plain = rows(() => undefined);
+    plain.forEach((row: Json) =>
+      expect(row.label).toBe("Applied Exchange Rate")
+    );
   });
 });

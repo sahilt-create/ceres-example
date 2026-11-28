@@ -35,6 +35,29 @@ import { computePaymentColumns } from "../../widgets/payment-table/utils";
 import type { SubtotalRow } from "../../widgets/subtotal/utils";
 import type { ImageInput } from "../../widgets/image/utils";
 
+/*
+ * A custom currency symbol made only of invisible characters (a business's way to print figures
+ * with no symbol, e.g. U+3164 HANGUL FILLER) shows as a crossed box in the PDF and the preview:
+ * the fonts have no glyph for it. It becomes WORD JOINER (U+2060), which browsers never draw,
+ * and removeHiddenSymbol takes it and the space after it out of the page once drawn (ported
+ * from Enterprise / BPS Technologies; user 2026-11-25, quotation LTG3443).
+ */
+export const HIDDEN_SYMBOL = "\u2060";
+const INVISIBLE =
+  /[\s\p{Cf}\p{Zs}\p{Mn}\u115F\u1160\u3164\uFFA0\u2800\u180E\u2028\u2029]/gu;
+
+/* A totals row whose label and figures are all empty or invisible characters. */
+const isBlankTotalsRow = (row: object): boolean =>
+  ["label", "value", "note", "converted"].every((key) => {
+    const value = (row as Record<string, unknown>)[key];
+    return typeof value !== "string" || value.replace(INVISIBLE, "") === "";
+  }) && !(row as Record<string, unknown>).extra;
+
+export const isInvisibleSymbol = (value: unknown): boolean =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  value.replace(INVISIBLE, "") === "";
+
 interface FormatContext {
   locale: string;
   digits: number;
@@ -87,6 +110,27 @@ const CODE_KEYS = ["hsn", "classification", "sku", "batch", "unit"];
 const text = (value: unknown): string => {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return asText(value).trim();
+};
+
+/* The hidden symbol and the space the formatter puts after it, out of every text in the page. */
+export const removeHiddenSymbol = (root: ParentNode = document): void => {
+  if (typeof document === "undefined") return;
+  root.querySelectorAll<HTMLElement>(".mn-doc").forEach((doc) => {
+    const walker = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const value = node.nodeValue || "";
+      if (value.includes(HIDDEN_SYMBOL)) {
+        node.nodeValue = value.replace(/\u2060[\s\u00a0]?/g, "");
+      }
+    }
+
+    // A totals row left with no visible text (its label and figure were only the hidden
+    // symbol) takes no room either.
+    doc.querySelectorAll<HTMLElement>(".mn-totals > tr").forEach((row) => {
+      const blank = (row.textContent || "").replace(INVISIBLE, "") === "";
+      row.classList.toggle("is-blank-row", blank);
+    });
+  });
 };
 
 const firstText = (...values: unknown[]): string =>
@@ -211,6 +255,9 @@ export const withMoneyDefaults = <T>(state: T): T => {
     invoice.subUnitLength !== moneyDigits(invoice)
   ) {
     invoice.subUnitLength = moneyDigits(invoice);
+  }
+  if (isInvisibleSymbol(invoice.customCurrencySymbol)) {
+    invoice.customCurrencySymbol = HIDDEN_SYMBOL;
   }
   return state;
 };
@@ -1695,6 +1742,13 @@ const customFieldValue = (field: UnknownRecord, ctx: FormatContext) => {
  */
 /* Characters beyond which a header detail's value moves under its label. */
 const META_LONG = 30;
+/* Running text too long for the details column (see buildMinimalView wideDetails). */
+const WIDE_DETAIL = 80;
+const isWideDetail = (row: { value?: unknown; isDate?: unknown }): boolean =>
+  !row.isDate &&
+  typeof row.value === "string" &&
+  row.value.length > WIDE_DETAIL &&
+  /\s/.test(row.value);
 
 /*
  * The business's saved order for the document details (documentFieldOrder /
@@ -3031,7 +3085,10 @@ export const mapItemTable = (
         originalImages,
         hasDetail,
         // Rows are vertically centred; one with a note or images reads from the top.
-        isRich: hasDetail || (showThumbnail && thumbnailOf(item) !== ""),
+        isRich:
+          hasDetail ||
+          originalImages.length > 0 ||
+          (showThumbnail && thumbnailOf(item) !== ""),
         detailInline: hasDetail && !inDetailRow,
         detailRow: inDetailRow,
         // The full-width row keeps the serial column and spans everything after it.
@@ -3099,7 +3156,7 @@ export const mapItemTable = (
     manyFigures:
       columns.filter((column) => column.kind !== "name").length >
       TABLET_FIGURE_COLUMNS,
-    serialLabel: labelOr(labels, "serialNumber", "#"),
+    serialLabel: labelOr(labels, "serialNumber", "Sr."),
     serialWidth: SERIAL_WIDTH,
     mergeUnit,
     smallNumbers: layout.smallNumbers,
@@ -3752,10 +3809,16 @@ export const mapTotals = (
   );
   const ctx = formatContext(invoice);
   // "BGN 1 = ₹57.22": the unit side stays a whole 1, whatever the decimal places.
+  // Its label reads "Applied Exchange Rate" (applied-exchange-rate-label rule, every template),
+  // unless the business named the row itself.
   const unitRate = (row: SubtotalRow): SubtotalRow =>
     row.key === "conversionRate"
       ? {
           ...row,
+          label:
+            row.label === "Conversion Rate"
+              ? "Applied Exchange Rate"
+              : row.label,
           value: row.value.replace(
             /^.*? = /,
             `${formatCurrency(
@@ -4318,24 +4381,6 @@ const mapEcommerceOperator = (invoice: UnknownRecord) => {
   ];
 };
 
-/*
- * The business address under the title (Refrens' Minimal header, user's PDF 2026-11-19):
- * "305, 3rd floor Orion mall, Bangalore, Karnataka, India": the street, then city, state and
- * country, no PIN code.
- */
-export const headerAddress = (partyValue: unknown): string => {
-  const party = asRecord(partyValue);
-  const street = [text(party.address), text(party.building), text(party.street)]
-    .filter(Boolean)
-    .join(", ");
-  const place = [
-    text(party.city),
-    partyStateName(party),
-    regionName(text(party.country)),
-  ].filter(Boolean);
-  return [street, ...place].filter(Boolean).join(", ");
-};
-
 /* "Invoice Details", "Quotation Details": the document's own title, then "Details". */
 const DOC_TYPE_TITLES: Record<string, string> = {
   INVOICE: "Invoice",
@@ -4457,7 +4502,6 @@ export const buildMinimalView = (root: unknown) => {
 
   return {
     brand: { name: seller ? seller.name : "", logo },
-    headerAddress: headerAddress(invoice.billedBy),
     detailsTitle: detailsTitle(invoice),
     title: firstText(invoice.invoiceTitle),
     subtitle: text(invoice.invoiceSubTitle),
@@ -4485,7 +4529,11 @@ export const buildMinimalView = (root: unknown) => {
     buyer:
       parties.find((party) => asRecord(party).role === "billed-to") || null,
     // The band's details strip: the document details, then what is due.
-    details: [...meta, ...dueAmount],
+    // A detail of more than 80 characters of running text (a custom field's paragraph) leaves
+    // the narrow details column for a full-width row under the three columns, its label beside
+    // it: in the column it ran down three pages of a real PDF (quotation LTG3443, 2026-11-26).
+    details: [...meta, ...dueAmount].filter((row) => !isWideDetail(row)),
+    wideDetails: meta.filter(isWideDetail),
     // A table whose columns cannot fit the printed width at the design's 12 px cell padding
     // prints with 6 px (text keeps its size; tables never shrink, user rule 2026-11-01).
     printTight: table.printFixedWidth + 160 > print.printWidth,
@@ -4521,7 +4569,9 @@ export const buildMinimalView = (root: unknown) => {
           emphasis: "normal",
         })),
         ...totals.due,
-      ],
+        // A row with nothing to show (no label, no figure, or only invisible characters) is
+        // left out: it printed as an empty strip above the Total bar (user, 2026-11-25).
+      ].filter((row) => !isBlankTotalsRow(row)),
     },
     words: mapWords(state, options),
     terms,
@@ -5127,6 +5177,16 @@ export const splitTotals = (root: ParentNode = document): void => {
     typeof window.matchMedia === "function" &&
     window.matchMedia("print").matches;
   if (!printing) return;
+  // The page-foot closing rule (styles.css .mn-items-corners) as wide as the rows' own bottom
+  // rule as printed, so it lies exactly on it where a page ends between rows.
+  root.querySelectorAll<HTMLTableElement>(".mn-items").forEach((table) => {
+    const width = Array.from(table.tBodies)
+      .flatMap((body) => Array.from(body.rows))
+      .flatMap((row) => Array.from(row.cells))
+      .map((cell) => parseFloat(getComputedStyle(cell).borderBottomWidth) || 0)
+      .find((value) => value > 0);
+    if (width) table.style.setProperty("--mn-close-rule", `${width}px`);
+  });
   root.querySelectorAll<HTMLTableElement>(".mn-items").forEach((table) => {
     const groups = Array.from(
       table.querySelectorAll<HTMLElement>(TOTALS_GROUPS)
@@ -6408,6 +6468,46 @@ const printZoom = (): number => drawnPrintZoom();
  * when print starts the print rules decide, and when it ends the screen's comes back.
  */
 /*
+ * The last-page footer keeps to the content before it (styles.css: break-before avoid-page)
+ * unless that content's last block and the footer cannot share a page: then Chrome moved the
+ * block over and still left the footer alone, with a page holding only what came before it
+ * (landscape USD invoice 084, 2026-11-26). Page height: the printed page's content height in
+ * the document's own pixels (--mn-browser-print-height), as the blocks measure.
+ */
+export const releaseTallFooter = (root: ParentNode = document): void => {
+  const printing =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("print").matches;
+  root.querySelectorAll<HTMLElement>(".mn-doc").forEach((doc) => {
+    const footer = doc.querySelector<HTMLElement>(
+      ".mn-page-body > .mn-letterhead-footer"
+    );
+    if (!footer) return;
+    footer.classList.remove("is-released");
+    // A Long PDF is one page as tall as the content: nothing to release.
+    if (
+      !printing ||
+      doc.classList.contains("is-pageless") ||
+      !footer.getClientRects().length
+    )
+      return;
+    const page = parseFloat(
+      getComputedStyle(doc).getPropertyValue("--mn-browser-print-height")
+    );
+    let block = footer.previousElementSibling as HTMLElement | null;
+    while (block && !block.getClientRects().length)
+      block = block.previousElementSibling as HTMLElement | null;
+    if (!block || !(page > 0)) return;
+    const gap = parseFloat(getComputedStyle(footer).marginTop) || 0;
+    const together =
+      block.getBoundingClientRect().height +
+      gap +
+      footer.getBoundingClientRect().height;
+    footer.classList.toggle("is-released", together > page);
+  });
+};
+
+/*
  * The summary rows never stretch (user, 2026-11-02): a group's Sub total closing the item list
  * stays on the Total row, and the empty space goes above it, under the last item.
  */
@@ -6442,6 +6542,8 @@ export const stretchItemTable = (root: ParentNode = document): void => {
     return;
   }
   if (!doc.classList.contains("is-stretch")) return;
+  // The footer released or kept first: kept, the planner joins it to the block before it.
+  releaseTallFooter(root);
   // Measured without the filler (is-filled off) and no row lengthened at a page break (marks
   // off), then shown with the rules' heights. Measured twice: as laid out, and with the text a
   // touch wider (is-flow-measure, styles.css), as Chrome prints it.
@@ -6656,6 +6758,8 @@ export const fitDetails = (root: ParentNode = document): void => {
 };
 
 export const fitItemsToScreen = (root: ParentNode = document): void => {
+  removeHiddenSymbol(root);
+  releaseTallFooter(root);
   fitDetails(root);
   const printing =
     typeof window.matchMedia === "function" &&
@@ -6762,8 +6866,13 @@ export const placeStampRoom = (root: ParentNode = document): void => {
     printZoom() *
     (parseFloat(getComputedStyle(doc).getPropertyValue("--mn-print-scale")) ||
       1);
+  // Chrome lays the service's page margins out under the html zoom (the text scale): at 0.8
+  // a margin the letterhead's height came out 80 % of it, and the title ran under the stamp
+  // (real PDF, quotation A00052-D, 2026-11-25).
+  const marginZoom = printZoom();
   const room = (img: HTMLImageElement | null): number => {
-    if (!img || !(paper > A4_PORTRAIT_WIDTH)) return 0;
+    if (!img || !(paper > 0)) return 0;
+    if (!(paper > A4_PORTRAIT_WIDTH) && !(marginZoom < 1)) return 0;
     if (!img.complete || !img.naturalWidth) {
       img.addEventListener(
         "load",
@@ -6775,8 +6884,11 @@ export const placeStampRoom = (root: ParentNode = document): void => {
       );
       return 0;
     }
+    // The stamp across the paper, less the margin the service keeps for it (its A4 portrait
+    // height) as Chrome draws that margin.
     return (
-      ((paper - A4_PORTRAIT_WIDTH) * img.naturalHeight) /
+      (Math.max(0, paper - A4_PORTRAIT_WIDTH * marginZoom) *
+        img.naturalHeight) /
       img.naturalWidth /
       zoom
     );
@@ -6888,6 +7000,7 @@ export const registerMinimalWords = (): void => {
   const schedule = () => {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
+      removeHiddenSymbol();
       prepareReadableStylesheet();
       applyBrowserPrintPage();
       loadScriptFonts();
