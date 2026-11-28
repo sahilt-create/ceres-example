@@ -942,7 +942,8 @@ describe("Minimal Template — boolean settings", () => {
       invoice.signature = "https://example.com/sign.png";
     });
     // "For <business>" above the signature (Refrens' Minimal).
-    expect(html).toMatch(/mn-signature-for">For [^<]+</);
+    // No "For <business>" line, as Refrens' native New Minimal (user, 2026-11-28).
+    expect(html).not.toContain("mn-signature-for");
     // In the right-hand column, after the totals.
     const at = html.indexOf('data-testid="signature"');
     expect(at).toBeGreaterThan(html.indexOf('class="mn-bottom-side"'));
@@ -2176,18 +2177,13 @@ describe("Minimal Template — Minimal design (2026-11-19)", () => {
     expect(details).toContain('data-ceres-field-container="documentQr"');
   });
 
-  it("adds the amount due to an invoice's details, never to a quotation's", () => {
+  it("prints no Due Amount among the document details (user, 2026-11-28)", () => {
     const due = (billType: string) =>
       view((invoice) => {
         invoice.billType = billType;
       }).details.find((row) => row.key === "dueAmount");
-    expect(due("INVOICE")?.label).toBe("Due Amount");
-    expect(due("INVOICE")?.value).toMatch(/^₹/);
-    expect(due("QUOTATION")).toBeUndefined();
-    // Hidden with the totals by the stylesheet, so a live Hide Totals takes it away and back.
-    expect(css()).toMatch(
-      /\.mn-doc:has\(\.mn-grand-row\.is-hidden-by-totals\) \.mn-detail\[class~="mn-meta-dueAmount"\] \{\s*display: none;/
-    );
+    expect(due("INVOICE")).toBeUndefined();
+    expect(due("PROFORMAINV")).toBeUndefined();
   });
 
   it("prints the amount in words under the grand total, every word capitalised", () => {

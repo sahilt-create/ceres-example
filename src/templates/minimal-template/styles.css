@@ -922,12 +922,11 @@
   padding-bottom: 0;
 }
 
-/* "Show Description In Full Width": the item's row closes with a rule above its full-width
-   description, across every column but the serial, which runs on through both rows
-   (full-width-description-rule, user 2026-11-25). */
-.mn-doc .mn-items > tbody > tr.mn-item-row:has(+ .mn-detail-row:not([style*="none"])) > td:not(.mn-col-serial) {
-  padding-bottom: 6px;
-  border-bottom: var(--mn-separator) solid var(--mn-sep-color);
+/* "Show Description In Full Width": no rule between the item's row and its full-width
+   description, as Refrens' native New Minimal (user, 2026-11-28; overrides the Classic-era
+   rule for this template). */
+.mn-items .mn-item-row:has(+ .mn-detail-row:not([style*="none"])) > td {
+  padding-bottom: 0;
 }
 
 .mn-items .mn-detail-row > td {
@@ -1947,7 +1946,9 @@
   .mn-large-image {
     /* px cap: on a Pageless PDF's one tall page vh is the whole document. --mn-vh is the
        page's vh while a browser's print is measured beforehand (prepareBrowserPrint). */
-    max-height: min(calc(55 * var(--mn-vh, 1vh)), 600px);
+    /* 55 % of the room the repeated letterhead / footer leave on a page (--mn-repeat-height,
+       helpers.ts prepareBrowserPrint; 0 in the PDF service, which stamps them outside it). */
+    max-height: min(calc(0.55 * (100 * var(--mn-vh, 1vh) - var(--mn-repeat-height, 0px))), 600px);
 
     /* Never wider than its row: at the 600 px cap a wide photo ran 730 px on a 736 px Legal
        page, past the table's room, and the whole table printed at 98 % to make way for it. */

@@ -3945,10 +3945,6 @@ export const mapSignature = (state: UnknownRecord) => {
     signerName: text(signer.signerName),
     verifyUrl: text(asRecord(invoice.share).pdf),
     label: heading(labels, "signature", "Authorized Signatory"),
-    // "For <business>" above the signature (Refrens' Minimal, user's PDF 2026-11-19).
-    forLine: text(asRecord(invoice.billedBy).name)
-      ? `For ${text(asRecord(invoice.billedBy).name)}`
-      : "",
   };
 };
 
@@ -4104,6 +4100,10 @@ export const mapPrint = (state: UnknownRecord) => {
     sideMargin: compactDecimal(sideMarginPx),
     // The paper's width in px, as printed (placeStampRoom).
     paperWidth: compactDecimal((paperMm / 25.4) * 96),
+    // The paper as a browser's own print must take it (applyBrowserPrintPage): the document's
+    // size and orientation, A4 portrait by default. Without it Chrome printed on its dialog's
+    // default paper (Letter) and the table stretched for A4 stopped short (user, 2026-11-28).
+    pageSize: `${compactDecimal(paperMm)}mm ${compactDecimal(paperHeightMm)}mm`,
     /*
      * The printed item table runs down to the foot of the page it ends on, always (user,
      * 2026-11-04: "stretch ke baare me kitna batana padega", as the E-commerce and Minimal
@@ -4477,28 +4477,7 @@ export const buildMinimalView = (root: unknown) => {
   );
   const status = statusTag(invoice);
   const print = mapPrint(state);
-  // The band's "Due Amount" (Minimal design): what is still due on an invoice or proforma, the
-  // Balance Due row once something is paid, else the grand total; never while the due amount
-  // is switched off. Hidden with the totals (styles.css), so Lydia's live Hide Totals takes it
-  // away and brings it back.
-  const grandRow = totals.main.find((row) => row.isGrand);
-  const dueRow = totals.due.find((row) => row.key === "dueAmount");
-  const dueValue =
-    ["INVOICE", "PROFORMAINV"].includes(text(invoice.billType).toUpperCase()) &&
-    options.dueAmount
-      ? text((dueRow || grandRow || {}).value)
-      : "";
-  const dueAmount = dueValue
-    ? [
-        {
-          key: "dueAmount",
-          label: labelOr(labels, "dueAmount", "Due Amount"),
-          value: dueValue,
-          isNum: true,
-          isDate: false,
-        },
-      ]
-    : [];
+  // No "Due Amount" among the document details (user, 2026-11-28): the totals carry it.
 
   return {
     brand: { name: seller ? seller.name : "", logo },
@@ -4532,7 +4511,7 @@ export const buildMinimalView = (root: unknown) => {
     // A detail of more than 80 characters of running text (a custom field's paragraph) leaves
     // the narrow details column for a full-width row under the three columns, its label beside
     // it: in the column it ran down three pages of a real PDF (quotation LTG3443, 2026-11-26).
-    details: [...meta, ...dueAmount].filter((row) => !isWideDetail(row)),
+    details: meta.filter((row) => !isWideDetail(row)),
     wideDetails: meta.filter(isWideDetail),
     // A table whose columns cannot fit the printed width at the design's 12 px cell padding
     // prints with 6 px (text keeps its size; tables never shrink, user rule 2026-11-01).
@@ -4540,7 +4519,7 @@ export const buildMinimalView = (root: unknown) => {
     // The details strip shows while it has a detail, the supply cells or the document QR's
     // place (kept for the host's live QR).
     hasDetailsRow:
-      meta.length + dueAmount.length > 0 ||
+      meta.length > 0 ||
       supply.show ||
       Boolean(compliance.qr.document) ||
       (hasCompliance && !compliance.isBelowItems),
@@ -5536,6 +5515,18 @@ export const prepareBrowserPrint = (
       if (pageHeight > 0)
         doc.style.setProperty("--mn-vh", `${pageHeight / 100}px`);
       withPrintMedia(() => {
+        // What the page frame's repeated header and footer (every-page letterhead, footer,
+        // margin rows) take from every page: a large image is capped to the room left, so an
+        // item and its picture still fit a page together (styles.css .mn-large-image; LTG3443
+        // browser print, 2026-11-28: the image went to a page of its own).
+        const frame = doc.querySelector<HTMLElement>(".mn-page-frame");
+        const repeated = ["thead", "tfoot"]
+          .map((part) => frame?.querySelector<HTMLElement>(`:scope > ${part}`))
+          .reduce(
+            (sum, part) => sum + (part?.getBoundingClientRect().height || 0),
+            0
+          );
+        doc.style.setProperty("--mn-repeat-height", `${Math.ceil(repeated)}px`);
         preparingBrowserPrint = true;
         try {
           layout?.();
@@ -6984,7 +6975,10 @@ export const applyBrowserPrintPage = (): void => {
       1);
   doc.style.setProperty("--mn-page-zoom", compactDecimal(pageZoom));
   const vertical = doc.classList.contains("is-pageless") ? cm(1) : "0";
-  const css = `@page { margin: ${vertical} ${px(side)}; }`;
+  const size = doc.dataset.mnPageSize;
+  const css = `@page { ${
+    size && !doc.classList.contains("is-pageless") ? `size: ${size}; ` : ""
+  }margin: ${vertical} ${px(side)}; }`;
   if (existing?.textContent === css) return;
   const style = existing ?? document.createElement("style");
   style.id = BROWSER_PAGE_STYLE_ID;

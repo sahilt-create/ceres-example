@@ -14,7 +14,7 @@
   update targets.
 --}}
 {{#with (mnView @root) as |view|}}
-<div class="mn-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-mn-currency="{{@root.invoice.currency}}" data-testid="invoice-root" data-mn-side-margin="{{view.print.sideMargin}}" data-mn-paper-width="{{view.print.paperWidth}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--mn-text-scale: {{view.print.textScale}}; --mn-print-scale: {{view.print.printScale}}; --mn-print-width: {{view.print.printWidth}}px; --mn-browser-print-width: {{view.print.browserPrintWidth}}px; --mn-print-base: {{view.print.printBase}}px; --mn-browser-print-height: {{view.print.browserPrintHeight}}px; --mn-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --mn-theme: {{view.theme.accent}}; --mn-on-accent: {{view.theme.onAccent}};{{#if view.theme.accentText}} --mn-accent-text: {{view.theme.accentText}};{{/if}}{{/if}}{{#if view.script.font}} --mn-script-font: {{{view.script.font}}};{{/if}}">
+<div class="mn-doc{{#if view.print.stretchTable}} is-stretch{{/if}}{{#if view.pageless}} is-pageless{{/if}}" data-mn-currency="{{@root.invoice.currency}}" data-testid="invoice-root" data-mn-side-margin="{{view.print.sideMargin}}" data-mn-paper-width="{{view.print.paperWidth}}" data-mn-page-size="{{view.print.pageSize}}" dir="{{view.script.dir}}"{{#if view.script.lang}} lang="{{view.script.lang}}"{{/if}}{{#if view.script.script}} data-ceres-script="{{view.script.script}}"{{/if}} style="--mn-text-scale: {{view.print.textScale}}; --mn-print-scale: {{view.print.printScale}}; --mn-print-width: {{view.print.printWidth}}px; --mn-browser-print-width: {{view.print.browserPrintWidth}}px; --mn-print-base: {{view.print.printBase}}px; --mn-browser-print-height: {{view.print.browserPrintHeight}}px; --mn-browser-print-base: {{view.print.browserPrintBase}}px;{{#if view.theme}} --mn-theme: {{view.theme.accent}}; --mn-on-accent: {{view.theme.onAccent}};{{#if view.theme.accentText}} --mn-accent-text: {{view.theme.accentText}};{{/if}}{{/if}}{{#if view.script.font}} --mn-script-font: {{{view.script.font}}};{{/if}}">
   {{!-- Text Scale Smaller (0.8, also unset): Refrens' renderer leaves the page unzoomed then, so the template zooms it (helpers.ts mapPrint ownPrintZoom); :where() lets the renderer's own rule win once Lydia sets another size live. --}}
   {{#if view.print.ownPrintZoom}}<style id="mn-own-zoom">@media print { :where(html) { zoom: {{view.print.ownPrintZoom}}; } }</style>{{/if}}
   {{!-- The Language/Script setting's font, for the glyphs Inter lacks. --}}
@@ -460,7 +460,8 @@
                     "For <business>" line, as refrens.com prints it. --}}
               {{#if view.signature.show}}
                 <section class="mn-signature" data-testid="signature">
-                  {{#if view.signature.forLine}}<p class="mn-signature-for">{{view.signature.forLine}}</p>{{/if}}
+                  {{!-- No "For <business>" line: the signature and its label only, as Refrens' native
+                        New Minimal prints them (user, 2026-11-28). --}}
                   <div class="mn-signature-mark">
                     {{#if view.signature.image}}
                       {{> CeresImage src=view.signature.image alt=view.signature.label class="mn-signature-image"}}
